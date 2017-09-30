@@ -1,0 +1,43 @@
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<title></title>
+	<script type="text/javascript" src="../dist/mother-mask.js"></script>
+</head>
+
+<body>
+	<ul>
+		<li>
+			<label>Date</label>
+			<input id="date" placeholder="dd/mm/yyyy" />
+		</li>
+		<li>
+			<label>phone (US)</label>
+			<input id="phoneus" placeholder="(999) 999-9999" />
+		</li>
+		<li>
+			<label>ZIP Code</label>
+			<input id="zipcode" placeholder="99999-999" />
+		</li>
+
+		<li>
+			<label>phone (BR)</label>
+			<input id="phonebr" placeholder="(99) 9 9999-9999" />
+		</li>
+		<li>
+			<label>CPF (BR)</label>
+			<input id="cpf" placeholder="999.999.999-99" />
+		</li>
+
+	</ul>
+
+	<script type="text/javascript" async="async">
+		MotherMask.bind(document.getElementById("phoneus"), "(999) 999-9999");
+		MotherMask.bind(document.getElementById("zipcode"), "99999-999");
+		MotherMask.bind(document.getElementById("date"), "99/99/9999");
+		MotherMask.bind(document.getElementById("phonebr"), "(99) 9 9999-9999");
+		MotherMask.bind(document.getElementById("cpf"), "999.999.999-99");
+	</script>
+</body>
+
+</html>

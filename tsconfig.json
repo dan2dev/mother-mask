@@ -1,0 +1,44 @@
+{
+	"compilerOptions": {
+		"outDir": "./lib/",
+		"declaration": true,
+		"sourceMap": true,
+		"noImplicitAny": true,
+		"module": "es2015",
+		"target": "es5",
+		"moduleResolution": "node",
+		"skipLibCheck": true,
+		"jsx": "react",
+		"allowJs": false,
+		"allowSyntheticDefaultImports": true,
+		"experimentalDecorators": true,
+		"lib": [
+			"es2015",
+			"es2015.core",
+			"es2015.promise",
+			"es2015.symbol.wellknown",
+			"es2016",
+			"es2016.array.include",
+			"dom",
+			"dom.iterable",
+			"webworker",
+			"es5",
+			"es6"
+		],
+		"types": [
+		]
+	},
+	"compileOnSave": true,
+	"exclude": [
+		"node_modules",
+		"node_modules/*",
+		"assets/plugins/*",
+		"node_modules/**/*",
+		"node_modules/@types",
+		"dist",
+		"tsdist"
+	],
+	"include": [
+		"./src/**/*"
+	]
+}

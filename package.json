@@ -1,0 +1,38 @@
+{
+	"name": "mother-mask",
+	"version": "1.0.0",
+	"description": "The Mother-Mask is a simple and definitive Js library to implement text mask using a pattern.",
+	"main": "lib/main",
+	"types": "lib/main",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"watch": "webpack --watch --hot",
+		"build": "webpack --config=webpack.min.config.js && webpack"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/dan2dev/mother-mask.git"
+	},
+	"keywords": [
+		"input",
+		"mask"
+	],
+	"author": "Dan C Castro",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/dan2dev/mother-mask/issues"
+	},
+	"homepage": "https://github.com/dan2dev/mother-mask#readme",
+	"dependencies": {
+		"utility-collection": "^1.0.3"
+	},
+	"devDependencies": {
+		"@types/webpack": "^3.0.12",
+		"awesome-typescript-loader": "^3.2.3",
+		"source-map-loader": "^0.2.2",
+		"ts-node": "^3.3.0",
+		"typescript": "^2.5.3",
+		"uglifyjs-webpack-plugin": "^0.4.6",
+		"webpack": "^3.6.0"
+	}
+}
