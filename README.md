@@ -15,7 +15,7 @@ $ npm install mother-mask --save
 	// vanilla javascript
 	var phoneInputElement = document.getElementById("myphoneinput");
 	// Jquery
-	var phoneInputElement = $(#"myphoneinput")[0];
+	var phoneInputElement = $("#myphoneinput")[0];
 
 	MotherMask.bind(phoneInputElement, "(99) 9 9999-9999");
 
