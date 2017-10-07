@@ -1,6 +1,6 @@
 {
 	"name": "mother-mask",
-	"version": "1.0.0",
+	"version": "1.0.2",
 	"description": "The Mother-Mask is a simple and definitive Js library to implement text mask using a pattern.",
 	"main": "lib/main",
 	"types": "lib/main",
