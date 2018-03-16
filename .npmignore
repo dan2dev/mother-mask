@@ -1,0 +1,10 @@
+node_modules
+.git
+.vs
+.vscode
+desktop.ini
+webpack*.js
+tslint.json
+tsconfig.json
+bin
+obj

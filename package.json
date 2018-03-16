@@ -1,13 +1,43 @@
 {
 	"name": "mother-mask",
-	"version": "1.0.2",
-	"description": "The Mother-Mask is a simple and definitive Js library to implement text mask using a pattern.",
+	"version": "1.0.4",
+	"description": "",
 	"main": "lib/main",
-	"types": "lib/main",
+	"types": "@types/main",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
-		"watch": "webpack --watch --hot",
-		"build": "webpack --config=webpack.min.config.js && webpack"
+		"link": "",
+		"test": "jest --no-cache",
+		"dev": "npm-run-all --parallel tsc-w webpack-dev-w webpack-prod-w && exit 0",
+		"tsc-w": "tsc -w",
+		"webpack-dev": "webpack --config=webpack.dev.js --progress --color",
+		"webpack-prod": "webpack --config=webpack.prod.js --progress --color",
+		"webpack-dev-w": "webpack -w --config=webpack.dev.js --progress --color",
+		"webpack-prod-w": "webpack -w --config=webpack.prod.js --progress --color",
+		"build": "yarn run clean && tsc && yarn run webpack-dev && yarn run webpack-prod && exit 0",
+		"clean": "rimraf lib/* dist/* @types/* && exit 0",
+		"clean-node": "rimraf package-lock.json node_modules/* && exit 0"
+	},
+	"babel": {
+		"presets": [
+			"@babel/preset-env",
+			"react",
+			"es2015"
+		]
+	},
+	"jest": {
+		"transform": {
+			"^.+\\.tsx?$": "ts-jest",
+			"^.+\\.jsx?$": "babel-jest"
+		},
+		"testRegex": "(/test/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
+		"moduleFileExtensions": [
+			"ts",
+			"tsx",
+			"js",
+			"jsx",
+			"json",
+			"node"
+		]
 	},
 	"repository": {
 		"type": "git",
@@ -24,15 +54,27 @@
 	},
 	"homepage": "https://github.com/dan2dev/mother-mask#readme",
 	"dependencies": {
-		"utility-collection": "^1.0.3"
+		"@types/jest": "^22.2.0",
+		"@types/lodash": "^4.14.105",
+		"utility-collection": "^1.1.9"
 	},
 	"devDependencies": {
-		"@types/webpack": "^3.0.12",
-		"awesome-typescript-loader": "^3.2.3",
-		"source-map-loader": "^0.2.2",
-		"ts-node": "^3.3.0",
-		"typescript": "^2.5.3",
-		"uglifyjs-webpack-plugin": "^0.4.6",
-		"webpack": "^3.6.0"
+		"@types/node": "^9.4.7",
+		"@types/webpack": "^3.8.3",
+		"@types/window-or-global": "^1.0.0",
+		"awesome-typescript-loader": "^4.0.1",
+		"babel-core": "^6.26.0",
+		"babel-jest": "^23.0.0-alpha.0",
+		"extract-text-webpack-plugin": "^4.0.0-beta.0",
+		"jest": "^23.0.0-alpha.0",
+		"regenerator-runtime": "^0.11.1",
+		"source-map-loader": "^0.2.3",
+		"ts-node": "^5.0.1",
+		"typescript": "^2.6.2",
+		"uglifyjs-webpack-plugin": "^1.2.3",
+		"webpack": "^4.1.1",
+		"webpack-cli": "^2.0.12",
+		"webpack-livereload-plugin": "^2.0.0",
+		"webpack-merge": "^4.1.2"
 	}
 }
