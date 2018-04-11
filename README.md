@@ -27,4 +27,4 @@ $ npm install mother-mask --save
 
 ### Simple Working demo
 
-**[Working demo!](https://jsfiddle.net/9bcv795c/)**
+**[Working demo!](https://stackblitz.com/edit/js-dfdhsq?file=index.js)**
