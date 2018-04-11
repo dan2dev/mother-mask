@@ -141,6 +141,11 @@ export namespace Simple {
 			});
 		});
 
+		inputElement.addEventListener("keypress", (e: KeyboardEvent) => {
+			if ((e.target as HTMLInputElement).value.length >= getMaxLength(mask) ) {
+				e.preventDefault();
+			}
+		});
 		inputElement.addEventListener("keydown", (e: KeyboardEvent) => {
 			const target = e.target as HTMLInputElement;
 			const oldValue = target.value.toString();
@@ -150,11 +155,11 @@ export namespace Simple {
 			const isCharInsert = (e.key.length === 1 && !e.ctrlKey && !e.altKey);
 			const isUnidentified = (e.key === "Unidentified");
 			// don't allow to insert more if it's full
-			if (isCharInsert && target.selectionStart === target.selectionEnd) {
-				if (oldValue.length >= getMaxLength(mask) ) {
-					e.preventDefault();
-				}
-			}
+			// if (isCharInsert && target.selectionStart === target.selectionEnd) {
+			// 	if (oldValue.length >= getMaxLength(mask) ) {
+			// 		e.preventDefault();
+			// 	}
+			// }
 			setImmediate(() => {
 				const selStartAfter = target.selectionStart;
 				// const m =  new Mask(target.value, mask, selStartAfter);

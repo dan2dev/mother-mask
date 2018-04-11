@@ -1615,6 +1615,11 @@ var Simple;
                 }
             });
         });
+        inputElement.addEventListener("keypress", (e) => {
+            if (e.target.value.length >= getMaxLength(mask)) {
+                e.preventDefault();
+            }
+        });
         inputElement.addEventListener("keydown", (e) => {
             const target = e.target;
             const oldValue = target.value.toString();
@@ -1624,11 +1629,11 @@ var Simple;
             const isCharInsert = (e.key.length === 1 && !e.ctrlKey && !e.altKey);
             const isUnidentified = (e.key === "Unidentified");
             // don't allow to insert more if it's full
-            if (isCharInsert && target.selectionStart === target.selectionEnd) {
-                if (oldValue.length >= getMaxLength(mask)) {
-                    e.preventDefault();
-                }
-            }
+            // if (isCharInsert && target.selectionStart === target.selectionEnd) {
+            // 	if (oldValue.length >= getMaxLength(mask) ) {
+            // 		e.preventDefault();
+            // 	}
+            // }
             setImmediate(() => {
                 const selStartAfter = target.selectionStart;
                 // const m =  new Mask(target.value, mask, selStartAfter);
