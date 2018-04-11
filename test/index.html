@@ -3,6 +3,8 @@
 <head>
 	<title></title>
 	<script type="text/javascript" src="../dist/mother-mask.js"></script>
+	<!-- <script type="text/javascript" src="../lib/main.js"></script>
+	<script type="text/javascript" src="../lib/simple.js"></script> -->
 </head>
 
 <body>
@@ -22,7 +24,7 @@
 
 		<li>
 			<label>phone (BR)</label>
-			<input id="phonebr" placeholder="(99) 9 9999-9999" />
+			<input id="phonebr" placeholder="(99) 99999-9999 ou (99) 9999-9999" />
 		</li>
 		<li>
 			<label>CPF (BR)</label>
@@ -35,7 +37,7 @@
 		MotherMask.bind(document.getElementById("phoneus"), "(999) 999-9999");
 		MotherMask.bind(document.getElementById("zipcode"), "99999-999");
 		MotherMask.bind(document.getElementById("date"), "99/99/9999");
-		MotherMask.bind(document.getElementById("phonebr"), "(99) 9 9999-9999");
+		MotherMask.bind(document.getElementById("phonebr"), ["(99) 9999-9999", "(99) 99999-9999"]);
 		MotherMask.bind(document.getElementById("cpf"), "999.999.999-99");
 	</script>
 </body>

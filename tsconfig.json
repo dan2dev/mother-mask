@@ -16,7 +16,6 @@
 		"emitDecoratorMetadata": true,
 		"experimentalDecorators": true,
 		"noEmit": false,
-		"strictNullChecks": true,
 		"lib": [
 			"es5",
 			"es6",

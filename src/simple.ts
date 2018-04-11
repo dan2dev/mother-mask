@@ -93,17 +93,32 @@ export namespace Simple {
 
 	}
 
-	export function process(value: string, mask: string) {
-		const instance = new Mask(value, mask);
-		return instance.process();
+	export function process(value: string, mask: string | string[]) {
+		const m = maskBuilder(value, mask);
+		return m.process();
+	}
+	export function getMaskString(value: string, mask: string | string[]) {
+		if (Array.isArray(mask)) {
+			let i: number = 0;
+			while (value.length > mask[i].length && i < mask.length) {
+				i++;
+			}
+			return mask[i];
+		} else {
+			return mask;
+		}
+	}
+	export function maskBuilder(value: string, mask: string | string[], caret: number = 0): Mask {
+		return new Mask(value, getMaskString(value, mask), caret);
 	}
 
-	export function bind(inputElement: HTMLInputElement | Element, mask: string, callback: ((output: string) => void) | null = null) {
+	export function bind(inputElement: HTMLInputElement | Element, mask: string | string[], callback: ((output: string) => void) | null = null) {
 		inputElement.addEventListener("paste", (e: Event) => {
 			const target = e.target as HTMLInputElement;
 			const oldValue = target.value.toString();
-			requestAnimationFrame(() => {
-				const m = new Mask(target.value, mask);
+			setImmediate(() => {
+				// target.value = process(target.value, mask);
+				const m = maskBuilder(target.value, mask);
 				target.value = m.process();
 				if (callback != null) {
 					callback(target.value);
@@ -121,14 +136,26 @@ export namespace Simple {
 			const isUnidentified = (e.key === "Unidentified");
 			// don't allow to insert more if it's full
 			if (isCharInsert && target.selectionStart === target.selectionEnd) {
-				if (oldValue.length >= mask.length) {
+				let maxLength: number = 0;
+				if (Array.isArray(mask)) {
+					mask.forEach((m) => {
+						if (maxLength < m.length) {
+							maxLength = m.length;
+						}
+					});
+				} else {
+					maxLength = mask.length;
+				}
+				if (oldValue.length >= maxLength ) {
 					e.preventDefault();
 				}
 			}
 			setImmediate(() => {
 				const selStartAfter = target.selectionStart;
-				const m = new Mask(target.value, mask, selStartAfter);
+				// const m =  new Mask(target.value, mask, selStartAfter);
+				const m = maskBuilder(target.value, mask, selStartAfter);
 				target.value = m.process();
+
 				// fix caret position
 				if (isUnidentified) {
 					if (target.value.length > oldValue.length) {
@@ -158,10 +185,5 @@ export namespace Simple {
 		});
 	}
 }
-
-// How to --------------------------
-// Simple.process("01215344139", "999.999.999-99");
-// var element = document.getElementById("mask1") as HTMLInputElement;
-// Simple.bind(element, "999.999.999-99");
 
 export default Simple;

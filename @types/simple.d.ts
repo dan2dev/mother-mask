@@ -22,7 +22,9 @@ export declare namespace Simple {
         private nextIMaskChar();
         private nextIValueChar(type);
     }
-    function process(value: string, mask: string): string;
-    function bind(inputElement: HTMLInputElement | Element, mask: string, callback?: ((output: string) => void) | null): void;
+    function process(value: string, mask: string | string[]): string;
+    function getMaskString(value: string, mask: string | string[]): string;
+    function maskBuilder(value: string, mask: string | string[], caret?: number): Mask;
+    function bind(inputElement: HTMLInputElement | Element, mask: string | string[], callback?: ((output: string) => void) | null): void;
 }
 export default Simple;

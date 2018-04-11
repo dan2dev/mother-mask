@@ -10,12 +10,12 @@
 			"tabs",
 			4
 		],
-		"unified-signatures": false,
-		"no-shadowed-variable": false,
 		"no-namespace": [
 			false,
 			"allow-declarations"
 		],
+		"unified-signatures": false,
+		"no-shadowed-variable": false,
 		"prefer-for-of": false,
 		"no-empty-interface": false,
 		"no-console": false,
