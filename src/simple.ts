@@ -1,4 +1,5 @@
 // made by Danilo Celestino de Castro (dan2dev)
+import "setimmediate";
 import { Is } from "utility-collection";
 
 export namespace Simple {

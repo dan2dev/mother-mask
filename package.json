@@ -55,6 +55,7 @@
 	"homepage": "https://github.com/dan2dev/mother-mask#readme",
 	"dependencies": {
 		"@types/lodash": "^4.14.105",
+		"setimmediate": "^1.0.5",
 		"utility-collection": "^2.1.1"
 	},
 	"devDependencies": {
