@@ -1,6 +1,6 @@
 // made by Danilo Celestino de Castro (dan2dev)
-import "setimmediate";
 import { Is } from "utility-collection";
+const setImmediate = require("setimmediate");
 
 export namespace Simple {
 	export enum CharType { NUMBER, LETTER }
