@@ -1,6 +1,6 @@
 // made by Danilo Celestino de Castro (dan2dev)
 import { Is } from "utility-collection";
-const setImmediate = require("setimmediate");
+import "setimmediate";
 
 export namespace Simple {
 	export enum CharType { NUMBER, LETTER }
@@ -98,7 +98,7 @@ export namespace Simple {
 		const m = maskBuilder(value, mask);
 		return m.process();
 	}
-	export function getMaskString(value: string, mask: string | string[]) {
+	function getMaskString(value: string, mask: string | string[]) {
 		if (Array.isArray(mask)) {
 			let i: number = 0;
 			while (value.length > mask[i].length && i < mask.length) {
@@ -109,11 +109,25 @@ export namespace Simple {
 			return mask;
 		}
 	}
+	function getMaxLength(mask: string | string[]): number {
+		let maxLength: number = 0;
+		if (Array.isArray(mask)) {
+			mask.forEach((m) => {
+				if (maxLength < m.length) {
+					maxLength = m.length;
+				}
+			});
+		} else {
+			maxLength = mask.length;
+		}
+		return maxLength;
+	}
 	export function maskBuilder(value: string, mask: string | string[], caret: number = 0): Mask {
 		return new Mask(value, getMaskString(value, mask), caret);
 	}
 
 	export function bind(inputElement: HTMLInputElement | Element, mask: string | string[], callback: ((output: string) => void) | null = null) {
+		inputElement.setAttribute("maxlength", getMaxLength(mask).toString());
 		inputElement.addEventListener("paste", (e: Event) => {
 			const target = e.target as HTMLInputElement;
 			const oldValue = target.value.toString();
@@ -137,17 +151,7 @@ export namespace Simple {
 			const isUnidentified = (e.key === "Unidentified");
 			// don't allow to insert more if it's full
 			if (isCharInsert && target.selectionStart === target.selectionEnd) {
-				let maxLength: number = 0;
-				if (Array.isArray(mask)) {
-					mask.forEach((m) => {
-						if (maxLength < m.length) {
-							maxLength = m.length;
-						}
-					});
-				} else {
-					maxLength = mask.length;
-				}
-				if (oldValue.length >= maxLength ) {
+				if (oldValue.length >= getMaxLength(mask) ) {
 					e.preventDefault();
 				}
 			}

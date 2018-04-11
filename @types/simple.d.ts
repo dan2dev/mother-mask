@@ -1,3 +1,4 @@
+import "setimmediate";
 export declare namespace Simple {
     enum CharType {
         NUMBER = 0,
@@ -23,7 +24,6 @@ export declare namespace Simple {
         private nextIValueChar(type);
     }
     function process(value: string, mask: string | string[]): string;
-    function getMaskString(value: string, mask: string | string[]): string;
     function maskBuilder(value: string, mask: string | string[], caret?: number): Mask;
     function bind(inputElement: HTMLInputElement | Element, mask: string | string[], callback?: ((output: string) => void) | null): void;
 }
