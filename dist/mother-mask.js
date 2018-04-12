@@ -1478,6 +1478,18 @@ __webpack_require__.r(__webpack_exports__);
 
 var Simple;
 (function (Simple) {
+    // detect ios for fix
+    let isIos;
+    function ios() {
+        if (isIos !== undefined) {
+            return isIos;
+        }
+        else {
+            isIos = /iPad|iPhone|iPod/i.test(navigator.userAgent);
+            return isIos;
+        }
+    }
+    // ------
     let CharType;
     (function (CharType) {
         CharType[CharType["NUMBER"] = 0] = "NUMBER";
@@ -1623,8 +1635,8 @@ var Simple;
                     return false;
                 }
             }
-        });
-        inputElement.addEventListener("keydown", (e) => {
+        }); // , {passive: false}
+        inputElement.addEventListener((ios() ? "keyup" : "keydown"), (e) => {
             const target = e.target;
             const oldValue = target.value.toString();
             // chars -------------------
@@ -1635,8 +1647,10 @@ var Simple;
             // don't allow to insert more if it's full
             if (isCharInsert && target.selectionStart === target.selectionEnd) {
                 if (oldValue.length >= getMaxLength(mask)) {
-                    e.preventDefault();
-                    return false;
+                    if (!ios()) {
+                        e.preventDefault();
+                        return false;
+                    }
                 }
             }
             setImmediate(() => {
@@ -1644,34 +1658,37 @@ var Simple;
                 // const m =  new Mask(target.value, mask, selStartAfter);
                 const m = maskBuilder(target.value, mask, selStartAfter);
                 target.value = m.process();
-                // fix caret position
-                if (isUnidentified) {
-                    if (target.value.length > oldValue.length) {
-                        target.setSelectionRange(m.caret, m.caret);
-                    }
-                    else {
-                        target.setSelectionRange(selStartAfter, selStartAfter);
-                    }
-                }
-                else {
-                    if (isDelete) {
-                        if (oldValue.length === target.value.length) {
-                            target.setSelectionRange(selStartAfter + 1, selStartAfter + 1);
+                setImmediate(() => {
+                    target.value = target.value;
+                    // fix caret position
+                    if (isUnidentified) {
+                        if (target.value.length > oldValue.length) {
+                            target.setSelectionRange(m.caret, m.caret);
                         }
                         else {
                             target.setSelectionRange(selStartAfter, selStartAfter);
                         }
                     }
-                    if (isBackspace) {
-                        target.setSelectionRange(selStartAfter, selStartAfter);
+                    else {
+                        if (isDelete) {
+                            if (oldValue.length === target.value.length) {
+                                target.setSelectionRange(selStartAfter + 1, selStartAfter + 1);
+                            }
+                            else {
+                                target.setSelectionRange(selStartAfter, selStartAfter);
+                            }
+                        }
+                        if (isBackspace) {
+                            target.setSelectionRange(selStartAfter, selStartAfter);
+                        }
+                        if (isCharInsert) {
+                            target.setSelectionRange(m.caret, m.caret);
+                        }
                     }
-                    if (isCharInsert) {
-                        target.setSelectionRange(m.caret, m.caret);
+                    if (callback != null) {
+                        callback(target.value);
                     }
-                }
-                if (callback != null) {
-                    callback(target.value);
-                }
+                });
             });
         });
     }

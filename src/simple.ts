@@ -3,6 +3,17 @@ import { Is } from "utility-collection";
 import "setimmediate";
 
 export namespace Simple {
+	// detect ios for fix
+	let isIos: boolean | undefined;
+	function ios(): boolean {
+		if (isIos !== undefined) {
+			return isIos;
+		} else {
+			isIos = /iPad|iPhone|iPod/i.test(navigator.userAgent);
+			return isIos;
+		}
+	}
+	// ------
 	export enum CharType { NUMBER, LETTER }
 	export interface IMaskChar {
 		position: number;
@@ -125,7 +136,6 @@ export namespace Simple {
 	export function maskBuilder(value: string, mask: string | string[], caret: number = 0): Mask {
 		return new Mask(value, getMaskString(value, mask), caret);
 	}
-
 	export function bind(inputElement: HTMLInputElement | Element, mask: string | string[], callback: ((output: string) => void) | null = null) {
 		inputElement.setAttribute("maxlength", getMaxLength(mask).toString());
 		inputElement.addEventListener("paste", (e: Event) => {
@@ -149,8 +159,8 @@ export namespace Simple {
 					return false;
 				}
 			}
-		});
-		inputElement.addEventListener("keydown", (e: KeyboardEvent) => {
+		}); // , {passive: false}
+		inputElement.addEventListener( (ios() ? "keyup" : "keydown"), (e: KeyboardEvent) => {
 			const target = e.target as HTMLInputElement;
 			const oldValue = target.value.toString();
 			// chars -------------------
@@ -161,8 +171,10 @@ export namespace Simple {
 			// don't allow to insert more if it's full
 			if (isCharInsert && target.selectionStart === target.selectionEnd) {
 				if (oldValue.length >= getMaxLength(mask) ) {
-					e.preventDefault();
-					return false;
+					if (!ios()) {
+						e.preventDefault();
+						return false;
+					}
 				}
 			}
 			setImmediate(() => {
@@ -170,32 +182,34 @@ export namespace Simple {
 				// const m =  new Mask(target.value, mask, selStartAfter);
 				const m = maskBuilder(target.value, mask, selStartAfter);
 				target.value = m.process();
-
-				// fix caret position
-				if (isUnidentified) {
-					if (target.value.length > oldValue.length) {
-						target.setSelectionRange(m.caret, m.caret);
-					} else {
-						target.setSelectionRange(selStartAfter, selStartAfter);
-					}
-				} else {
-					if (isDelete) {
-						if (oldValue.length === target.value.length) {
-							target.setSelectionRange(selStartAfter + 1, selStartAfter + 1);
+				setImmediate(() => {
+					target.value = target.value;
+					// fix caret position
+					if (isUnidentified) {
+						if (target.value.length > oldValue.length) {
+							target.setSelectionRange(m.caret, m.caret);
 						} else {
 							target.setSelectionRange(selStartAfter, selStartAfter);
 						}
+					} else {
+						if (isDelete) {
+							if (oldValue.length === target.value.length) {
+								target.setSelectionRange(selStartAfter + 1, selStartAfter + 1);
+							} else {
+								target.setSelectionRange(selStartAfter, selStartAfter);
+							}
+						}
+						if (isBackspace) {
+							target.setSelectionRange(selStartAfter, selStartAfter);
+						}
+						if (isCharInsert) {
+							target.setSelectionRange(m.caret, m.caret);
+						}
 					}
-					if (isBackspace) {
-						target.setSelectionRange(selStartAfter, selStartAfter);
+					if (callback != null) {
+						callback(target.value);
 					}
-					if (isCharInsert) {
-						target.setSelectionRange(m.caret, m.caret);
-					}
-				}
-				if (callback != null) {
-					callback(target.value);
-				}
+				});
 			});
 		});
 	}
