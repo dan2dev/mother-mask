@@ -136,7 +136,15 @@ export namespace Simple {
 	export function maskBuilder(value: string, mask: string | string[], caret: number = 0): Mask {
 		return new Mask(value, getMaskString(value, mask), caret);
 	}
-	export function bind(inputElement: HTMLInputElement | Element, mask: string | string[], callback: ((output: string) => void) | null = null) {
+	export function bind(
+		inputElement: HTMLInputElement | Element,
+		mask: string | string[],
+		callback: ((output: string) => void) | null = null) {
+		inputElement.setAttribute("autocomplete", "off");
+		inputElement.setAttribute("autocorrect", "off");
+		inputElement.setAttribute("autocapitalize", "off");
+		inputElement.setAttribute("spellcheck", "false");
+
 		inputElement.setAttribute("maxlength", getMaxLength(mask).toString());
 		inputElement.addEventListener("paste", (e: Event) => {
 			const target = e.target as HTMLInputElement;
@@ -154,13 +162,13 @@ export namespace Simple {
 		inputElement.addEventListener("keypress", (e: KeyboardEvent) => {
 			const target = (e.target as HTMLInputElement);
 			if ((target.selectionEnd - target.selectionStart) < 1) {
-				if (target.value.length >= getMaxLength(mask) ) {
+				if (target.value.length >= getMaxLength(mask)) {
 					e.preventDefault();
 					return false;
 				}
 			}
 		}); // , {passive: false}
-		inputElement.addEventListener( (ios() ? "keyup" : "keydown"), (e: KeyboardEvent) => {
+		inputElement.addEventListener((ios() ? "keyup" : "keydown"), (e: KeyboardEvent) => {
 			const target = e.target as HTMLInputElement;
 			const oldValue = target.value.toString();
 			// chars -------------------
@@ -170,7 +178,7 @@ export namespace Simple {
 			const isUnidentified = (e.key === "Unidentified");
 			// don't allow to insert more if it's full
 			if (isCharInsert && target.selectionStart === target.selectionEnd) {
-				if (oldValue.length >= getMaxLength(mask) ) {
+				if (oldValue.length >= getMaxLength(mask)) {
 					if (!ios()) {
 						e.preventDefault();
 						return false;

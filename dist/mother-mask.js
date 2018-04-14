@@ -1614,6 +1614,10 @@ var Simple;
     }
     Simple.maskBuilder = maskBuilder;
     function bind(inputElement, mask, callback = null) {
+        inputElement.setAttribute("autocomplete", "off");
+        inputElement.setAttribute("autocorrect", "off");
+        inputElement.setAttribute("autocapitalize", "off");
+        inputElement.setAttribute("spellcheck", "false");
         inputElement.setAttribute("maxlength", getMaxLength(mask).toString());
         inputElement.addEventListener("paste", (e) => {
             const target = e.target;
