@@ -1,6 +1,5 @@
 // made by Danilo Celestino de Castro (dan2dev)
 import { Is } from "utility-collection";
-import "setimmediate";
 
 export namespace Simple {
 	// detect ios for fix
@@ -136,6 +135,7 @@ export namespace Simple {
 	export function maskBuilder(value: string, mask: string | string[], caret: number = 0): Mask {
 		return new Mask(value, getMaskString(value, mask), caret);
 	}
+	let lockInput: boolean = false;
 	export function bind(
 		inputElement: HTMLInputElement | Element,
 		mask: string | string[],
@@ -158,39 +158,52 @@ export namespace Simple {
 				}
 			});
 		});
-
-		inputElement.addEventListener("keypress", (e: KeyboardEvent) => {
-			const target = (e.target as HTMLInputElement);
-			if ((target.selectionEnd - target.selectionStart) < 1) {
-				if (target.value.length >= getMaxLength(mask)) {
-					e.preventDefault();
-					return false;
-				}
-			}
-		}); // , {passive: false}
 		inputElement.addEventListener((ios() ? "keyup" : "keydown"), (e: KeyboardEvent) => {
+
 			const target = e.target as HTMLInputElement;
-			const oldValue = target.value.toString();
-			// chars -------------------
-			const isBackspace = ("Backspace" === e.key || e.keyCode === 8);
-			const isDelete = ("Delete" === e.key);
-			const isCharInsert = (e.key.length === 1 && !e.ctrlKey && !e.altKey);
-			const isUnidentified = (e.key === "Unidentified");
-			// don't allow to insert more if it's full
-			if (isCharInsert && target.selectionStart === target.selectionEnd) {
-				if (oldValue.length >= getMaxLength(mask)) {
-					if (!ios()) {
-						e.preventDefault();
-						return false;
+
+			if (e.key === undefined) {
+				lockInput = true;
+				requestAnimationFrame(() => {
+					const selStartAfter = target.selectionStart;
+					const m = maskBuilder(target.value, mask, selStartAfter);
+					target.value = m.process();
+					if (e.which === 8) {
+						target.setSelectionRange(selStartAfter, selStartAfter);
+					} else {
+						target.setSelectionRange(m.caret, m.caret);
+					}
+					requestAnimationFrame(() => {
+						lockInput = false;
+					});
+				});
+			} else {
+				const oldValue = target.value.toString();
+				// chars -------------------
+				const isBackspace = (e.key !== undefined) ? ("Backspace" === e.key || e.keyCode === 8) : true;
+				const isDelete = (e.key !== undefined) ? ("Delete" === e.key) : true;
+				const isCharInsert = (e.key !== undefined) ? (e.key.length === 1 && !e.ctrlKey && !e.altKey) : true;
+				const isUnidentified = (e.key !== undefined) ? (e.key === "Unidentified") : false;
+				// don't allow to insert more if it's full
+				if (isCharInsert && target.selectionStart === target.selectionEnd) {
+					if (oldValue.length >= getMaxLength(mask)) {
+						if (!ios()) {
+							e.preventDefault();
+							return false;
+						}
 					}
 				}
-			}
-			setImmediate(() => {
-				const selStartAfter = target.selectionStart;
-				// const m =  new Mask(target.value, mask, selStartAfter);
-				const m = maskBuilder(target.value, mask, selStartAfter);
-				target.value = m.process();
-				setImmediate(() => {
+				if (lockInput) {
+					e.preventDefault();
+					return;
+				}
+				lockInput = true;
+				requestAnimationFrame(() => {
+					const selStartAfter = target.selectionStart;
+					// const m =  new Mask(target.value, mask, selStartAfter);
+					const m = maskBuilder(target.value, mask, selStartAfter);
+					target.value = m.process();
+					// requestAnimationFrame(() => {
 					target.value = target.value;
 					// fix caret position
 					if (isUnidentified) {
@@ -217,8 +230,12 @@ export namespace Simple {
 					if (callback != null) {
 						callback(target.value);
 					}
+					requestAnimationFrame(() => {
+						lockInput = false;
+					});
+					// });
 				});
-			});
+			}
 		});
 	}
 }

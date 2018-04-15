@@ -1,4 +1,3 @@
-import "setimmediate";
 export declare namespace Simple {
     enum CharType {
         NUMBER = 0,
