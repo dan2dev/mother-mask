@@ -1,6 +1,6 @@
 // made by Danilo Celestino de Castro (dan2dev)
 import { Is } from "utility-collection";
-
+const setImmediate = requestAnimationFrame;
 export namespace Simple {
   // detect ios for fix
   let isIos: boolean | undefined;
@@ -180,9 +180,10 @@ export namespace Simple {
       } else {
         const oldValue = target.value.toString();
         // chars -------------------
+        const isMeta = (e.key !== undefined) ? ("Meta" === e.key) : true;
         const isBackspace = (e.key !== undefined) ? ("Backspace" === e.key || e.keyCode === 8) : true;
         const isDelete = (e.key !== undefined) ? ("Delete" === e.key) : true;
-        const isCharInsert = (e.key !== undefined) ? (e.key.length === 1 && !e.ctrlKey && !e.altKey) : true;
+        const isCharInsert = (e.key !== undefined) ? (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) : true;
         const isUnidentified = (e.key !== undefined) ? (e.key === "Unidentified") : false;
         // don't allow to insert more if it's full
         if (isCharInsert && target.selectionStart === target.selectionEnd) {

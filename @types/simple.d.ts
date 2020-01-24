@@ -1,7 +1,7 @@
 export declare namespace Simple {
     enum CharType {
         NUMBER = 0,
-        LETTER = 1,
+        LETTER = 1
     }
     interface IMaskChar {
         position: number;
@@ -19,8 +19,8 @@ export declare namespace Simple {
         private valueChar;
         constructor(value: string, mask: string, caret?: number);
         process(): string;
-        private nextIMaskChar();
-        private nextIValueChar(type);
+        private nextIMaskChar;
+        private nextIValueChar;
     }
     function process(value: string, mask: string | string[]): string;
     function maskBuilder(value: string, mask: string | string[], caret?: number): Mask;
