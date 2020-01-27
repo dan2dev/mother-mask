@@ -23,7 +23,7 @@ export module MotherMask {
     }
   }
 }
-if (window !== undefined) {
+if (typeof window !== 'undefined') {
   (window as any).MotherMask = MotherMask;
 }
 export default MotherMask;

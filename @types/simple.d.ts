@@ -1,3 +1,8 @@
+export declare module Is {
+    function empty(value: any): boolean;
+    function number(value: string): boolean;
+    function letter(value: string): boolean;
+}
 export declare namespace Simple {
     enum CharType {
         NUMBER = 0,

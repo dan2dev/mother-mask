@@ -1,6 +1,26 @@
 // made by Danilo Celestino de Castro (dan2dev)
-import { Is } from "utility-collection";
-const setImmediate = requestAnimationFrame;
+// import { Is } from "utility-collection/src/is";
+export module Is {
+  export function empty(value: any): boolean {
+    if (value === undefined || value === null || value === "") {
+      return true;
+    } else {
+      return false;
+    }
+  }
+  // is Number
+  const numberRegex: RegExp = /\D/;
+  export function number(value: string): boolean {
+    return !numberRegex.test(value);
+  }
+
+  // is Letter
+  const letterRegex: RegExp = /[a-zA-Z]/;
+  export function letter(value: string): boolean {
+    return letterRegex.test(value);
+  }
+}
+
 export namespace Simple {
   // detect ios for fix
   let isIos: boolean | undefined;
@@ -149,7 +169,7 @@ export namespace Simple {
     inputElement.addEventListener("paste", (e: Event) => {
       const target = e.target as HTMLInputElement;
       const oldValue = target.value.toString();
-      setImmediate(() => {
+      requestAnimationFrame(() => {
         // target.value = process(target.value, mask);
         const m = maskBuilder(target.value, mask);
         target.value = m.process();
