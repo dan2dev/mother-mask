@@ -18,9 +18,15 @@ describe('process()', () => {
     expect(process('12345678901', '999.999.999-99')).toBe('123.456.789-01')
   })
 
-  it('applies CNPJ mask', () => {
+  it('applies CNPJ mask (numeric)', () => {
     expect(process('12345678000195', '99.999.999/9999-99')).toBe(
       '12.345.678/0001-95',
+    )
+  })
+
+  it('applies CNPJ alfanumérico mask', () => {
+    expect(process('1AB2C3D45E6F78', 'AA.AAA.AAA/AAAA-99')).toBe(
+      '1A.B2C.3D4/5E6F-78',
     )
   })
 
@@ -86,6 +92,131 @@ describe('process()', () => {
 })
 
 // ---------------------------------------------------------------------------
+// process() — alphanumeric `A` slot
+// ---------------------------------------------------------------------------
+
+describe('process() with alphanumeric A slot', () => {
+  it('A slot accepts digits', () => {
+    expect(process('123', 'AAA')).toBe('123')
+  })
+
+  it('A slot accepts letters', () => {
+    expect(process('abc', 'AAA')).toBe('abc')
+  })
+
+  it('A slot accepts uppercase letters', () => {
+    expect(process('ABC', 'AAA')).toBe('ABC')
+  })
+
+  it('A slot accepts mixed alphanumeric', () => {
+    expect(process('a1B', 'AAA')).toBe('a1B')
+  })
+
+  it('A slot strips non-alphanumeric characters', () => {
+    expect(process('a@1#B!', 'AAA')).toBe('a1B')
+  })
+
+  it('A slot with literal separators', () => {
+    expect(process('1AB2C3', 'AA.AAA.A')).toBe('1A.B2C.3')
+  })
+
+  it('CNPJ alfanumérico — all digits (backward compatible)', () => {
+    expect(process('12345678000195', 'AA.AAA.AAA/AAAA-99')).toBe(
+      '12.345.678/0001-95',
+    )
+  })
+
+  it('CNPJ alfanumérico — mixed alphanumeric', () => {
+    expect(process('1AB2C3D45E6F78', 'AA.AAA.AAA/AAAA-99')).toBe(
+      '1A.B2C.3D4/5E6F-78',
+    )
+  })
+
+  it('CNPJ alfanumérico — all letters in alphanumeric slots', () => {
+    expect(process('ABCDEFGHIJKL12', 'AA.AAA.AAA/AAAA-99')).toBe(
+      'AB.CDE.FGH/IJKL-12',
+    )
+  })
+
+  it('CNPJ alfanumérico — partial input', () => {
+    expect(process('1AB2C', 'AA.AAA.AAA/AAAA-99')).toBe('1A.B2C')
+  })
+
+  it('CNPJ alfanumérico — strips special chars from input', () => {
+    expect(process('1A.B2C.3D4/5E6F-78', 'AA.AAA.AAA/AAAA-99')).toBe(
+      '1A.B2C.3D4/5E6F-78',
+    )
+  })
+
+  it('mixed A and 9 slots — digits only fill both', () => {
+    expect(process('1234', 'AA-99')).toBe('12-34')
+  })
+
+  it('mixed A and 9 slots — letters rejected by 9 slot', () => {
+    expect(process('12AB', 'AA-99')).toBe('12')
+  })
+
+  it('mixed A and Z slots — letters only fill both', () => {
+    expect(process('abcd', 'AA-ZZ')).toBe('ab-cd')
+  })
+
+  it('mixed A and Z slots — digits rejected by Z slot', () => {
+    expect(process('a1b2', 'AA-ZZ')).toBe('a1-b')
+  })
+
+  it('A slot with only non-alphanumeric input → empty', () => {
+    expect(process('@#$%', 'AAA')).toBe('')
+  })
+
+  it('A, 9, Z slots combined', () => {
+    expect(process('a1b', 'A9Z')).toBe('a1b')
+  })
+
+  it('A, 9, Z combined — digit in Z slot skipped', () => {
+    expect(process('a12', 'A9Z')).toBe('a1')
+  })
+
+  it('A, 9, Z combined — letter in 9 slot skipped, no digit available', () => {
+    expect(process('abc', 'A9Z')).toBe('a')
+  })
+
+  it('single A slot with digit', () => {
+    expect(process('5', 'A')).toBe('5')
+  })
+
+  it('single A slot with letter', () => {
+    expect(process('x', 'A')).toBe('x')
+  })
+
+  it('single A slot with special char', () => {
+    expect(process('@', 'A')).toBe('')
+  })
+
+  it('A slot truncates excess characters', () => {
+    expect(process('abcd123', 'AA-AA')).toBe('ab-cd')
+  })
+
+  it('CPF/CNPJ array mask — selects CPF for 11-digit input', () => {
+    const masks = ['999.999.999-99', 'AA.AAA.AAA/AAAA-99']
+    expect(process('12345678901', masks)).toBe('123.456.789-01')
+  })
+
+  it('CPF/CNPJ array mask — selects CNPJ for longer input (re-masking)', () => {
+    const masks = ['999.999.999-99', 'AA.AAA.AAA/AAAA-99']
+    // Already-masked CNPJ value (19 chars > 14) triggers second mask
+    expect(process('1A.B2C.3D4/5E6F-78', masks)).toBe('1A.B2C.3D4/5E6F-78')
+  })
+
+  it('vehicle plate mask — old format (AAA-9999)', () => {
+    expect(process('ABC1234', 'ZZZ-9999')).toBe('ABC-1234')
+  })
+
+  it('vehicle plate mask — new Mercosul format (AAA9A99)', () => {
+    expect(process('ABC1D23', 'ZZZ9A99')).toBe('ABC1D23')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // process() — array masks
 // ---------------------------------------------------------------------------
 
@@ -130,6 +261,14 @@ describe('getMaxLength()', () => {
   it('returns 0 for empty array mask', () => {
     expect(getMaxLength([])).toBe(0)
   })
+
+  it('returns correct length for alphanumeric mask', () => {
+    expect(getMaxLength('AA.AAA.AAA/AAAA-99')).toBe(18)
+  })
+
+  it('returns max for CPF/CNPJ array mask', () => {
+    expect(getMaxLength(['999.999.999-99', 'AA.AAA.AAA/AAAA-99'])).toBe(18)
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -164,6 +303,23 @@ describe('buildMask()', () => {
   it('resolves array mask before creating Mask', () => {
     const m = buildMask('12345678', ['999-999', '999-999-999'])
     expect(m.process()).toBe('123-456-78')
+  })
+
+  it('processes CNPJ alfanumérico via Mask instance', () => {
+    expect(buildMask('1AB2C3D45E6F78', 'AA.AAA.AAA/AAAA-99').process()).toBe(
+      '1A.B2C.3D4/5E6F-78',
+    )
+  })
+
+  it('caret with A slot — jumps past literal', () => {
+    const m = buildMask('1AB', 'AA-AA', 3)
+    m.process()
+    expect(m.caret).toBe(4) // "1A-B"
+  })
+
+  it('resolves CPF/CNPJ array mask to CNPJ for long alphanumeric', () => {
+    const m = buildMask('1A.B2C.3D4/5E6F-78', ['999.999.999-99', 'AA.AAA.AAA/AAAA-99'])
+    expect(m.process()).toBe('1A.B2C.3D4/5E6F-78')
   })
 })
 
@@ -378,6 +534,67 @@ describe('applyMask() — caret tracking', () => {
     })
   })
 
+  // -- Alphanumeric A slot caret tracking ------------------------------------
+
+  it('A slot — typing digit at end', () => {
+    const r = applyMask('1', 'AA-AA', 1)
+    expect(r.value).toBe('1')
+    expect(r.caret).toBe(1)
+  })
+
+  it('A slot — typing letter at end', () => {
+    const r = applyMask('1A', 'AA-AA', 2)
+    expect(r.value).toBe('1A')
+    expect(r.caret).toBe(2)
+  })
+
+  it('A slot — third char triggers literal separator', () => {
+    const r = applyMask('1AB', 'AA-AA', 3)
+    expect(r.value).toBe('1A-B')
+    expect(r.caret).toBe(4)
+  })
+
+  it('A slot — insert in middle with literal', () => {
+    // "1A-B" → insert 'X' between '1' and 'A' → "1XA-B", caret=2
+    const r = applyMask('1XA-B', 'AA-AA', 2)
+    expect(r.value).toBe('1X-AB')
+    expect(r.caret).toBe(2)
+  })
+
+  it('A slot — non-alphanumeric skipped, caret unaffected', () => {
+    // "@1A" with caret=1 → '@' before caret is skipped
+    const r = applyMask('@1A', 'AA', 1)
+    expect(r.value).toBe('1A')
+    expect(r.caret).toBe(0)
+  })
+
+  it('CNPJ alfanumérico — full typing sequence', () => {
+    const mask = 'AA.AAA.AAA/AAAA-99'
+
+    // Type '1'
+    expect(applyMask('1', mask, 1)).toEqual({ value: '1', caret: 1 })
+    // Type 'A' → "1A"
+    expect(applyMask('1A', mask, 2)).toEqual({ value: '1A', caret: 2 })
+    // Type 'B' → "1AB", literal '.' appears
+    expect(applyMask('1AB', mask, 3)).toEqual({ value: '1A.B', caret: 4 })
+    // Type '2' → "1A.B2"
+    expect(applyMask('1A.B2', mask, 5)).toEqual({ value: '1A.B2', caret: 5 })
+    // Fill rest: "1A.B2C.3D4/5E6F-78" (18 chars = mask length)
+    expect(applyMask('1A.B2C.3D4/5E6F-78', mask, 19)).toEqual({
+      value: '1A.B2C.3D4/5E6F-78',
+      caret: 18,
+    })
+  })
+
+  it('CNPJ alfanumérico — caret past digits-only check digits', () => {
+    const mask = 'AA.AAA.AAA/AAAA-99'
+    // Last two slots are '9' — letter should be rejected
+    // "1AB2C3D45E6FAB" → check digit slots expect digits, 'A','B' skipped
+    const r = applyMask('1AB2C3D45E6FAB', mask, 14)
+    expect(r.value).toBe('1A.B2C.3D4/5E6F')
+    expect(r.caret).toBe(15)
+  })
+
   // -- CPF mask typing sequence ---------------------------------------------
 
   it('CPF mask — typing sequence', () => {
@@ -415,6 +632,8 @@ describe('applyMask() — value output', () => {
       ['01012024', '99/99/9999'],
       ['abc123', '999'],
       ['A1B2', 'Z9Z9'],
+      ['1AB2C3D45E6F78', 'AA.AAA.AAA/AAAA-99'],
+      ['a1B', 'AAA'],
     ]
     for (const [value, mask] of cases) {
       expect(applyMask(value, mask).value).toBe(process(value, mask))

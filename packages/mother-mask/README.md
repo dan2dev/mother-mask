@@ -40,9 +40,10 @@ Apply a mask to a raw string without touching the DOM. Useful for formatting sto
 ```ts
 import { process } from 'mother-mask'
 
-process('12345678901', '999.999.999-99') // → "123.456.789-01"
-process('01012024',   '99/99/9999')      // → "01/01/2024"
-process('01310100',   '99999-999')       // → "01310-100"
+process('12345678901', '999.999.999-99')       // → "123.456.789-01"
+process('01012024',   '99/99/9999')            // → "01/01/2024"
+process('01310100',   '99999-999')             // → "01310-100"
+process('1AB2C3D45E6F78', 'AA.AAA.AAA/AAAA-99') // → "1A.B2C.3D4/5E6F-78"
 ```
 
 ## Pattern syntax
@@ -51,6 +52,7 @@ process('01310100',   '99999-999')       // → "01310-100"
 |-----------|----------------|
 | `9`       | Digit (0–9)    |
 | `Z`       | Letter (a–z, A–Z) |
+| `A`       | Alphanumeric (0–9, a–z, A–Z) |
 | anything else | Literal — inserted automatically |
 
 ## Array masks
@@ -61,8 +63,8 @@ Pass an ordered array (shortest → longest) to support variable-length inputs. 
 // Brazilian phone: 8-digit → 9-digit landline / mobile
 bind(input, ['(99) 9999-9999', '(99) 99999-9999'])
 
-// CPF / CNPJ
-bind(input, ['999.999.999-99', '99.999.999/9999-99'])
+// CPF / CNPJ alfanumérico
+bind(input, ['999.999.999-99', 'AA.AAA.AAA/AAAA-99'])
 ```
 
 ## UMD / CDN

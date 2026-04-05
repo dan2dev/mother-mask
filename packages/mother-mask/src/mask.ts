@@ -1,10 +1,12 @@
 /**
  * Mask pattern — a single pattern string or an array ordered from shortest to longest.
- * `9` matches a digit, `Z` matches a letter, anything else is a literal character.
+ * `9` matches a digit, `Z` matches a letter, `A` matches alphanumeric (digit or letter),
+ * anything else is a literal character.
  *
  * @example
  * '(99) 99999-9999'
  * ['(99) 9999-9999', '(99) 99999-9999']
+ * 'AA.AAA.AAA/AAAA-99'  // CNPJ alfanumérico
  */
 export type MaskPattern = string | string[]
 
@@ -27,7 +29,10 @@ function isLetterChar(ch: string): boolean {
 }
 
 function matchesSlot(ch: string, slot: string): boolean {
-  return slot === '9' ? isDigitChar(ch) : isLetterChar(ch)
+  if (slot === '9') return isDigitChar(ch)
+  if (slot === 'Z') return isLetterChar(ch)
+  // slot === 'A' → alphanumeric
+  return isDigitChar(ch) || isLetterChar(ch)
 }
 
 // ---------------------------------------------------------------------------
@@ -77,7 +82,7 @@ export function applyMask(value: string, mask: string, inputCaret = 0): MaskResu
   for (let maskIdx = 0; maskIdx < mask.length; maskIdx++) {
     const maskCh = mask[maskIdx]
 
-    if (maskCh !== '9' && maskCh !== 'Z') {
+    if (maskCh !== '9' && maskCh !== 'Z' && maskCh !== 'A') {
       pending += maskCh
       continue
     }
