@@ -1,5 +1,7 @@
 {
   "name": "mother-mask-workspace",
   "private": true,
-  "workspaces": ["packages/mother-mask"]
+  "workspaces": [
+    "packages/mother-mask"
+  ]
 }

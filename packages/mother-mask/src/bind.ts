@@ -30,11 +30,11 @@ export function bind(
   if (input.getAttribute(MASKED_ATTR) !== null) return
 
   input.setAttribute(MASKED_ATTR, Array.isArray(mask) ? mask.join('|') : mask)
-  input.setAttribute('autocomplete', 'off')
-  input.setAttribute('autocorrect', 'off')
-  input.setAttribute('autocapitalize', 'off')
-  input.setAttribute('spellcheck', 'false')
-  input.setAttribute('maxlength', String(getMaxLength(mask)))
+  if (!input.hasAttribute('autocomplete')) input.setAttribute('autocomplete', 'off')
+  if (!input.hasAttribute('autocorrect')) input.setAttribute('autocorrect', 'off')
+  if (!input.hasAttribute('autocapitalize')) input.setAttribute('autocapitalize', 'off')
+  if (!input.hasAttribute('spellcheck')) input.setAttribute('spellcheck', 'false')
+  if (!input.hasAttribute('maxlength')) input.setAttribute('maxlength', String(getMaxLength(mask)))
 
   let lockInput = false
 
