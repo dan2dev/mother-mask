@@ -200,3 +200,60 @@ describe('bind() — event handlers', () => {
     expect(input.value).toBe('1A.B2C.3D4/5E6F-78')
   })
 })
+
+describe('bind() — caret / selection vs applyMask', () => {
+  let input: HTMLInputElement
+
+  beforeEach(() => {
+    input = document.createElement('input')
+    document.body.appendChild(input)
+  })
+
+  afterEach(() => {
+    input.remove()
+    vi.unstubAllGlobals()
+    vi.resetModules()
+  })
+
+  it('selection matches applyMask caret after digit keydown (simulated post-input value)', async () => {
+    const { bind, applyMask } = await import('../src/index')
+    const mask = '99-99'
+    bind(input, mask)
+    input.value = '1'
+    input.setSelectionRange(1, 1)
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: '1', bubbles: true, cancelable: true }),
+    )
+    await flushRafs()
+    expect(input.selectionStart).toBe(applyMask('1', mask, 1).caret)
+  })
+
+  it('selection at end of masked value matches applyMask', async () => {
+    const { bind, applyMask } = await import('../src/index')
+    const mask = '99-99'
+    bind(input, mask)
+    input.value = '12-34'
+    const pos = 5
+    input.setSelectionRange(pos, pos)
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'x', bubbles: true, cancelable: true }),
+    )
+    await flushRafs()
+    expect(input.selectionStart).toBe(applyMask(input.value, mask, pos).caret)
+  })
+
+  it('CNPJ alfanumérico: selection after keydown matches applyMask for displayed value', async () => {
+    const { bind, applyMask } = await import('../src/index')
+    const mask = 'AA.AAA.AAA/AAAA-99'
+    bind(input, mask)
+    // Simula o valor já mascarado após o último dígito verificador (como no próximo rAF).
+    input.value = '1A.B2C.3D4/5E6F-78'
+    const pos = input.value.length
+    input.setSelectionRange(pos, pos)
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: '8', bubbles: true, cancelable: true }),
+    )
+    await flushRafs()
+    expect(input.selectionStart).toBe(applyMask(input.value, mask, pos).caret)
+  })
+})
