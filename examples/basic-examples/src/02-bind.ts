@@ -18,9 +18,9 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <p class="hint"><code>bind(input, '999.999.999-99')</code></p>
     </div>
     <div class="field">
-      <label for="cnpj">CNPJ</label>
-      <input id="cnpj" placeholder="00.000.000/0000-00" inputmode="numeric" />
-      <p class="hint"><code>bind(input, '99.999.999/9999-99')</code></p>
+      <label for="cnpj">CNPJ alfanumérico</label>
+      <input id="cnpj" placeholder="AA.AAA.AAA/AAAA-99" inputmode="text" />
+      <p class="hint"><code>bind(input, 'AA.AAA.AAA/AAAA-99')</code> — dígitos ou letras nas posições base</p>
     </div>
     <div class="field">
       <label for="date">Date</label>
@@ -42,7 +42,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 `
 
 bind(document.querySelector<HTMLInputElement>('#cpf')!,   '999.999.999-99')
-bind(document.querySelector<HTMLInputElement>('#cnpj')!,  '99.999.999/9999-99')
+bind(document.querySelector<HTMLInputElement>('#cnpj')!,  'AA.AAA.AAA/AAAA-99')
 bind(document.querySelector<HTMLInputElement>('#date')!,  '99/99/9999')
 bind(document.querySelector<HTMLInputElement>('#cep')!,   '99999-999')
 bind(document.querySelector<HTMLInputElement>('#plate')!, 'ZZZ-9999')

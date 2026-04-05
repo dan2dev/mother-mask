@@ -3,7 +3,8 @@ import { process } from 'mother-mask'
 
 const examples = [
   { label: 'CPF',          raw: '12345678901',    mask: '999.999.999-99'      },
-  { label: 'CNPJ',         raw: '12345678000195', mask: '99.999.999/9999-99'  },
+  // CNPJ alfanumérico (Receita Federal): 12 base + 2 dígitos verificadores; máscara com slots A.
+  { label: 'CNPJ (alfa)',  raw: '1AB2C3D45E6F78', mask: 'AA.AAA.AAA/AAAA-99' },
   { label: 'Date',         raw: '25122025',       mask: '99/99/9999'          },
   { label: 'CEP',          raw: '01310100',       mask: '99999-999'           },
   { label: 'Phone',        raw: '11987654321',    mask: '(99) 99999-9999'     },
@@ -50,7 +51,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <input id="raw" placeholder="type digits or letters…" />
     </div>
     <div class="field">
-      <label for="mask-pat">Mask pattern &nbsp;<span class="badge">9 = digit &nbsp; Z = letter</span></label>
+      <label for="mask-pat">Mask pattern &nbsp;<span class="badge">9 = digit &nbsp; Z = letter &nbsp; A = alphanumeric</span></label>
       <input id="mask-pat" value="999.999.999-99" />
     </div>
     <div class="output" id="live-out">—</div>
