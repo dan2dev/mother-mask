@@ -1,3 +1,4 @@
-export type { MaskPattern, MaskResult } from './mask'
-export { applyMask, process, buildMask, getMaxLength, Mask } from './mask'
+export type { BindOptions, MaskPattern, MaskResult } from './types'
+export { applyMask } from './apply-mask'
 export { bind } from './bind'
+export { buildMask, getMaxLength, Mask, process } from './mask'

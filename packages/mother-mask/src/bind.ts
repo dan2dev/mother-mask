@@ -1,15 +1,15 @@
-import type { MaskPattern } from './mask'
 import { buildMask, getMaxLength } from './mask'
+import { isIos } from './platform'
+import type { BindOptions, MaskPattern } from './types'
 
 const MASKED_ATTR = 'data-masked'
 
-let cachedIsIos: boolean | undefined
-
-function isIos(): boolean {
-  if (cachedIsIos !== undefined) return cachedIsIos
-  cachedIsIos =
-    typeof navigator !== 'undefined' && /iPad|iPhone|iPod/i.test(navigator.userAgent)
-  return cachedIsIos
+function toBindOptions(
+  third: BindOptions | ((value: string) => void) | null | undefined,
+): BindOptions {
+  if (third == null) return {}
+  if (typeof third === 'function') return { onChange: third }
+  return third
 }
 
 /**
@@ -18,36 +18,62 @@ function isIos(): boolean {
  * Idempotent — calling `bind()` on an already-bound element has no effect.
  * The element receives a `data-masked` attribute marking it as bound.
  *
- * @param input   - Any `HTMLInputElement` or `Element` that behaves like one.
- * @param mask    - A single pattern string or an ordered array (shortest → longest).
- * @param callback - Optional callback called with the masked value on every change.
+ * Returns a function that removes listeners and clears `data-masked` so the
+ * element can be bound again later.
+ *
+ * @param input - Any `HTMLInputElement` or `Element` that behaves like one.
+ * @param mask - A single pattern string or an ordered array (shortest → longest).
+ * @param options - Optional `{ onChange }`, or pass a callback (legacy) as the third argument.
  */
 export function bind(
   input: HTMLInputElement | Element,
   mask: MaskPattern,
-  callback: ((value: string) => void) | null = null,
-): void {
-  if (input.getAttribute(MASKED_ATTR) !== null) return
+  options?: BindOptions | null,
+): () => void
+export function bind(
+  input: HTMLInputElement | Element,
+  mask: MaskPattern,
+  onChange: ((value: string) => void) | null,
+): () => void
+export function bind(
+  input: HTMLInputElement | Element,
+  mask: MaskPattern,
+  third?: BindOptions | ((value: string) => void) | null,
+): () => void {
+  if (input.getAttribute(MASKED_ATTR) !== null) return () => {}
+
+  const { onChange } = toBindOptions(third)
+
+  /** Attribute names set by this bind call; removed on dispose so a later `bind()` can re-apply. */
+  const attrsSetHere: string[] = []
+  const setIfMissing = (name: string, value: string): void => {
+    if (!input.hasAttribute(name)) {
+      input.setAttribute(name, value)
+      attrsSetHere.push(name)
+    }
+  }
 
   input.setAttribute(MASKED_ATTR, Array.isArray(mask) ? mask.join('|') : mask)
-  if (!input.hasAttribute('autocomplete')) input.setAttribute('autocomplete', 'off')
-  if (!input.hasAttribute('autocorrect')) input.setAttribute('autocorrect', 'off')
-  if (!input.hasAttribute('autocapitalize')) input.setAttribute('autocapitalize', 'off')
-  if (!input.hasAttribute('spellcheck')) input.setAttribute('spellcheck', 'false')
-  if (!input.hasAttribute('maxlength')) input.setAttribute('maxlength', String(getMaxLength(mask)))
+  setIfMissing('autocomplete', 'off')
+  setIfMissing('autocorrect', 'off')
+  setIfMissing('autocapitalize', 'off')
+  setIfMissing('spellcheck', 'false')
+  setIfMissing('maxlength', String(getMaxLength(mask)))
 
   let lockInput = false
 
-  input.addEventListener('paste', (e: Event) => {
+  const keyEventName = isIos() ? 'keyup' : 'keydown'
+
+  const onPaste = (e: Event): void => {
     const target = e.target as HTMLInputElement
     requestAnimationFrame(() => {
       const m = buildMask(target.value, mask)
       target.value = m.process()
-      callback?.(target.value)
+      onChange?.(target.value)
     })
-  })
+  }
 
-  input.addEventListener(isIos() ? 'keyup' : 'keydown', (e: Event) => {
+  const onKey = (e: Event): void => {
     const ke = e as KeyboardEvent
     const target = ke.target as HTMLInputElement
     const oldValue = target.value
@@ -105,10 +131,20 @@ export function bind(
         target.setSelectionRange(m.caret, m.caret)
       }
 
-      callback?.(target.value)
+      onChange?.(target.value)
       requestAnimationFrame(() => {
         lockInput = false
       })
     })
-  })
+  }
+
+  input.addEventListener('paste', onPaste)
+  input.addEventListener(keyEventName, onKey)
+
+  return () => {
+    input.removeEventListener('paste', onPaste)
+    input.removeEventListener(keyEventName, onKey)
+    input.removeAttribute(MASKED_ATTR)
+    for (const name of attrsSetHere) input.removeAttribute(name)
+  }
 }

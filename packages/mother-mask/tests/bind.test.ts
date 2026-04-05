@@ -32,6 +32,16 @@ describe('bind() — event handlers', () => {
     expect(input.value).toBe('123.456.789-01')
   })
 
+  it('invokes onChange from options object after paste', async () => {
+    const { bind } = await import('../src/index')
+    const cb = vi.fn()
+    bind(input, '999.999.999-99', { onChange: cb })
+    input.value = '12345678901'
+    input.dispatchEvent(new Event('paste', { bubbles: true }))
+    await flushRafs(1)
+    expect(cb).toHaveBeenCalledWith('123.456.789-01')
+  })
+
   it('invokes callback after paste', async () => {
     const { bind } = await import('../src/index')
     const cb = vi.fn()
@@ -180,6 +190,24 @@ describe('bind() — event handlers', () => {
     )
     await flushRafs()
     expect(input.selectionStart).toBeGreaterThanOrEqual(0)
+  })
+
+  it('idempotent second bind returns noop dispose', async () => {
+    const { bind } = await import('../src/index')
+    bind(input, '999')
+    const noop = bind(input, '999')
+    expect(noop()).toBeUndefined()
+  })
+
+  it('dispose removes listeners and data-masked so bind can run again', async () => {
+    const { bind } = await import('../src/index')
+    const unbind = bind(input, '999')
+    expect(input.getAttribute('data-masked')).toBe('999')
+    unbind()
+    expect(input.getAttribute('data-masked')).toBeNull()
+    bind(input, '99-99')
+    expect(input.getAttribute('data-masked')).toBe('99-99')
+    expect(input.getAttribute('maxlength')).toBe('5')
   })
 
   it('masks array pattern on paste', async () => {
