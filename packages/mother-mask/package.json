@@ -1,0 +1,71 @@
+{
+  "name": "mother-mask",
+  "private": false,
+  "version": "2.0.1",
+  "type": "module",
+  "description": "Lightweight input mask library for browsers",
+  "author": "Danilo Celestino de Castro <dan2dev>",
+  "license": "MIT",
+  "keywords": [
+    "input",
+    "mask",
+    "form"
+  ],
+  "main": "./dist/mother-mask.cjs",
+  "module": "./dist/mother-mask.mjs",
+  "browser": "./dist/mother-mask.umd.js",
+  "types": "./dist/mother-mask.d.mts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/mother-mask.d.mts",
+        "default": "./dist/mother-mask.mjs"
+      },
+      "require": {
+        "types": "./dist/mother-mask.d.cts",
+        "default": "./dist/mother-mask.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest --watch --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "release": "bumpp",
+    "prepublishOnly": "pnpm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@eslint/json": "^1.2.0",
+    "@eslint/markdown": "^8.0.1",
+    "@types/node": "^25.5.2",
+    "@typescript/native-preview": "7.0.0-dev.20260405.1",
+    "@vitest/coverage-v8": "^4.1.2",
+    "bumpp": "^11.0.1",
+    "eslint": "^10.1.0",
+    "globals": "^17.4.0",
+    "jsdom": "^29.0.1",
+    "tsdown": "^0.21.7",
+    "typescript": "^6.0.2",
+    "typescript-eslint": "^8.58.0",
+    "vitest": "^4.1.2"
+  },
+  "packageManager": "pnpm@10.33.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dan2dev/mother-mask.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dan2dev/mother-mask/issues"
+  },
+  "homepage": "https://github.com/dan2dev/mother-mask#readme"
+}
