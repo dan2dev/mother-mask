@@ -1,30 +1,32 @@
-# mother-mask
-The Mother-Mask is a simple and definitive Js library to implement text mask using a pattern.
+# mother-mask workspace
 
+Monorepo for [mother-mask](https://www.npmjs.com/package/mother-mask) and related projects.
 
-## How to Install
+## Structure
+
+```
+mother-mask/
+├── packages/
+│   └── mother-mask/   # published npm package
+├── Makefile           # workspace-level commands
+└── .gitignore
+```
+
+## Quick start
 
 ```bash
-$ npm install mother-mask --save
+make install   # install all dependencies
+make test      # run tests
+make build     # build the library
+make dev       # watch mode
 ```
 
-### How to Use ###
+## Publish
 
-```javascript
-	// get the input element
-	// vanilla javascript
-	var phoneInputElement = document.getElementById("myphoneinput");
-	// Jquery
-	var phoneInputElement = $("#myphoneinput")[0];
-
-	// bind the element with the mask
-	MotherMask.bind(phoneInputElement, "999.999.999-99");
-
-	// create dynamic mask
-	MotherMask.bind(phoneInputElement, ["(99) 9999-9999", "(99) 99999-9999"]);
-
+```bash
+make publish              # bump patch → publish
+make publish BUMP=minor
+make publish BUMP=major
 ```
 
-### Simple Working demo
-
-**[Working demo!](https://stackblitz.com/edit/mother-mask-sample)**
+See [`packages/mother-mask/README.md`](packages/mother-mask/README.md) for full documentation.
