@@ -33,6 +33,7 @@
   ],
   "scripts": {
     "build": "tsdown",
+    "build:watch": "tsdown --watch",
     "dev": "tsdown --watch",
     "clean": "rm -rf dist *.tsbuildinfo",
     "test": "vitest run --coverage",
