@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mother-mask — simple demo</title>
+  </head>
+  <body>
+    <div class="wrapper">
+      <h1>mother-mask</h1>
+      <p class="subtitle">Simple demo — live input masks with <code>bind()</code></p>
+
+      <form id="demo-form" novalidate>
+        <div class="field">
+          <label for="name">Company name</label>
+          <input id="name" type="text" placeholder="Acme Ltda" />
+        </div>
+
+        <div class="field">
+          <label for="cnpj">CNPJ</label>
+          <input id="cnpj" placeholder="AA.AAA.AAA/AAAA-00" />
+          <span class="hint" id="cnpj-hint">12 alphanumeric + 2 digits</span>
+        </div>
+
+        <div class="field">
+          <label for="phone">Phone</label>
+          <input id="phone" placeholder="(00) 00000-0000" inputmode="numeric" />
+          <span class="hint" id="phone-hint">10 or 11 digits</span>
+        </div>
+
+        <div class="field">
+          <label for="cep">CEP</label>
+          <input id="cep" placeholder="00000-000" inputmode="numeric" />
+          <span class="hint" id="cep-hint">8 digits</span>
+        </div>
+
+        <button type="submit">Submit</button>
+      </form>
+
+      <pre id="output" style="display:none"></pre>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
