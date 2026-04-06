@@ -132,15 +132,21 @@ describe('bind() — event handlers', () => {
     expect(input.value).toBe('12-3')
   })
 
-  it('second keydown while input is locked is prevented', async () => {
+  it('fast typing: second keydown is never swallowed while first rAF is pending', async () => {
     const { bind } = await import('../src/index')
     bind(input, '999-999')
+    // Simulate the browser inserting both characters before any rAF fires.
+    input.value = '12'
+    input.setSelectionRange(2, 2)
     const first = new KeyboardEvent('keydown', { key: '1', bubbles: true, cancelable: true })
     const second = new KeyboardEvent('keydown', { key: '2', bubbles: true, cancelable: true })
     input.dispatchEvent(first)
     input.dispatchEvent(second)
-    expect(second.defaultPrevented).toBe(true)
+    // Neither event should be cancelled — fast typing must not drop characters.
+    expect(first.defaultPrevented).toBe(false)
+    expect(second.defaultPrevented).toBe(false)
     await flushRafs()
+    expect(input.value).toBe('12')
   })
 
   it('handles keydown with missing key (Android WebView style)', async () => {

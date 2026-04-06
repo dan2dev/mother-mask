@@ -19,7 +19,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     </div>
     <div class="field">
       <label for="cnpj">CNPJ alfanumérico</label>
-      <input id="cnpj" placeholder="AA.AAA.AAA/AAAA-99" inputmode="text" />
+      <input id="cnpj" placeholder="AA.AAA.AAA/AAAA-99" inputmode="text" style="text-transform:uppercase" />
       <p class="hint"><code>bind(input, 'AA.AAA.AAA/AAAA-99')</code> — dígitos ou letras nas posições base</p>
     </div>
     <div class="field">

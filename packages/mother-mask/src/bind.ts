@@ -108,12 +108,13 @@ export function bind(
       }
     }
 
+    // `lockInput` is only set by the Android WebView path above; block normal
+    // key events while that asynchronous path is in flight.
     if (lockInput) {
       ke.preventDefault()
       return
     }
 
-    lockInput = true
     requestAnimationFrame(() => {
       const pos = target.selectionStart ?? 999
       const m = buildMask(target.value, mask, pos)
@@ -132,9 +133,6 @@ export function bind(
       }
 
       onChange?.(target.value)
-      requestAnimationFrame(() => {
-        lockInput = false
-      })
     })
   }
 
