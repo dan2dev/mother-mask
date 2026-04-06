@@ -1,32 +1,16 @@
-# mother-mask workspace
+# mother-mask
 
-Monorepo for [mother-mask](https://www.npmjs.com/package/mother-mask) and related projects.
+Lightweight input mask library for browsers. Zero runtime dependencies, TypeScript-first, ships **ESM**, **CJS**, and **UMD**.
 
-## Structure
+Published as [`mother-mask` on npm](https://www.npmjs.com/package/mother-mask).
 
-```
-mother-mask/
-├── packages/
-│   └── mother-mask/   # published npm package
-├── Makefile           # workspace-level commands
-└── .gitignore
-```
+| | |
+|--|--|
+| **Library** (install, usage, API) | [`packages/mother-mask/README.md`](packages/mother-mask/README.md) |
+| **Repository** (layout, development, publish) | [`REPOSITORY.md`](REPOSITORY.md) |
 
-## Quick start
+The library README is the canonical copy for package consumers; this file only points to it and to repository docs so they stay in one place each.
 
-```bash
-make install   # install all dependencies
-make test      # run tests
-make build     # build the library
-make dev       # watch mode
-```
+## License
 
-## Publish
-
-```bash
-make publish              # bump patch → publish
-make publish BUMP=minor
-make publish BUMP=major
-```
-
-See [`packages/mother-mask/README.md`](packages/mother-mask/README.md) for full documentation.
+MIT — [Danilo Celestino de Castro](https://github.com/dan2dev)

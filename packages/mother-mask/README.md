@@ -1,6 +1,8 @@
 # mother-mask
 
-Lightweight input mask library for browsers. Zero dependencies, TypeScript-first, ships ESM + CJS + UMD.
+Lightweight input mask library for browsers. Zero runtime dependencies, TypeScript-first, ships **ESM**, **CJS**, and **UMD**.
+
+Published as [`mother-mask` on npm](https://www.npmjs.com/package/mother-mask).
 
 ## Install
 
@@ -12,9 +14,13 @@ pnpm add mother-mask
 
 ## Usage
 
-### `bind(input, mask, callback?)` — DOM binding
+### `bind(input, mask, options?)`
 
-Attach a mask to any input element. Idempotent — calling `bind()` twice on the same element has no effect.
+Attach a mask to any input element — this is the main API.
+
+- **Idempotent** — calling `bind()` again on the same element does nothing (the element is marked with `data-masked`).
+- **Returns a dispose function** — call it to remove listeners and attributes so you can bind again later.
+- Sets sensible defaults when missing: `autocomplete`, `autocorrect`, `autocapitalize`, `spellcheck`, and `maxlength` from the mask.
 
 ```ts
 import { bind } from 'mother-mask'
@@ -22,48 +28,38 @@ import { bind } from 'mother-mask'
 const input = document.getElementById('phone') as HTMLInputElement
 
 // Fixed mask
-bind(input, '(99) 99999-9999')
+const dispose = bind(input, '(99) 99999-9999')
 
-// Dynamic mask — switches automatically as the user types
+// Dynamic mask — picks the pattern from an ordered list (shortest → longest)
 bind(input, ['(99) 9999-9999', '(99) 99999-9999'])
 
-// Optional callback — receives the masked value on every change
+// Callback after paste or keyboard-driven changes
 bind(input, '999.999.999-99', (value) => {
   console.log(value) // e.g. "123.456.789-01"
 })
-```
 
-### `process(value, mask)` — pure function
+// Or options object (same as callback for a single `onChange`)
+bind(input, '999.999.999-99', { onChange: (value) => console.log(value) })
 
-Apply a mask to a raw string without touching the DOM. Useful for formatting stored values.
-
-```ts
-import { process } from 'mother-mask'
-
-process('12345678901', '999.999.999-99')       // → "123.456.789-01"
-process('01012024',   '99/99/9999')            // → "01/01/2024"
-process('01310100',   '99999-999')             // → "01310-100"
-process('1AB2C3D45E6F78', 'AA.AAA.AAA/AAAA-99') // → "1A.B2C.3D4/5E6F-78"
+// Later: allow rebinding
+dispose()
 ```
 
 ## Pattern syntax
 
-| Character | Matches        |
-|-----------|----------------|
-| `9`       | Digit (0–9)    |
-| `Z`       | Letter (a–z, A–Z) |
-| `A`       | Alphanumeric (0–9, a–z, A–Z) |
-| anything else | Literal — inserted automatically |
+| Character | Matches |
+|-----------|---------|
+| `9` | Digit (`0`–`9`) |
+| `Z` | Letter (`a`–`z`, `A`–`Z`) |
+| `A` | Alphanumeric (digit or letter) |
+| Anything else | Literal — inserted as the user fills slots |
 
 ## Array masks
 
-Pass an ordered array (shortest → longest) to support variable-length inputs. The mask is selected by comparing the current value length against each mask's total length.
+Pass an ordered array **shortest → longest** for variable-length inputs. The active mask is chosen from the **count of alphanumeric “data” characters** in the current value, so it works for both progressively masked input and fast typing.
 
 ```ts
-// Brazilian phone: 8-digit → 9-digit landline / mobile
 bind(input, ['(99) 9999-9999', '(99) 99999-9999'])
-
-// CPF / CNPJ alfanumérico
 bind(input, ['999.999.999-99', 'AA.AAA.AAA/AAAA-99'])
 ```
 
@@ -72,50 +68,50 @@ bind(input, ['999.999.999-99', 'AA.AAA.AAA/AAAA-99'])
 ```html
 <script src="https://unpkg.com/mother-mask/dist/mother-mask.umd.js"></script>
 <script>
-  MotherMask.bind(document.getElementById('cpf'), '999.999.999-99')
+  const dispose = MotherMask.bind(document.getElementById('cpf'), '999.999.999-99')
 </script>
 ```
 
+The global name is **`MotherMask`**.
+
 ## API reference
 
+### `bind` (primary)
+
+| | |
+|--|--|
+| **Signature** | `bind(input, mask, options?)` |
+| **Returns** | `() => void` — call to remove listeners and attributes so the input can be bound again |
+| **Third argument** | `{ onChange?: (value: string) => void }`, or a legacy `(value) => void` callback |
+
+### Other exports
+
+| Export | Description |
+|--------|-------------|
+| `buildMask(value, mask, caret?)` | Build a `Mask` instance (array `mask` is resolved to one string first). |
+| `getMaxLength(mask)` | Maximum string length for the mask (for array masks, the longest pattern). |
+| `applyMask(value, mask, inputCaret?)` | Low-level: apply a **single** mask string; returns `{ value, caret }`. |
+
+### `Mask` class
+
+`buildMask` returns a `Mask` for advanced use. The instance applies the pattern and keeps a `caret` position aligned with the masked output (see TypeScript definitions in the package).
+
+### Types
+
 ```ts
-// Apply mask to a string — no DOM required
-process(value: string, mask: MaskPattern): string
-
-// Bind a mask to an input element (idempotent)
-bind(
-  input: HTMLInputElement | Element,
-  mask: MaskPattern,
-  callback?: ((value: string) => void) | null,
-): void
-
-// Build a Mask instance directly (advanced use)
-buildMask(value: string, mask: MaskPattern, caret?: number): Mask
-
-// Maximum allowed input length for a given mask
-getMaxLength(mask: MaskPattern): number
-
-// Pattern type
 type MaskPattern = string | string[]
+
+interface MaskResult {
+  readonly value: string
+  readonly caret: number
+}
+
+interface BindOptions {
+  onChange?: (value: string) => void
+}
 ```
 
-## Development
-
-```bash
-make install    # install dependencies
-make test       # run tests + coverage
-make build      # build ESM + CJS + UMD
-make dev        # watch mode
-make lint       # lint source files
-```
-
-## Release
-
-```bash
-make publish              # bump patch, publish, commit, tag, push
-make publish BUMP=minor
-make publish BUMP=major
-```
+`MaskPattern`, `MaskResult`, and `BindOptions` are exported as types.
 
 ## License
 
