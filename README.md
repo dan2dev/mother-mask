@@ -4,6 +4,10 @@ Lightweight input mask library for browsers. Zero runtime dependencies, TypeScri
 
 Published as [`mother-mask` on npm](https://www.npmjs.com/package/mother-mask).
 
+## Live demo
+
+**[Try it on StackBlitz →](https://stackblitz.com/edit/mother-mask-simple-demo?file=src%2Fmain.ts)**
+
 | | |
 |--|--|
 | **Library** (install, usage, API) | [`packages/mother-mask/README.md`](packages/mother-mask/README.md) |
