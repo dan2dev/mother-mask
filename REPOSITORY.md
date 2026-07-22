@@ -23,7 +23,6 @@ make install    # install dependencies (pnpm in packages/mother-mask)
 make test       # tests + coverage
 make build      # ESM + CJS + UMD
 make dev        # watch mode
-make lint       # lint package sources
 make up         # upgrade dependencies in the package
 ```
 

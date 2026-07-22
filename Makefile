@@ -1,4 +1,4 @@
-.PHONY: help install up build test dev lint publish release-patch release-minor release-major
+.PHONY: help install up build test dev publish release-patch release-minor release-major
 
 PKG := packages/mother-mask
 
@@ -12,7 +12,6 @@ help:
 	@echo "  build                Build the library"
 	@echo "  test                 Run tests with coverage"
 	@echo "  dev                  Watch mode (build on change)"
-	@echo "  lint                 Lint source files"
 	@echo ""
 	@echo "  publish              Bump PATCH, publish, commit, tag, push"
 	@echo "  publish BUMP=minor   Bump MINOR"
@@ -38,9 +37,6 @@ test:
 
 dev:
 	cd $(PKG) && pnpm dev
-
-lint:
-	cd $(PKG) && pnpm lint
 
 # ── Publish ───────────────────────────────────────────────────────────────────
 BUMP ?= patch
