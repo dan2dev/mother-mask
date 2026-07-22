@@ -822,7 +822,7 @@ describe('fast typing — onChange callback consistency', () => {
     bind(input, '99-99', { onChange: cb })
     typeChars(input, '1234')
     await flushRafs()
-    const calls: string[] = cb.mock.calls.map(([v]: [string]) => v)
+    const calls: string[] = cb.mock.calls.map(([v]) => v as string)
     // Every call must produce a string that the mask would output unchanged
     for (const v of calls) {
       // Applying mask again to an already-masked value must be idempotent
