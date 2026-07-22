@@ -33,9 +33,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      - name: Lint
-        run: bun run lint
-
       - name: Typecheck
         run: bun run typecheck
 
