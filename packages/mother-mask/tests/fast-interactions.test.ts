@@ -430,8 +430,9 @@ describe('fast delete sequences — multiple deletes before any rAF fires', () =
     press(input, 'Delete', '3-456', 0)
     press(input, 'Delete', '-456', 0)
     await flushRafs()
-    // "-456" → digits "456" → mask "999-999" → "456"
-    expect(input.value).toBe('456')
+    // Segmented mode (default): the whole first segment was deleted, so it
+    // stays empty instead of pulling "456" left across the "-".
+    expect(input.value).toBe('-456')
     expect(input.value.replace(/\D/g, '')).toBe('456')
   })
 

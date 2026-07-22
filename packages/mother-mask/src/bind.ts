@@ -42,7 +42,7 @@ export function bind(
 ): () => void {
   if (input.getAttribute(MASKED_ATTR) !== null) return () => {}
 
-  const { onChange } = toBindOptions(third)
+  const { onChange, segmented } = toBindOptions(third)
 
   /** Attribute names set by this bind call; removed on dispose so a later `bind()` can re-apply. */
   const attrsSetHere: string[] = []
@@ -67,7 +67,7 @@ export function bind(
   const onPaste = (e: Event): void => {
     const target = e.target as HTMLInputElement
     requestAnimationFrame(() => {
-      const m = buildMask(target.value, mask)
+      const m = buildMask(target.value, mask, 0, { segmented })
       target.value = m.process()
       onChange?.(target.value)
     })
@@ -83,7 +83,7 @@ export function bind(
       lockInput = true
       requestAnimationFrame(() => {
         const pos = target.selectionStart ?? 999
-        const m = buildMask(target.value, mask, pos)
+        const m = buildMask(target.value, mask, pos, { segmented })
         target.value = m.process()
         target.setSelectionRange(m.caret, m.caret)
         requestAnimationFrame(() => {
@@ -117,7 +117,7 @@ export function bind(
 
     requestAnimationFrame(() => {
       const pos = target.selectionStart ?? 999
-      const m = buildMask(target.value, mask, pos)
+      const m = buildMask(target.value, mask, pos, { segmented })
       target.value = m.process()
 
       if (isUnidentified) {

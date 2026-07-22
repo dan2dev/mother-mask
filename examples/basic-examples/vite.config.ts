@@ -12,6 +12,8 @@ export default defineConfig({
         p04: resolve(__dirname, 'examples/04-bind-callback.html'),
         p05: resolve(__dirname, 'examples/05-buildmask.html'),
         p06: resolve(__dirname, 'examples/06-form.html'),
+        p07: resolve(__dirname, 'examples/07-segmented.html'),
+        p08: resolve(__dirname, 'examples/08-decimal.html'),
       },
     },
   },

@@ -16,8 +16,51 @@ export interface MaskResult {
   readonly caret: number
 }
 
+/** Options for {@link applyMask} and {@link buildMask}. */
+export interface ApplyMaskOptions {
+  /**
+   * Treat literal separators as hard boundaries between independent fields
+   * instead of one continuous digit/character stream. **On by default**: a
+   * mask made of independent fields — dates, times, phone area codes — never
+   * bleeds digits from one field into a neighboring one when you edit a
+   * single field (e.g. the month in "99/99/9999" won't steal a digit from
+   * the year).
+   *
+   * Pass `segmented: false` to opt into the classic flat/reflow behavior
+   * instead, where deleting or replacing characters anywhere shifts
+   * everything after it to close the gap — useful when a mask really is one
+   * continuous number with cosmetic separators (e.g. formatting a running
+   * total) rather than independent fields.
+   */
+  segmented?: boolean
+}
+
 /** Options for {@link bind}. */
-export interface BindOptions {
+export interface BindOptions extends ApplyMaskOptions {
   /** Fires with the masked value after paste or keyboard-driven changes. */
   onChange?: (value: string) => void
+}
+
+/** Options for {@link applyDecimalMask}, {@link processDecimal}, {@link unmaskDecimal}, {@link formatDecimalValue}, and {@link bindDecimal}. */
+export interface DecimalMaskOptions {
+  /** Number of fixed fractional digits. Negative/fractional values are floored to `0`. @default 2 */
+  decimalPlaces?: number
+  /** Group the integer part into thousands using `separator`. @default true */
+  segmented?: boolean
+  /** Thousands grouping separator, used when `segmented` is `true`. @default ',' */
+  separator?: string
+  /** Separator between the integer and fractional parts. @default '.' */
+  decimalSeparator?: string
+  /** Fixed text prepended to the formatted number (after the sign, if negative). @default '' */
+  prefix?: string
+  /** Fixed text appended to the formatted number. @default '' */
+  suffix?: string
+  /** Allow a leading `-` to produce a negative value. @default false */
+  allowNegative?: boolean
+}
+
+/** Options for {@link bindDecimal}. */
+export interface BindDecimalOptions extends DecimalMaskOptions {
+  /** Fires with the masked string and its parsed numeric value after paste or keyboard-driven changes. */
+  onChange?: (value: string, numericValue: number) => void
 }

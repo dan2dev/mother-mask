@@ -1,7 +1,7 @@
-import './style.css'
-import { bind } from 'mother-mask'
+import "./style.css";
+import { bind } from "mother-mask";
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
+document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
 <div class="page">
   <a href="/" class="back">← back</a>
   <h1>bind()</h1>
@@ -39,10 +39,12 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     </div>
   </div>
 </div>
-`
+`;
 
-bind(document.querySelector<HTMLInputElement>('#cpf')!,   '999.999.999-99')
-bind(document.querySelector<HTMLInputElement>('#cnpj')!,  'AA.AAA.AAA/AAAA-99')
-bind(document.querySelector<HTMLInputElement>('#date')!,  '99/99/9999')
-bind(document.querySelector<HTMLInputElement>('#cep')!,   '99999-999')
-bind(document.querySelector<HTMLInputElement>('#plate')!, 'ZZZ-9999')
+bind(document.querySelector<HTMLInputElement>("#cpf")!, "999.999.999-99");
+bind(document.querySelector<HTMLInputElement>("#cnpj")!, "AA.AAA.AAA/AAAA-99");
+bind(document.querySelector<HTMLInputElement>("#date")!, "99/99/9999");
+bind(document.querySelector<HTMLInputElement>("#cep")!, "99999-999");
+bind(document.querySelector<HTMLInputElement>("#plate")!, "ZZZ-9999", {
+	segmented: false,
+});
