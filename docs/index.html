@@ -92,17 +92,41 @@
         <div class="content">
       <main>
         <section class="hero" id="top">
-          <h1>Mask any input.</h1>
-          <p>
-            Zero-dependency, TypeScript-first input masking for the browser.
-            <code>bind()</code> a pattern to an element and it stays masked, segmented, and
-            paste-safe — no framework required. Ships ESM, CJS, and UMD.
-          </p>
-          <div class="install-box" id="install">
-            <code class="language-bash" id="install-cmd">npm install mother-mask</code>
-            <button class="copy-btn" id="copy-install" type="button" aria-label="Copy install command">
-              <svg class="icon" role="presentation"><use href="#copy-icon"></use></svg>
-            </button>
+          <div class="hero-copy">
+            <p class="eyebrow">TypeScript input masking</p>
+            <h1>Predictable masks for browser inputs.</h1>
+            <p>
+              Bind a pattern to any input and keep edits, selections, and pasted values formatted
+              without a framework dependency.
+            </p>
+            <div class="hero-actions">
+              <a class="button-link" href="#examples">Try examples</a>
+              <a class="text-link" href="#api">Read API</a>
+            </div>
+            <div class="install-box" id="install">
+              <code class="language-bash" id="install-cmd">npm install mother-mask</code>
+              <button class="copy-btn" id="copy-install" type="button" aria-label="Copy install command">
+                <svg class="icon" role="presentation"><use href="#copy-icon"></use></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="hero-demo" aria-label="Live mask preview">
+            <div class="demo-toolbar">
+              <span>Live preview</span>
+              <code>bind()</code>
+            </div>
+            <label class="hero-field">
+              <span>Phone</span>
+              <input id="hero-phone" placeholder="(000) 000-0000" inputmode="tel" value="(555) 123-4567" />
+            </label>
+            <div class="hero-code">
+              <code>bind(input, '(999) 999-9999')</code>
+            </div>
+            <div class="hero-demo-footer">
+              <span id="hero-phone-hint">10 digits</span>
+              <span>paste-safe</span>
+            </div>
           </div>
         </section>
 

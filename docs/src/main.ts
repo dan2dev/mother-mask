@@ -71,6 +71,13 @@ function setHint(id: string, state: { text: string; ok?: boolean; error?: boolea
 
 const $ = <T extends HTMLElement>(id: string) => document.querySelector<T>(`#${id}`)!
 
+// ── Hero preview ─────────────────────────────────────────────────────────────
+
+bind($('hero-phone'), '(999) 999-9999', (v) => {
+  const n = v.replace(/\D/g, '').length
+  setHint('hero-phone-hint', n === 0 ? { text: '10 digits' } : n === 10 ? { text: '10 digits', ok: true } : { text: `${n} / 10`, error: true })
+})
+
 // ── CPF ──────────────────────────────────────────────────────────────────────
 
 bind($('ex-cpf'), '999.999.999-99', (v) => {
