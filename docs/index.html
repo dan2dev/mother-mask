@@ -37,19 +37,30 @@
       <symbol id="moon-icon" viewBox="0 0 20 20">
         <path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M17 10.7A7 7 0 1 1 9.3 3a5.5 5.5 0 0 0 7.7 7.7Z"/>
       </symbol>
+      <symbol id="menu-icon" viewBox="0 0 20 20">
+        <path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M4 6.5h12M4 10h12M4 13.5h12"/>
+      </symbol>
     </svg>
 
     <div id="app">
       <header>
         <div class="bar">
           <a class="brand" href="#top">mother-mask</a>
-          <nav class="primary-nav mobile-nav" aria-label="Primary">
-            <a href="#install">Install</a>
-            <a href="#examples">Examples</a>
-            <a href="#regional">Regional</a>
-            <a href="#patterns">Patterns</a>
-            <a href="#api">API</a>
-          </nav>
+          <details class="mobile-menu" id="mobile-menu">
+            <summary>
+              <svg class="icon" role="presentation"><use href="#menu-icon"></use></svg>
+              <span>Menu</span>
+            </summary>
+            <nav class="mobile-menu-nav" aria-label="Primary">
+              <a href="#top">Overview</a>
+              <a href="#install">Install</a>
+              <a href="#examples">Examples</a>
+              <a href="#regional">Regional</a>
+              <a href="#patterns">Patterns</a>
+              <a href="#cdn">CDN</a>
+              <a href="#api">API</a>
+            </nav>
+          </details>
           <div class="header-links">
             <button class="icon-link" id="theme-toggle" type="button" aria-label="Toggle dark mode">
               <svg class="icon" role="presentation"><use href="#moon-icon"></use></svg>
@@ -66,6 +77,7 @@
 
       <div class="layout">
         <aside class="sidebar">
+          <span class="sidebar-label">Docs</span>
           <nav class="primary-nav sidebar-nav" aria-label="Primary">
             <a href="#top">Overview</a>
             <a href="#install">Install</a>
@@ -87,7 +99,7 @@
             paste-safe — no framework required. Ships ESM, CJS, and UMD.
           </p>
           <div class="install-box" id="install">
-            <code id="install-cmd">npm install mother-mask</code>
+            <code class="language-bash" id="install-cmd">npm install mother-mask</code>
             <button class="copy-btn" id="copy-install" type="button" aria-label="Copy install command">
               <svg class="icon" role="presentation"><use href="#copy-icon"></use></svg>
             </button>
@@ -293,7 +305,7 @@
 
         <section id="cdn">
           <h2>UMD / CDN</h2>
-          <pre><code>&lt;script src="https://unpkg.com/mother-mask/dist/mother-mask.umd.js"&gt;&lt;/script&gt;
+          <pre><code class="language-html">&lt;script src="https://unpkg.com/mother-mask/dist/mother-mask.umd.js"&gt;&lt;/script&gt;
 &lt;script&gt;
   const dispose = MotherMask.bind(document.getElementById('cpf'), '999.999.999-99')
 &lt;/script&gt;</code></pre>
@@ -361,7 +373,7 @@
 
           <div class="api-block">
             <h3>Types</h3>
-            <pre><code>type MaskPattern = string | string[]
+            <pre><code class="language-ts">type MaskPattern = string | string[]
 
 interface MaskResult {
   readonly value: string

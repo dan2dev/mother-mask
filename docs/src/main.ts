@@ -1,5 +1,18 @@
 import './style.css'
+import hljs from 'highlight.js/lib/core'
+import bash from 'highlight.js/lib/languages/bash'
+import typescript from 'highlight.js/lib/languages/typescript'
+import xml from 'highlight.js/lib/languages/xml'
 import { bind, bindDecimal } from 'mother-mask'
+
+hljs.registerLanguage('bash', bash)
+hljs.registerLanguage('html', xml)
+hljs.registerLanguage('ts', typescript)
+hljs.registerLanguage('typescript', typescript)
+
+document.querySelectorAll<HTMLElement>('pre code, code.snippet, .install-box code').forEach((block) => {
+  hljs.highlightElement(block)
+})
 
 // ── Theme toggle ─────────────────────────────────────────────────────────────
 
@@ -99,10 +112,10 @@ bind($('ex-date-flat'), '99/99/9999', { segmented: false })
 // ── Time ─────────────────────────────────────────────────────────────────────
 
 bindDecimal($('ex-time'), {
-	decimalPlaces: 2,
-	numberPlaces: 2,
-	decimalSeparator: ":",
-	separator: ""
+  decimalPlaces: 2,
+  numberPlaces: 2,
+  decimalSeparator: ':',
+  separator: '',
 })
 
 // ── Plates ───────────────────────────────────────────────────────────────────
@@ -204,12 +217,15 @@ bind($('ex-raw'), '999.999.999-99', (v) => {
 
 // ── Smooth-scroll for in-page nav ───────────────────────────────────────────
 
+const mobileMenu = document.querySelector<HTMLDetailsElement>('#mobile-menu')
+
 document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]').forEach((link) => {
   link.addEventListener('click', (e) => {
     const id = link.getAttribute('href')!.slice(1)
     const target = id ? document.getElementById(id) : null
     if (!target) return
     e.preventDefault()
+    mobileMenu?.removeAttribute('open')
     target.scrollIntoView({ behavior: 'smooth', block: 'start' })
     history.pushState(null, '', `#${id}`)
   })
