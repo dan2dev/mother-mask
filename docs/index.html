@@ -43,9 +43,10 @@
       <header>
         <div class="bar">
           <a class="brand" href="#top">mother-mask</a>
-          <nav class="primary-nav">
+          <nav class="primary-nav mobile-nav" aria-label="Primary">
             <a href="#install">Install</a>
             <a href="#examples">Examples</a>
+            <a href="#regional">Regional</a>
             <a href="#patterns">Patterns</a>
             <a href="#api">API</a>
           </nav>
@@ -63,6 +64,20 @@
         </div>
       </header>
 
+      <div class="layout">
+        <aside class="sidebar">
+          <nav class="primary-nav sidebar-nav" aria-label="Primary">
+            <a href="#top">Overview</a>
+            <a href="#install">Install</a>
+            <a href="#examples">Examples</a>
+            <a href="#regional">Regional</a>
+            <a href="#patterns">Patterns</a>
+            <a href="#cdn">CDN</a>
+            <a href="#api">API</a>
+          </nav>
+        </aside>
+
+        <div class="content">
       <main>
         <section class="hero" id="top">
           <h1>Mask any input.</h1>
@@ -188,6 +203,69 @@
                 <div><span class="hint">masked</span><output id="ex-raw-masked">—</output></div>
                 <div><span class="hint">raw digits</span><output id="ex-raw-digits">—</output></div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="regional">
+          <h2>Regional formats</h2>
+          <p class="section-sub">A few common US, Canada, and Europe patterns — all just <code>bind()</code> calls.</p>
+
+          <div class="examples-grid">
+            <div class="example">
+              <h3>US — Phone</h3>
+              <code class="snippet">bind(input, '(999) 999-9999')</code>
+              <input id="ex-us-phone" placeholder="(000) 000-0000" inputmode="tel" />
+              <span class="hint" id="ex-us-phone-hint">10 digits</span>
+            </div>
+
+            <div class="example">
+              <h3>US — SSN</h3>
+              <code class="snippet">bind(input, '999-99-9999')</code>
+              <input id="ex-us-ssn" placeholder="000-00-0000" inputmode="numeric" />
+              <span class="hint" id="ex-us-ssn-hint">9 digits</span>
+            </div>
+
+            <div class="example">
+              <h3>US — ZIP+4</h3>
+              <code class="snippet">bind(input, '99999-9999')</code>
+              <input id="ex-us-zip" placeholder="00000-0000" inputmode="numeric" />
+              <span class="hint" id="ex-us-zip-hint">5, or 9 with the +4 suffix</span>
+            </div>
+
+            <div class="example">
+              <h3>Canada — postal code</h3>
+              <code class="snippet">bind(input, 'Z9Z 9Z9')</code>
+              <input id="ex-ca-postal" placeholder="A0A 0A0" />
+              <span class="hint" id="ex-ca-postal-hint">6 alphanumeric characters</span>
+            </div>
+
+            <div class="example">
+              <h3>Canada — SIN</h3>
+              <code class="snippet">bind(input, '999 999 999')</code>
+              <input id="ex-ca-sin" placeholder="000 000 000" inputmode="numeric" />
+              <span class="hint" id="ex-ca-sin-hint">9 digits</span>
+            </div>
+
+            <div class="example">
+              <h3>Europe (DE) — IBAN</h3>
+              <code class="snippet">bind(input, 'ZZ99 9999 9999 9999 9999 99')</code>
+              <input id="ex-eu-iban" placeholder="DE00 0000 0000 0000 0000 00" />
+              <span class="hint" id="ex-eu-iban-hint">2 letters + 20 digits</span>
+            </div>
+
+            <div class="example">
+              <h3>Europe (DE) — VAT ID</h3>
+              <code class="snippet">bind(input, 'DE999999999')</code>
+              <input id="ex-eu-vat" placeholder="DE000000000" inputmode="numeric" />
+              <span class="hint" id="ex-eu-vat-hint">9 digits after the DE prefix</span>
+            </div>
+
+            <div class="example">
+              <h3>Europe (PL) — postal code</h3>
+              <code class="snippet">bind(input, '99-999')</code>
+              <input id="ex-pl-postal" placeholder="00-000" inputmode="numeric" />
+              <span class="hint" id="ex-pl-postal-hint">5 digits</span>
             </div>
           </div>
         </section>
@@ -323,6 +401,8 @@ interface BindDecimalOptions extends DecimalMaskOptions {
           <a href="https://stackblitz.com/edit/mother-mask-simple-demo?file=src%2Fmain.ts" target="_blank" rel="noreferrer">StackBlitz demo</a>
         </div>
       </footer>
+        </div>
+      </div>
     </div>
 
     <script type="module" src="./src/main.ts"></script>

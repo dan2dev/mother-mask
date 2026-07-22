@@ -150,15 +150,6 @@ pre code {
 
 /* Layout */
 
-#app {
-  max-width: 1000px;
-  margin: 0 auto;
-  padding: 0 24px;
-  @media (max-width: 640px) {
-    padding: 0 16px;
-  }
-}
-
 section {
   padding: 56px 0;
   border-top: 1px solid var(--border);
@@ -184,16 +175,47 @@ header {
 }
 
 header .bar {
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 14px 24px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 24px;
   @media (max-width: 640px) {
     padding: 12px 16px;
     gap: 12px;
   }
+}
+
+/* Layout: left sidebar nav on desktop, collapses into the header's
+   horizontal nav below 1024px (see nav.primary-nav rules). */
+
+.layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+  @media (max-width: 640px) {
+    padding: 0 16px;
+  }
+}
+
+.sidebar {
+  flex: none;
+  width: 200px;
+  position: sticky;
+  top: 76px;
+  @media (max-width: 1024px) {
+    display: none;
+  }
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
 }
 
 .brand {
@@ -230,6 +252,29 @@ nav.primary-nav a {
 nav.primary-nav a:hover {
   color: var(--text-h);
   background: var(--accent-bg);
+}
+
+/* Desktop: nav lives in the left sidebar, stacked vertically. */
+nav.primary-nav.sidebar-nav {
+  flex-direction: column;
+  overflow: visible;
+  gap: 2px;
+}
+
+nav.primary-nav.sidebar-nav a {
+  padding: 8px 12px;
+}
+
+nav.primary-nav.mobile-nav {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  /* Mobile/tablet: sidebar is hidden (see .sidebar), nav moves back into
+     the header as a horizontally scrollable row. */
+  nav.primary-nav.mobile-nav {
+    display: flex;
+  }
 }
 
 .header-links {
