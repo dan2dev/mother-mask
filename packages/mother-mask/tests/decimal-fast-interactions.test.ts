@@ -593,6 +593,19 @@ describe('bindDecimal() fast interactions — locale and option combinations', (
     expect(input.value).toBe('42,40')
   })
 
+  it('normalizes a numeric-keypad "." to "," even when the next digit arrives before the fallback rAF', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2, decimalSeparator: ',' })
+
+    press(input, '4', '4', 1)
+    press(input, '2', '42', 2)
+    press(input, '.', '42.', 3)
+    press(input, '4', '42.4', 4)
+
+    await flushRafs()
+    expect(input.value).toBe('42,40')
+  })
+
   it('decimalPlaces: 0 (whole numbers) never opens a fraction segment even if "." is typed fast', async () => {
     const { bindDecimal } = await import('../src/index')
     bindDecimal(input, { decimalPlaces: 0, suffix: ' units' })

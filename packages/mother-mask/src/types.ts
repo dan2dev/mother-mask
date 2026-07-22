@@ -75,6 +75,6 @@ export interface DecimalMaskOptions {
 
 /** Options for {@link bindDecimal}. */
 export interface BindDecimalOptions extends DecimalMaskOptions {
-  /** Fires with the masked string and its parsed numeric value after paste or keyboard-driven changes. */
+  /** Fires with the masked string and its parsed numeric value after input, paste, or keyboard-driven changes. */
   onChange?: (value: string, numericValue: number) => void
 }

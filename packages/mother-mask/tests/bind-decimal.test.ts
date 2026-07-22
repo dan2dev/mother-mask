@@ -13,6 +13,20 @@ function dispatchKey(input: HTMLInputElement, key: string, eventName = 'keydown'
   input.dispatchEvent(new KeyboardEvent(eventName, { key, bubbles: true, cancelable: true }))
 }
 
+function dispatchInput(
+  input: HTMLInputElement,
+  options: { data?: string | null; inputType?: string; isComposing?: boolean } = {},
+): void {
+  const event = new Event('input', { bubbles: true, cancelable: false })
+  Object.defineProperty(event, 'data', { value: options.data ?? null, configurable: true })
+  Object.defineProperty(event, 'inputType', { value: options.inputType ?? '', configurable: true })
+  Object.defineProperty(event, 'isComposing', {
+    value: options.isComposing ?? false,
+    configurable: true,
+  })
+  input.dispatchEvent(event)
+}
+
 describe('bindDecimal() — event handlers', () => {
   let input: HTMLInputElement
 
@@ -174,6 +188,86 @@ describe('bindDecimal() — event handlers', () => {
     input.setSelectionRange(3, 3)
     dispatchKey(input, '.')
     await flushRafs()
+    expect(input.value).toBe('42,00')
+  })
+
+  it('formats an Android-style input-only comma inserted before the existing decimal comma', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, {
+      decimalPlaces: 2,
+      separator: '.',
+      decimalSeparator: ',',
+      suffix: ' €',
+    })
+
+    // Chrome on Android can deliver punctuation from the virtual keyboard as an
+    // input mutation without a useful key event. If the caret is just before the
+    // formatted decimal comma, the raw DOM value temporarily contains two commas.
+    input.value = '42,,00 €'
+    input.setSelectionRange(3, 3)
+    dispatchInput(input, { data: ',', inputType: 'insertText' })
+
+    expect(input.value).toBe('42,00 €')
+    expect(input.selectionStart).toBe(3)
+    await flushRafs()
+    expect(input.value).toBe('42,00 €')
+  })
+
+  it('normalizes an input-only "." insertion to a configured "," decimalSeparator', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2, decimalSeparator: ',' })
+
+    input.value = '42.'
+    input.setSelectionRange(3, 3)
+    dispatchInput(input, { data: '.', inputType: 'insertText' })
+
+    expect(input.value).toBe('42,00')
+    expect(input.selectionStart).toBe(3)
+    await flushRafs()
+    expect(input.value).toBe('42,00')
+  })
+
+  it('restores a fixed decimal boundary after an input-only Backspace deletes the separator', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2, prefix: '$' })
+
+    input.value = '$2500'
+    input.setSelectionRange(3, 3)
+    dispatchInput(input, { inputType: 'deleteContentBackward' })
+
+    expect(input.value).toBe('$2.00')
+    expect(input.selectionStart).toBe('$2'.length)
+  })
+
+  it('does not re-emit on iOS keyup after the input event already handled the edit', async () => {
+    vi.stubGlobal('navigator', { userAgent: 'iPhone; CPU iPhone OS 17_0 like Mac OS X' })
+    const { bindDecimal } = await import('../src/index')
+    const cb = vi.fn()
+    bindDecimal(input, { decimalPlaces: 2, decimalSeparator: ',', onChange: cb })
+
+    input.value = '42,,00'
+    input.setSelectionRange(3, 3)
+    dispatchInput(input, { data: ',', inputType: 'insertText' })
+    dispatchKey(input, ',', 'keyup')
+
+    await flushRafs()
+    expect(input.value).toBe('42,00')
+    expect(cb).toHaveBeenCalledTimes(1)
+    expect(cb).toHaveBeenCalledWith('42,00', 42)
+  })
+
+  it('defers input-event formatting while composition is active', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2, decimalSeparator: ',' })
+
+    input.dispatchEvent(new Event('compositionstart', { bubbles: true }))
+    input.value = '42,,00'
+    input.setSelectionRange(3, 3)
+    dispatchInput(input, { data: ',', inputType: 'insertCompositionText', isComposing: true })
+
+    expect(input.value).toBe('42,,00')
+
+    input.dispatchEvent(new Event('compositionend', { bubbles: true }))
     expect(input.value).toBe('42,00')
   })
 
