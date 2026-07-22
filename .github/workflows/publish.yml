@@ -75,7 +75,19 @@ jobs:
           NODE
           )"
 
-          bun pm version "$version" --message "chore(release): %s [skip ci]"
+          node - "$version" <<'NODE'
+          const fs = require("node:fs");
+
+          const version = process.argv[2];
+          const packageJsonPath = "package.json";
+          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+          packageJson.version = version;
+          fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+          NODE
+
+          git add package.json
+          git commit -m "chore(release): v${version} [skip ci]"
+          git tag "v${version}"
           echo "tag=v${version}" >> "$GITHUB_OUTPUT"
 
       - name: Publish
@@ -85,5 +97,4 @@ jobs:
 
       - name: Push release commit and tag
         run: |
-          git push origin HEAD:${{ github.ref_name }}
-          git push origin "refs/tags/${{ steps.version.outputs.tag }}"
+          git push --atomic origin HEAD:${{ github.ref_name }} "refs/tags/${{ steps.version.outputs.tag }}"
