@@ -47,9 +47,35 @@ jobs:
 
       - name: Bump minor version and tag
         id: version
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          bun pm version minor --message "chore(release): %s [skip ci]"
-          version="$(bun pm pkg get version | tr -d '"')"
+          package_name="$(bun pm pkg get name | tr -d '"')"
+          local_version="$(bun pm pkg get version | tr -d '"')"
+          published_version="$(npm view "$package_name" version 2>/dev/null || true)"
+
+          version="$(node - "$local_version" "$published_version" <<'NODE'
+          const versions = process.argv.slice(2).filter(Boolean).map((version) => {
+            const match = /^(\d+)\.(\d+)\.(\d+)(?:-.+)?$/.exec(version);
+            if (!match) throw new Error(`Invalid semver: ${version}`);
+            return {
+              raw: version,
+              major: Number(match[1]),
+              minor: Number(match[2]),
+              patch: Number(match[3]),
+            };
+          });
+
+          versions.sort((a, b) =>
+            a.major - b.major || a.minor - b.minor || a.patch - b.patch
+          );
+
+          const base = versions.at(-1);
+          console.log(`${base.major}.${base.minor + 1}.0`);
+          NODE
+          )"
+
+          bun pm version "$version" --message "chore(release): %s [skip ci]"
           echo "tag=v${version}" >> "$GITHUB_OUTPUT"
 
       - name: Publish
