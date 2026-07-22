@@ -203,10 +203,15 @@ export function bindDecimal(
     })
   }
 
+  // Deliberately does NOT bail out while `isComposing` is true — see the
+  // matching comment in `bind.ts`. Android wraps typing in a full-QWERTY
+  // text field (e.g. a decimal input without `inputmode="decimal"`) into an
+  // IME composition session for autocorrect bookkeeping, not just genuine
+  // multi-candidate input, and that composition may never end while the
+  // user is still entering a space-less value — so waiting for
+  // `compositionend` before formatting made the mask appear broken there.
   const onInput = (e: Event): void => {
     const inputEvent = e as InputEvent
-    if (isComposing || inputEvent.isComposing) return
-
     const target = e.target as HTMLInputElement
     cancelPendingFrames()
     lockInput = false

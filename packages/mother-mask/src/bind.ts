@@ -12,11 +12,41 @@ function toBindOptions(
   return third
 }
 
+function getCaret(target: HTMLInputElement): number {
+  try {
+    return target.selectionStart ?? target.value.length
+  } catch {
+    return target.value.length
+  }
+}
+
+function setCaret(target: HTMLInputElement, caret: number): void {
+  try {
+    target.setSelectionRange(caret, caret)
+  } catch {
+    // Some input types (for example type="number") do not support text selection.
+  }
+}
+
+type InputEditKind = 'insert' | 'backspace' | 'delete' | 'unidentified'
+
+/** Classify a native `InputEvent.inputType` the same way `onKey` classifies `KeyboardEvent.key`. */
+function classifyInputType(inputType: string | undefined): InputEditKind {
+  if (inputType === 'deleteContentBackward') return 'backspace'
+  if (inputType === 'deleteContentForward') return 'delete'
+  if (inputType && inputType.startsWith('insert')) return 'insert'
+  return 'unidentified'
+}
+
 /**
  * Bind a mask pattern to an input element.
  *
  * Idempotent — calling `bind()` on an already-bound element has no effect.
  * The element receives a `data-masked` attribute marking it as bound.
+ *
+ * Reformats post-mutation `input` events (the reliable, timing-safe signal
+ * on every modern browser, including mobile IME/autocorrect) with a
+ * `keydown`/`requestAnimationFrame` fallback for older browsers.
  *
  * Returns a function that removes listeners and clears `data-masked` so the
  * element can be bound again later.
@@ -66,6 +96,12 @@ export function bind(
   setIfMissing('maxlength', String(maxLength))
 
   let lockInput = false
+  let isComposing = false
+  let skipNextKeyup = false
+  // Baseline the `input`-event path compares against to detect growth/no-op
+  // edits (mirrors the role `oldValue` plays in `onKey`, but persisted
+  // across calls since `input` fires once per real mutation — see `onInput`).
+  let lastMaskedValue = (input as HTMLInputElement).value ?? ''
 
   const keyEventName = isIos() ? 'keyup' : 'keydown'
 
@@ -83,6 +119,10 @@ export function bind(
     })
     pendingFrames.add(id)
   }
+  const cancelPendingFrames = (): void => {
+    for (const id of pendingFrames) cancelAnimationFrame(id)
+    pendingFrames.clear()
+  }
 
   const onPaste = (e: Event): void => {
     const target = e.target as HTMLInputElement
@@ -93,10 +133,90 @@ export function bind(
     })
   }
 
+  // `input` fires synchronously, once per real DOM mutation, right after the
+  // browser (or IME/autocorrect) has already applied the edit — unlike
+  // `keydown` + `requestAnimationFrame`, there's no batching window where
+  // several keystrokes can queue up before we read `selectionStart`, which is
+  // what let fast typing (especially Android Chrome, where composed/
+  // autocorrected characters often arrive with an unreliable or missing
+  // `key`) drift the caret. This is now the primary formatting path; `onKey`
+  // below stays as a `requestAnimationFrame` fallback for browsers that don't
+  // fire `input` reliably.
+  //
+  // Deliberately does NOT bail out while `isComposing` is true. Android's
+  // on-screen keyboard wraps essentially all typing in a full-QWERTY text
+  // field into an IME composition session for its own autocorrect/
+  // suggestion-strip bookkeeping — not just genuine multi-candidate input
+  // (Pinyin, Kana, …). Since a mask's alphabet is always plain ASCII
+  // digits/letters (see `matchesSlot`), whatever Android is "composing" is
+  // already the final intended character, not a provisional candidate — so
+  // reformatting immediately is safe. Waiting for `compositionend` instead
+  // (as this used to) meant the mask never visibly applied while typing a
+  // space-less value like a plate number, since Android only ends the
+  // composition on a word boundary (space/punctuation) or blur, which may
+  // never happen mid-entry.
+  const onInput = (e: Event): void => {
+    const inputEvent = e as InputEvent
+    const target = e.target as HTMLInputElement
+    cancelPendingFrames()
+    lockInput = false
+    skipNextKeyup = true
+
+    const pos = getCaret(target)
+    const previousLength = lastMaskedValue.length
+    const m = buildMask(target.value, mask, pos, { segmented })
+    target.value = m.process()
+
+    const kind = classifyInputType(inputEvent.inputType)
+    if (kind === 'unidentified') {
+      const newPos = target.value.length > previousLength ? m.caret : pos
+      setCaret(target, newPos)
+    } else if (kind === 'delete') {
+      const newPos = previousLength === target.value.length ? pos + 1 : pos
+      setCaret(target, newPos)
+    } else if (kind === 'backspace') {
+      setCaret(target, pos)
+    } else {
+      setCaret(target, m.caret)
+    }
+
+    lastMaskedValue = target.value
+    onChange?.(target.value)
+  }
+
+  const onCompositionStart = (): void => {
+    isComposing = true
+    cancelPendingFrames()
+    lockInput = false
+  }
+
+  const onCompositionEnd = (e: Event): void => {
+    isComposing = false
+    skipNextKeyup = true
+
+    const target = e.target as HTMLInputElement
+    const pos = getCaret(target)
+    const m = buildMask(target.value, mask, pos, { segmented })
+    target.value = m.process()
+    setCaret(target, m.caret)
+
+    lastMaskedValue = target.value
+    onChange?.(target.value)
+  }
+
   const onKey = (e: Event): void => {
     const ke = e as KeyboardEvent
     const target = ke.target as HTMLInputElement
     const oldValue = target.value
+
+    if (isComposing) return
+
+    // `input` already handled this keystroke (it fires before `keyup`); skip
+    // the redundant iOS `keyup` pass so we don't reformat the value twice.
+    if (keyEventName === 'keyup' && skipNextKeyup) {
+      skipNextKeyup = false
+      return
+    }
 
     // Older Android WebViews may fire key events without a `key` value.
     if (!(ke as { key?: string }).key) {
@@ -157,14 +277,19 @@ export function bind(
   }
 
   input.addEventListener('paste', onPaste)
+  input.addEventListener('input', onInput)
+  input.addEventListener('compositionstart', onCompositionStart)
+  input.addEventListener('compositionend', onCompositionEnd)
   input.addEventListener(keyEventName, onKey)
 
   return () => {
     input.removeEventListener('paste', onPaste)
+    input.removeEventListener('input', onInput)
+    input.removeEventListener('compositionstart', onCompositionStart)
+    input.removeEventListener('compositionend', onCompositionEnd)
     input.removeEventListener(keyEventName, onKey)
     input.removeAttribute(MASKED_ATTR)
     for (const name of attrsSetHere) input.removeAttribute(name)
-    for (const id of pendingFrames) cancelAnimationFrame(id)
-    pendingFrames.clear()
+    cancelPendingFrames()
   }
 }

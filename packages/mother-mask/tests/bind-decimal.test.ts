@@ -256,16 +256,24 @@ describe('bindDecimal() — event handlers', () => {
     expect(cb).toHaveBeenCalledWith('42,00', 42)
   })
 
-  it('defers input-event formatting while composition is active', async () => {
+  it('formats live even while an IME composition is active (Android autocorrect wraps typing in composition)', async () => {
     const { bindDecimal } = await import('../src/index')
     bindDecimal(input, { decimalPlaces: 2, decimalSeparator: ',' })
 
+    // Android's on-screen keyboard wraps essentially all typing into a full
+    // QWERTY field in an IME composition session for autocorrect/suggestion
+    // bookkeeping — not just genuine multi-candidate input — and that
+    // session may never end (no `compositionend`) while the user is still
+    // entering a space-less value. Waiting for it before formatting made the
+    // mask appear completely broken on Android; every digit's alphabet is
+    // plain ASCII, so whatever is "composing" is already the final intended
+    // character and is safe to format immediately.
     input.dispatchEvent(new Event('compositionstart', { bubbles: true }))
     input.value = '42,,00'
     input.setSelectionRange(3, 3)
     dispatchInput(input, { data: ',', inputType: 'insertCompositionText', isComposing: true })
 
-    expect(input.value).toBe('42,,00')
+    expect(input.value).toBe('42,00')
 
     input.dispatchEvent(new Event('compositionend', { bubbles: true }))
     expect(input.value).toBe('42,00')

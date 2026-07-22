@@ -37,7 +37,7 @@ export interface ApplyMaskOptions {
 
 /** Options for {@link bind}. */
 export interface BindOptions extends ApplyMaskOptions {
-  /** Fires with the masked value after paste or keyboard-driven changes. */
+  /** Fires with the masked value after input, paste, or keyboard-driven changes. */
   onChange?: (value: string) => void
 }
 

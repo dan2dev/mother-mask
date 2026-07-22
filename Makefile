@@ -1,6 +1,7 @@
-.PHONY: help install up build test dev publish release-patch release-minor release-major
+.PHONY: help install up build test test-e2e dev publish release-patch release-minor release-major
 
 PKG := packages/mother-mask
+E2E := e2e
 
 # ── Default ───────────────────────────────────────────────────────────────────
 help:
@@ -11,6 +12,7 @@ help:
 	@echo "  up                   Upgrade all dependencies to latest"
 	@echo "  build                Build the library"
 	@echo "  test                 Run tests with coverage"
+	@echo "  test-e2e             Run Playwright browser tests (real Chrome, desktop + mobile)"
 	@echo "  dev                  Watch mode (build on change)"
 	@echo ""
 	@echo "  publish              Bump PATCH, publish, commit, tag, push"
@@ -34,6 +36,10 @@ build:
 
 test:
 	cd $(PKG) && pnpm test
+
+test-e2e:
+	cd $(PKG) && pnpm build
+	cd $(E2E) && bun install && bunx playwright install --with-deps chromium && bunx playwright test
 
 dev:
 	cd $(PKG) && pnpm dev
