@@ -93,6 +93,7 @@
 
 body {
   margin: 0;
+  overflow-x: clip;
 }
 
 h1, h2, h3 {
@@ -155,12 +156,14 @@ pre {
   overflow-x: auto;
   margin: 0;
   box-shadow: inset 0 1px 0 color-mix(in srgb, var(--bg-raised) 70%, transparent);
+  max-width: 100%;
 }
 
 pre code {
   padding: 0;
   background: none;
   font-size: 1em;
+  overflow-wrap: normal;
 }
 
 .hljs {
@@ -252,6 +255,11 @@ header .bar {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  width: 100%;
+  min-width: 0;
+  @media (max-width: 1440px) {
+    max-width: 900px;
+  }
   @media (max-width: 640px) {
     padding: 12px 16px;
     gap: 12px;
@@ -263,10 +271,12 @@ header .bar {
   margin: 0 auto;
   padding: 0 24px;
   display: grid;
-  grid-template-columns: 212px minmax(0, 1fr);
+  grid-template-columns: 188px minmax(0, 1fr);
   align-items: flex-start;
-  gap: 48px;
-  @media (max-width: 1024px) {
+  gap: 36px;
+  width: 100%;
+  @media (max-width: 1440px) {
+    max-width: 900px;
     display: block;
   }
   @media (max-width: 640px) {
@@ -280,7 +290,7 @@ header .bar {
   max-height: calc(100vh - 104px);
   padding: 4px 0 24px;
   overflow-y: auto;
-  @media (max-width: 1024px) {
+  @media (max-width: 1440px) {
     display: none;
   }
 }
@@ -295,8 +305,8 @@ header .bar {
 }
 
 .content {
+  width: 100%;
   min-width: 0;
-  max-width: 900px;
 }
 
 .brand {
@@ -343,7 +353,7 @@ nav.primary-nav.sidebar-nav a {
   display: none;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1440px) {
   .mobile-menu {
     display: block;
     position: relative;
@@ -403,12 +413,6 @@ nav.primary-nav.sidebar-nav a {
   }
 }
 
-@media (max-width: 480px) {
-  .mobile-menu summary span {
-    display: none;
-  }
-}
-
 .header-links {
   display: flex;
   align-items: center;
@@ -436,6 +440,16 @@ nav.primary-nav.sidebar-nav a {
   background: var(--accent-bg);
 }
 
+@media (max-width: 640px) {
+  .mobile-menu summary span {
+    display: none;
+  }
+
+  .header-links {
+    gap: 0;
+  }
+}
+
 /* Hero */
 
 .hero {
@@ -444,12 +458,11 @@ nav.primary-nav.sidebar-nav a {
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 36%),
     transparent;
+  width: 100%;
   @media (max-width: 1024px) {
-    margin: 0 -24px;
     padding: 40px 24px 36px;
   }
   @media (max-width: 640px) {
-    margin: 0 -16px;
     padding: 34px 16px 32px;
   }
 }
@@ -470,6 +483,7 @@ nav.primary-nav.sidebar-nav a {
   padding: 12px 8px 12px 16px;
   max-width: 360px;
   margin-top: 20px;
+  width: 100%;
 }
 
 .install-box code {
@@ -477,6 +491,8 @@ nav.primary-nav.sidebar-nav a {
   padding: 0;
   font-size: 15px;
   color: var(--code-text);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .copy-btn {
@@ -548,7 +564,7 @@ input:focus {
 
 .examples-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   margin-top: 18px;
   @media (max-width: 720px) {
@@ -562,6 +578,7 @@ input:focus {
   padding: 18px;
   background: var(--bg-raised);
   box-shadow: 0 1px 2px rgba(15, 24, 36, 0.04);
+  min-width: 0;
 }
 
 .example-wide {
@@ -625,6 +642,10 @@ th {
 
 td code {
   white-space: nowrap;
+}
+
+td {
+  min-width: 0;
 }
 
 .table-wrap {
