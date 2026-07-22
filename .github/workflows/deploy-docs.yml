@@ -24,31 +24,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
-        with:
-          node-version: 24
-
-      - name: Setup pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.33.0 --activate
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Install package dependencies
         working-directory: packages/mother-mask
-        run: pnpm install --lockfile=false
+        run: bun install --no-save
 
       - name: Build package
         working-directory: packages/mother-mask
-        run: pnpm run build
+        run: bun run build
 
       - name: Install docs dependencies
         working-directory: docs
-        run: pnpm install --lockfile=false
+        run: bun install --no-save
 
       - name: Build docs
         working-directory: docs
-        run: pnpm run build
+        run: bun run build
 
       - name: Configure Pages
         uses: actions/configure-pages@v6
