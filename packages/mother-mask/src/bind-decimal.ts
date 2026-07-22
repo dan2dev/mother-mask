@@ -159,7 +159,7 @@ export function bindDecimal(
       // Normalize whichever one the user just typed to the configured
       // `decimalSeparator` so it reliably opens the fraction segment.
       if (
-        decimalPlaces > 0 &&
+        decimalPlaces !== 0 &&
         (ke.key === '.' || ke.key === ',') &&
         ke.key !== decimalSeparator &&
         pos > 0 &&
@@ -168,9 +168,13 @@ export function bindDecimal(
         target.value = target.value.slice(0, pos - 1) + decimalSeparator + target.value.slice(pos)
       }
 
-      // Typing a digit into a field whose integer part is still the
-      // auto-inserted "0" placeholder replaces that zero instead of
-      // combining with it (e.g. "$0.00" + "2" → "$2.00", not "$20.00").
+      // Typing a digit into a field whose integer part isn't yet full of
+      // real digits — the auto-inserted "0" placeholder, or a
+      // `numberPlaces`-padded segment with fewer real digits than its width
+      // — extends the real digit stream instead of combining with a
+      // padding zero (e.g. "$0.00" + "2" → "$2.00", "02:00" + "4" →
+      // "24:00"). A segment already full of real digits (e.g. "23:00")
+      // falls through to the default mask, which drops the keystroke.
       const replaced = isDigitKey(ke.key)
         ? applyDecimalMaskReplacingLoneZero(target.value, pos, ke.key, decimalOptions)
         : null

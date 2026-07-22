@@ -34,7 +34,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <div class="field">
       <label for="eur">Amount</label>
       <input id="eur" placeholder="0,00" inputmode="decimal" />
-      <p class="hint"><code>bindDecimal(input, { separator: '.', decimalSeparator: ',', suffix: ' €' })</code> — typing "1234" produces "1.234,00 €"; "." also opens the fraction</p>
+      <p class="hint"><code>bindDecimal(input, { decimalPlaces: 2, separator: '.', decimalSeparator: ',', suffix: ' €' })</code> — typing "1234" produces "1.234,00 €"; "." also opens the fraction</p>
     </div>
   </div>
 
@@ -52,7 +52,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
     <div class="field">
       <label for="balance">Account balance</label>
       <input id="balance" placeholder="$0.00" inputmode="decimal" />
-      <p class="hint"><code>bindDecimal(input, { prefix: '$', allowNegative: true })</code> — type a "-" anywhere to flip the sign</p>
+      <p class="hint"><code>bindDecimal(input, { decimalPlaces: 2, prefix: '$', allowNegative: true })</code> — type a "-" anywhere to flip the sign</p>
     </div>
   </div>
 
@@ -85,6 +85,7 @@ bindDecimal(document.querySelector<HTMLInputElement>('#usd')!, {
 })
 
 bindDecimal(document.querySelector<HTMLInputElement>('#eur')!, {
+  decimalPlaces: 2,
   separator: '.',
   decimalSeparator: ',',
   suffix: ' €',
@@ -96,11 +97,13 @@ bindDecimal(document.querySelector<HTMLInputElement>('#qty')!, {
 })
 
 bindDecimal(document.querySelector<HTMLInputElement>('#balance')!, {
+  decimalPlaces: 2,
   prefix: '$',
   allowNegative: true,
 })
 
 bindDecimal(document.querySelector<HTMLInputElement>('#total')!, {
+  decimalPlaces: 2,
   prefix: '$',
   onChange: (masked, numericValue) => {
     document.querySelector<HTMLDivElement>('#total-masked')!.innerHTML = `<strong>${masked || '—'}</strong>`

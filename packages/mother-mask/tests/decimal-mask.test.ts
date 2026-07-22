@@ -8,34 +8,34 @@ import {
   unmaskDecimal,
 } from '../src/decimal-mask'
 
-describe('processDecimal() — integer-first entry (no separator typed yet)', () => {
+describe('processDecimal() — integer-first entry, decimalPlaces: 2 (fixed-width fraction)', () => {
   it('appends a zero-padded fraction while only integer digits have been typed', () => {
-    expect(processDecimal('42')).toBe('42.00')
-    expect(processDecimal('423')).toBe('423.00')
+    expect(processDecimal('42', { decimalPlaces: 2 })).toBe('42.00')
+    expect(processDecimal('423', { decimalPlaces: 2 })).toBe('423.00')
   })
 
   it('groups the integer part into thousands as it grows', () => {
-    expect(processDecimal('1234')).toBe('1,234.00')
-    expect(processDecimal('1234567')).toBe('1,234,567.00')
+    expect(processDecimal('1234', { decimalPlaces: 2 })).toBe('1,234.00')
+    expect(processDecimal('1234567', { decimalPlaces: 2 })).toBe('1,234,567.00')
   })
 
   it('applies prefix and suffix', () => {
-    expect(processDecimal('1234', { prefix: '$' })).toBe('$1,234.00')
-    expect(processDecimal('1234', { suffix: ' kg' })).toBe('1,234.00 kg')
+    expect(processDecimal('1234', { decimalPlaces: 2, prefix: '$' })).toBe('$1,234.00')
+    expect(processDecimal('1234', { decimalPlaces: 2, suffix: ' kg' })).toBe('1,234.00 kg')
   })
 
   it('never groups a 1-3 digit integer part', () => {
-    expect(processDecimal('100')).toBe('100.00')
-    expect(processDecimal('999')).toBe('999.00')
+    expect(processDecimal('100', { decimalPlaces: 2 })).toBe('100.00')
+    expect(processDecimal('999', { decimalPlaces: 2 })).toBe('999.00')
   })
 
   it('groups exactly at 4 digits', () => {
-    expect(processDecimal('1000')).toBe('1,000.00')
+    expect(processDecimal('1000', { decimalPlaces: 2 })).toBe('1,000.00')
   })
 
   it('collapses leading zeros in the integer part', () => {
-    expect(processDecimal('007')).toBe('7.00')
-    expect(processDecimal('000')).toBe('0.00')
+    expect(processDecimal('007', { decimalPlaces: 2 })).toBe('7.00')
+    expect(processDecimal('000', { decimalPlaces: 2 })).toBe('0.00')
   })
 
   it('returns an empty string for empty input', () => {
@@ -48,69 +48,123 @@ describe('processDecimal() — integer-first entry (no separator typed yet)', ()
   })
 
   it('ignores non-digit noise characters interspersed with integer digits', () => {
-    expect(processDecimal('1a2b3c')).toBe('123.00')
+    expect(processDecimal('1a2b3c', { decimalPlaces: 2 })).toBe('123.00')
   })
 
   it('handles very large integer parts', () => {
-    expect(processDecimal('123456789012345')).toBe('123,456,789,012,345.00')
+    expect(processDecimal('123456789012345', { decimalPlaces: 2 })).toBe('123,456,789,012,345.00')
   })
 })
 
-describe('processDecimal() — entering the fraction via the decimal separator', () => {
+describe('processDecimal() — entering the fraction via the decimal separator, decimalPlaces: 2', () => {
   it('opens the fraction segment once "." (default decimalSeparator) is typed', () => {
-    expect(processDecimal('42.')).toBe('42.00')
-    expect(processDecimal('42.5')).toBe('42.50')
-    expect(processDecimal('42.56')).toBe('42.56')
+    expect(processDecimal('42.', { decimalPlaces: 2 })).toBe('42.00')
+    expect(processDecimal('42.5', { decimalPlaces: 2 })).toBe('42.50')
+    expect(processDecimal('42.56', { decimalPlaces: 2 })).toBe('42.56')
   })
 
   it('drops fraction digits beyond decimalPlaces instead of shifting the window', () => {
-    expect(processDecimal('42.567')).toBe('42.56')
+    expect(processDecimal('42.567', { decimalPlaces: 2 })).toBe('42.56')
   })
 
   it('uses a custom decimalSeparator as the trigger', () => {
-    expect(processDecimal('42,5', { decimalSeparator: ',' })).toBe('42,50')
+    expect(processDecimal('42,5', { decimalPlaces: 2, decimalSeparator: ',' })).toBe('42,50')
     // "." is not the configured trigger when decimalSeparator is ",", so it's
     // dropped as noise and its digits fall through into the integer part.
-    expect(processDecimal('42.5', { decimalSeparator: ',' })).toBe('425,00')
+    expect(processDecimal('42.5', { decimalPlaces: 2, decimalSeparator: ',' })).toBe('425,00')
   })
 
   it('re-masks an already-formatted value idempotently', () => {
-    const once = processDecimal('1234.5', { prefix: '$' })
-    expect(processDecimal(once, { prefix: '$' })).toBe(once)
+    const once = processDecimal('1234.5', { decimalPlaces: 2, prefix: '$' })
+    expect(processDecimal(once, { decimalPlaces: 2, prefix: '$' })).toBe(once)
   })
 
   it('a second, later separator character is treated as noise, not a reset', () => {
-    expect(processDecimal('12.34.56')).toBe('12.34')
+    expect(processDecimal('12.34.56', { decimalPlaces: 2 })).toBe('12.34')
   })
 
   it('a lone separator with no digits at all formats as zero', () => {
-    expect(processDecimal('.')).toBe('0.00')
+    expect(processDecimal('.', { decimalPlaces: 2 })).toBe('0.00')
   })
 
   it('digits typed before any integer digit go straight into the fraction', () => {
-    expect(processDecimal('.5')).toBe('0.50')
+    expect(processDecimal('.5', { decimalPlaces: 2 })).toBe('0.50')
   })
 })
 
-describe('processDecimal() — editing (segmented: integer and fraction never bleed)', () => {
+describe('processDecimal() — editing, decimalPlaces: 2 (segmented: integer and fraction never bleed)', () => {
   it('shrinking the fraction pads with trailing zeros instead of reflowing', () => {
     // User had "423.42" and deleted the trailing "2" → browser produces "423.4".
-    expect(processDecimal('423.4')).toBe('423.40')
+    expect(processDecimal('423.4', { decimalPlaces: 2 })).toBe('423.40')
   })
 
   it('shrinking the integer part does not touch an already-typed fraction', () => {
     // "423.42" with the integer edited down to "42" → browser produces "42.42".
-    expect(processDecimal('42.42')).toBe('42.42')
+    expect(processDecimal('42.42', { decimalPlaces: 2 })).toBe('42.42')
   })
 
   it('growing the integer part does not touch an already-typed fraction', () => {
-    expect(processDecimal('4231.42')).toBe('4,231.42')
+    expect(processDecimal('4231.42', { decimalPlaces: 2 })).toBe('4,231.42')
+  })
+})
+
+describe('processDecimal() — decimalPlaces unset (optional, uncapped fraction — the default)', () => {
+  it('shows no fraction at all when only integer digits have been typed', () => {
+    expect(processDecimal('42')).toBe('42')
+    expect(processDecimal('423')).toBe('423')
+  })
+
+  it('still groups the integer part into thousands', () => {
+    expect(processDecimal('1234')).toBe('1,234')
+    expect(processDecimal('1234567')).toBe('1,234,567')
+  })
+
+  it('shows the separator with an empty fraction right after it is typed', () => {
+    expect(processDecimal('42.')).toBe('42.')
+  })
+
+  it('keeps a typed fraction exactly as typed, with no padding', () => {
+    expect(processDecimal('42.5')).toBe('42.5')
+    expect(processDecimal('42.56')).toBe('42.56')
+  })
+
+  it('does not cap the fraction at 2 digits — the user can type as many as they want', () => {
+    expect(processDecimal('42.567')).toBe('42.567')
+    expect(processDecimal('42.1234')).toBe('42.1234')
+    expect(processDecimal('42.123456789')).toBe('42.123456789')
+  })
+
+  it('does not strip or pad a trailing zero the user actually typed', () => {
+    expect(processDecimal('42.10')).toBe('42.10')
+    expect(processDecimal('42.100')).toBe('42.100')
+  })
+
+  it('shrinking the fraction does not pad back up — unlike the decimalPlaces: 2 case', () => {
+    // Contrast with the decimalPlaces: 2 test above, which pads "423.4" back
+    // to "423.40". With no fixed width there's nothing to pad to.
+    expect(processDecimal('423.4')).toBe('423.4')
+  })
+
+  it('a lone separator with no digits at all keeps the separator, not "0.00"', () => {
+    expect(processDecimal('.')).toBe('0.')
+  })
+
+  it('digits typed before any integer digit go straight into the fraction', () => {
+    expect(processDecimal('.5')).toBe('0.5')
+  })
+
+  it('re-masks an already-formatted value idempotently', () => {
+    const once = processDecimal('1234.56789', { prefix: '$' })
+    expect(once).toBe('$1,234.56789')
+    expect(processDecimal(once, { prefix: '$' })).toBe(once)
   })
 })
 
 describe('processDecimal() — options', () => {
   it('respects custom decimalPlaces', () => {
-    expect(processDecimal('1234')).not.toBe(processDecimal('1234', { decimalPlaces: 0 }))
+    expect(processDecimal('1234', { decimalPlaces: 2 })).not.toBe(
+      processDecimal('1234', { decimalPlaces: 0 }),
+    )
     expect(processDecimal('1234', { decimalPlaces: 0 })).toBe('1,234')
     expect(processDecimal('1234.5', { decimalPlaces: 1 })).toBe('1,234.5')
     expect(processDecimal('1234.5', { decimalPlaces: 4 })).toBe('1,234.5000')
@@ -121,14 +175,16 @@ describe('processDecimal() — options', () => {
   })
 
   it('floors and clamps a fractional/negative decimalPlaces to a non-negative integer', () => {
-    expect(processDecimal('1234', { decimalPlaces: 2.9 })).toBe(processDecimal('1234'))
+    expect(processDecimal('1234', { decimalPlaces: 2.9 })).toBe(
+      processDecimal('1234', { decimalPlaces: 2 }),
+    )
     expect(processDecimal('1234', { decimalPlaces: -3 })).toBe(
       processDecimal('1234', { decimalPlaces: 0 }),
     )
   })
 
   it('disables thousands grouping when segmented is false', () => {
-    expect(processDecimal('123456789', { segmented: false })).toBe('123456789.00')
+    expect(processDecimal('123456789', { decimalPlaces: 2, segmented: false })).toBe('123456789.00')
   })
 
   it('uses a custom thousands separator independent of the decimal separator', () => {
@@ -136,7 +192,7 @@ describe('processDecimal() — options', () => {
   })
 
   it('treats an empty thousands separator as "no grouping"', () => {
-    expect(processDecimal('123456789', { separator: '' })).toBe('123456789.00')
+    expect(processDecimal('123456789', { decimalPlaces: 2, separator: '' })).toBe('123456789.00')
   })
 
   it('handles a thousands separator equal to the decimal separator without crashing', () => {
@@ -146,15 +202,17 @@ describe('processDecimal() — options', () => {
 
   describe('negative numbers', () => {
     it('ignores a minus sign when allowNegative is false (default)', () => {
-      expect(processDecimal('-1234')).toBe('1,234.00')
+      expect(processDecimal('-1234', { decimalPlaces: 2 })).toBe('1,234.00')
     })
 
     it('produces a signed value when allowNegative is true', () => {
-      expect(processDecimal('-1234', { allowNegative: true })).toBe('-1,234.00')
+      expect(processDecimal('-1234', { decimalPlaces: 2, allowNegative: true })).toBe('-1,234.00')
     })
 
     it('places the sign before the prefix', () => {
-      expect(processDecimal('-1234', { allowNegative: true, prefix: '$' })).toBe('-$1,234.00')
+      expect(processDecimal('-1234', { decimalPlaces: 2, allowNegative: true, prefix: '$' })).toBe(
+        '-$1,234.00',
+      )
     })
 
     it('treats a lone "-" with no digits as empty', () => {
@@ -163,25 +221,103 @@ describe('processDecimal() — options', () => {
   })
 })
 
-describe('formatDecimalValue() — number to masked string', () => {
-  it('formats a plain number with default options', () => {
-    expect(formatDecimalValue(1234.5)).toBe('1,234.50')
+describe('processDecimal() — numberPlaces (fixed-width, left-padded integer part)', () => {
+  const timeOpts = { decimalPlaces: 2, numberPlaces: 2, decimalSeparator: ':', separator: '' }
+
+  it('left-pads a shorter integer part with zeros', () => {
+    expect(processDecimal('1', timeOpts)).toBe('01:00')
+    expect(processDecimal('12', timeOpts)).toBe('12:00')
+  })
+
+  it('drops integer digits typed beyond numberPlaces instead of shifting the window', () => {
+    expect(processDecimal('123', timeOpts)).toBe('12:00')
+  })
+
+  it('composes with the fraction segment (e.g. a time field)', () => {
+    expect(processDecimal('12:3', timeOpts)).toBe('12:30')
+    expect(processDecimal('12:34', timeOpts)).toBe('12:34')
+    // No decimalSeparator typed yet — everything is integer-segment digits,
+    // so numberPlaces caps at 2 and the rest is dropped (same as decimalPlaces
+    // for an all-integer stream with no separator).
+    expect(processDecimal('1234', timeOpts)).toBe('12:00')
+  })
+
+  it('collapses leading zeros before re-padding', () => {
+    expect(processDecimal('007', timeOpts)).toBe('00:00')
+    expect(processDecimal('007:5', timeOpts)).toBe('00:50')
+  })
+
+  it('has no effect on the integer part when unset (default)', () => {
+    expect(processDecimal('5')).toBe(processDecimal('5', { numberPlaces: undefined }))
+  })
+
+  it('floors a fractional numberPlaces and clamps non-positive values up to 1', () => {
+    expect(processDecimal('5', { ...timeOpts, numberPlaces: 2.9 })).toBe('05:00')
+    expect(processDecimal('5', { ...timeOpts, numberPlaces: 0 })).toBe('5:00')
+    expect(processDecimal('5', { ...timeOpts, numberPlaces: -3 })).toBe('5:00')
+  })
+
+  it('still groups a wide integer part into thousands beyond numberPlaces width when segmented', () => {
+    expect(processDecimal('1234', { decimalPlaces: 0, numberPlaces: 6 })).toBe('001,234')
+  })
+})
+
+describe('applyDecimalMask() — numberPlaces caret placement', () => {
+  const timeOpts = { decimalPlaces: 2, numberPlaces: 2, decimalSeparator: ':', separator: '' }
+
+  it('places the caret after the typed digit once padding is prepended', () => {
+    const m = applyDecimalMask('1', 1, timeOpts)
+    expect(m.value).toBe('01:00')
+    expect(m.caret).toBe(2)
+  })
+
+  it('keeps the caret glued to a mid-integer edit', () => {
+    const m = applyDecimalMask('12:30', 1, timeOpts)
+    expect(m.value).toBe('12:30')
+    expect(m.caret).toBe(1)
+  })
+
+  it('places the caret right after the full, unpadded integer segment', () => {
+    const m = applyDecimalMask('12', 2, timeOpts)
+    expect(m.value).toBe('12:00')
+    expect(m.caret).toBe(2)
+  })
+})
+
+describe('formatDecimalValue() — numberPlaces', () => {
+  const timeOpts = { decimalPlaces: 2, numberPlaces: 2, decimalSeparator: ':', separator: '' }
+
+  it('left-pads a small number', () => {
+    expect(formatDecimalValue(5, timeOpts)).toBe('05:00')
+    expect(formatDecimalValue(5.5, timeOpts)).toBe('05:50')
+  })
+
+  it('does not truncate a real number wider than numberPlaces (no data loss)', () => {
+    expect(formatDecimalValue(123.5, timeOpts)).toBe('123:50')
+  })
+})
+
+describe('formatDecimalValue() — number to masked string, decimalPlaces: 2', () => {
+  it('formats a plain number', () => {
+    expect(formatDecimalValue(1234.5, { decimalPlaces: 2 })).toBe('1,234.50')
   })
 
   it('formats zero', () => {
-    expect(formatDecimalValue(0)).toBe('0.00')
+    expect(formatDecimalValue(0, { decimalPlaces: 2 })).toBe('0.00')
   })
 
   it('formats negative zero without a stray sign', () => {
-    expect(formatDecimalValue(-0, { allowNegative: true })).toBe('0.00')
+    expect(formatDecimalValue(-0, { decimalPlaces: 2, allowNegative: true })).toBe('0.00')
   })
 
   it('formats negative numbers when allowed', () => {
-    expect(formatDecimalValue(-42.5, { allowNegative: true, prefix: '$' })).toBe('-$42.50')
+    expect(formatDecimalValue(-42.5, { decimalPlaces: 2, allowNegative: true, prefix: '$' })).toBe(
+      '-$42.50',
+    )
   })
 
   it('drops the sign for negative numbers when allowNegative is false', () => {
-    expect(formatDecimalValue(-42.5)).toBe('42.50')
+    expect(formatDecimalValue(-42.5, { decimalPlaces: 2 })).toBe('42.50')
   })
 
   it('rounds to the configured decimalPlaces', () => {
@@ -194,8 +330,41 @@ describe('formatDecimalValue() — number to masked string', () => {
   })
 
   it('round-trips through unmaskDecimal', () => {
-    const masked = formatDecimalValue(1234.56, { prefix: '$' })
-    expect(unmaskDecimal(masked, { prefix: '$' })).toBeCloseTo(1234.56)
+    const masked = formatDecimalValue(1234.56, { decimalPlaces: 2, prefix: '$' })
+    expect(unmaskDecimal(masked, { decimalPlaces: 2, prefix: '$' })).toBeCloseTo(1234.56)
+  })
+})
+
+describe('formatDecimalValue() — decimalPlaces unset (optional, uncapped fraction — the default)', () => {
+  it('shows no fraction at all for a whole number', () => {
+    expect(formatDecimalValue(1234)).toBe('1,234')
+  })
+
+  it('formats zero with no fraction', () => {
+    expect(formatDecimalValue(0)).toBe('0')
+  })
+
+  it('formats negative zero without a stray sign or fraction', () => {
+    expect(formatDecimalValue(-0, { allowNegative: true })).toBe('0')
+  })
+
+  it('shows exactly the digits the value carries, with no padding or rounding', () => {
+    expect(formatDecimalValue(1234.5)).toBe('1,234.5')
+    expect(formatDecimalValue(3.14159)).toBe('3.14159')
+  })
+
+  it('formats negative numbers when allowed, preserving full precision', () => {
+    expect(formatDecimalValue(-42.5, { allowNegative: true, prefix: '$' })).toBe('-$42.5')
+  })
+
+  it('drops the sign for negative numbers when allowNegative is false', () => {
+    expect(formatDecimalValue(-42.5)).toBe('42.5')
+  })
+
+  it('round-trips through unmaskDecimal with full precision', () => {
+    const masked = formatDecimalValue(1234.56789, { prefix: '$' })
+    expect(masked).toBe('$1,234.56789')
+    expect(unmaskDecimal(masked, { prefix: '$' })).toBeCloseTo(1234.56789)
   })
 })
 
@@ -233,13 +402,13 @@ describe('unmaskDecimal() — masked string to number', () => {
 
 describe('applyDecimalMask() — caret placement', () => {
   it('places the caret right before the auto-appended zero fraction, not past it', () => {
-    const m = applyDecimalMask('1234', 4)
+    const m = applyDecimalMask('1234', 4, { decimalPlaces: 2 })
     expect(m.value).toBe('1,234.00')
     expect(m.caret).toBe('1,234'.length)
   })
 
   it('places the caret right before the separator when caret sits at the boundary', () => {
-    const m = applyDecimalMask('1234', 4)
+    const m = applyDecimalMask('1234', 4, { decimalPlaces: 2 })
     // Right after all 4 integer digits, before the appended ".00".
     expect(m.value.slice(0, m.caret)).toBe('1,234')
   })
@@ -247,9 +416,15 @@ describe('applyDecimalMask() — caret placement', () => {
   it('keeps the caret glued to the digit just typed inside the fraction', () => {
     // "423.42", user backspaced the trailing "2" → browser produced "423.4"
     // with the caret at the end (position 5).
-    const m = applyDecimalMask('423.4', 5)
+    const m = applyDecimalMask('423.4', 5, { decimalPlaces: 2 })
     expect(m.value).toBe('423.40')
     expect(m.caret).toBe(5) // "423.4|0"
+  })
+
+  it('with decimalPlaces unset, does not pad the caret past what was typed', () => {
+    const m = applyDecimalMask('1234', 4)
+    expect(m.value).toBe('1,234')
+    expect(m.caret).toBe('1,234'.length)
   })
 
   it('keeps the caret in the integer segment when editing there, ignoring the fraction', () => {
@@ -337,18 +512,123 @@ describe('applyDecimalMaskReplacingLoneZero() — overwrite the placeholder zero
   })
 })
 
-describe('applyDecimalMaskUnmergingSeparator() — Backspace over the decimal separator', () => {
+describe('applyDecimalMaskReplacingLoneZero() — numberPlaces padding-aware fill', () => {
+  const timeOpts = { decimalPlaces: 2, numberPlaces: 2, decimalSeparator: ':', separator: '' }
+
+  it('collapses a multi-digit all-zero placeholder to just the typed digit', () => {
+    // "00:00" with the caret after inserting "5" at index 1 -> "050:00".
+    const m = applyDecimalMaskReplacingLoneZero('050:00', 2, '5', timeOpts)
+    expect(m).not.toBeNull()
+    expect(m!.value).toBe('05:00')
+  })
+
+  it('is caret-position independent across an all-zero run', () => {
+    const atStart = applyDecimalMaskReplacingLoneZero('500:00', 1, '5', timeOpts)
+    const atEnd = applyDecimalMaskReplacingLoneZero('005:00', 3, '5', timeOpts)
+    expect(atStart!.value).toBe('05:00')
+    expect(atEnd!.value).toBe('05:00')
+  })
+
+  it('extends the one real digit and drops the leading padding zero', () => {
+    // "02:00" + "4" at the end -> browser produces "024:00".
+    const m = applyDecimalMaskReplacingLoneZero('024:00', 3, '4', timeOpts)
+    expect(m).not.toBeNull()
+    expect(m!.value).toBe('24:00')
+  })
+
+  it('is caret-position independent when extending a padded real digit', () => {
+    // Typing "4" at the very front of "02" (before the padding zero) still
+    // produces "24", not "42" — the padding isn't independently editable.
+    const m = applyDecimalMaskReplacingLoneZero('402:00', 1, '4', timeOpts)
+    expect(m).not.toBeNull()
+    expect(m!.value).toBe('24:00')
+  })
+
+  it('returns null once both digits are real, even with a trailing "0" ("20" is not padding)', () => {
+    const m = applyDecimalMaskReplacingLoneZero('204:00', 3, '4', timeOpts)
+    expect(m).toBeNull()
+  })
+
+  it('returns null once both digits are real (non-zero leading digit)', () => {
+    const m = applyDecimalMaskReplacingLoneZero('234:00', 3, '4', timeOpts)
+    expect(m).toBeNull()
+  })
+
+  it('returns null for "10" — the trailing zero is real, not numberPlaces padding', () => {
+    const m = applyDecimalMaskReplacingLoneZero('104:00', 3, '4', timeOpts)
+    expect(m).toBeNull()
+  })
+
+  it('preserves an already-typed fraction while filling padding', () => {
+    const m = applyDecimalMaskReplacingLoneZero('024:45', 3, '4', timeOpts)
+    expect(m).not.toBeNull()
+    expect(m!.value).toBe('24:45')
+  })
+
+  it('respects a wider numberPlaces: one real digit still has two padding slots', () => {
+    const wideOpts = { ...timeOpts, numberPlaces: 3 }
+    // "002" (real "2", 2 padding zeros) + "4" -> "0024" browser snapshot.
+    const m = applyDecimalMaskReplacingLoneZero('0024:00', 4, '4', wideOpts)
+    expect(m).not.toBeNull()
+    expect(m!.value).toBe('024:00')
+  })
+
+  it('respects a wider numberPlaces: two real digits still have one padding slot', () => {
+    const wideOpts = { ...timeOpts, numberPlaces: 3 }
+    // "012" (real "12", 1 padding zero) + "5" -> "0125" browser snapshot.
+    const m = applyDecimalMaskReplacingLoneZero('0125:00', 4, '5', wideOpts)
+    expect(m).not.toBeNull()
+    expect(m!.value).toBe('125:00')
+  })
+
+  it('returns null once a wider numberPlaces segment is fully real', () => {
+    const wideOpts = { ...timeOpts, numberPlaces: 3 }
+    const m = applyDecimalMaskReplacingLoneZero('1234:00', 4, '4', wideOpts)
+    expect(m).toBeNull()
+  })
+
+  it('returns null when the caret lands past the integer segment (into the separator/fraction)', () => {
+    // Caret sits right after the ":" — the inserted "4" belongs to the
+    // fraction, not the padded "02" integer segment.
+    const m = applyDecimalMaskReplacingLoneZero('02:400', 4, '4', timeOpts)
+    expect(m).toBeNull()
+  })
+
+  it('preserves a negative sign while filling padding', () => {
+    const m = applyDecimalMaskReplacingLoneZero('-024:00', 4, '4', {
+      ...timeOpts,
+      allowNegative: true,
+    })
+    expect(m).not.toBeNull()
+    expect(m!.value).toBe('-24:00')
+  })
+
+  it('works with decimalPlaces: 0 (no fraction segment at all)', () => {
+    const noFracOpts = { numberPlaces: 2, decimalPlaces: 0, separator: '' }
+    const m = applyDecimalMaskReplacingLoneZero('024', 3, '4', noFracOpts)
+    expect(m).not.toBeNull()
+    expect(m!.value).toBe('24')
+  })
+
+  it('combines a prefix with numberPlaces padding fill', () => {
+    const m = applyDecimalMaskReplacingLoneZero('$024:00', 4, '4', { ...timeOpts, prefix: '$' })
+    expect(m).not.toBeNull()
+    expect(m!.value).toBe('$24:00')
+  })
+})
+
+describe('applyDecimalMaskUnmergingSeparator() — Backspace over the decimal separator, decimalPlaces: 2', () => {
   it('drops the last integer digit and restores the fraction boundary', () => {
     // "$25.00" with the caret right after "." → Backspace deletes the "."
     // → browser produces "$2500" with the caret at 3.
-    const m = applyDecimalMaskUnmergingSeparator('$2500', { prefix: '$' })
+    const m = applyDecimalMaskUnmergingSeparator('$2500', { decimalPlaces: 2, prefix: '$' })
     expect(m).not.toBeNull()
     expect(m!.value).toBe('$2.00')
     expect(m!.value.slice(0, m!.caret)).toBe('$2')
   })
 
   it('returns null when the separator is still present (nothing to restore)', () => {
-    const m = applyDecimalMaskUnmergingSeparator('$25.00', { prefix: '$' })
+    const m = applyDecimalMaskUnmergingSeparator('$25.00', { decimalPlaces: 2, prefix: '$' })
     expect(m).toBeNull()
   })
 
@@ -358,27 +638,41 @@ describe('applyDecimalMaskUnmergingSeparator() — Backspace over the decimal se
   })
 
   it('returns null when there are too few digits to have come from a real split', () => {
-    const m = applyDecimalMaskUnmergingSeparator('$5', { prefix: '$' })
+    const m = applyDecimalMaskUnmergingSeparator('$5', { decimalPlaces: 2, prefix: '$' })
     expect(m).toBeNull()
   })
 
   it('preserves a negative sign', () => {
-    const m = applyDecimalMaskUnmergingSeparator('-$2500', { prefix: '$', allowNegative: true })
+    const m = applyDecimalMaskUnmergingSeparator('-$2500', {
+      decimalPlaces: 2,
+      prefix: '$',
+      allowNegative: true,
+    })
     expect(m).not.toBeNull()
     expect(m!.value).toBe('-$2.00')
   })
 
   it('re-groups the remaining integer part after dropping a digit', () => {
     // Pre-merge was "$1,234.00"; deleting the "." merges to "1234" + "00".
-    const m = applyDecimalMaskUnmergingSeparator('$123400', { prefix: '$' })
+    const m = applyDecimalMaskUnmergingSeparator('$123400', { decimalPlaces: 2, prefix: '$' })
     expect(m).not.toBeNull()
     expect(m!.value).toBe('$123.00')
   })
 
   it('uses the configured decimalSeparator when rebuilding', () => {
-    const m = applyDecimalMaskUnmergingSeparator('2500', { decimalSeparator: ',' })
+    const m = applyDecimalMaskUnmergingSeparator('2500', { decimalPlaces: 2, decimalSeparator: ',' })
     expect(m).not.toBeNull()
     expect(m!.value).toBe('2,00')
+  })
+})
+
+describe('applyDecimalMaskUnmergingSeparator() — decimalPlaces unset (optional, uncapped fraction)', () => {
+  it('returns null — there is no fixed fraction width to restore, so nothing merges back', () => {
+    // With an uncapped fraction, Backspace over "." just leaves the digits
+    // merged into one continuous integer; there's no way to know how many
+    // trailing digits used to be "the fraction".
+    const m = applyDecimalMaskUnmergingSeparator('$2500', { prefix: '$' })
+    expect(m).toBeNull()
   })
 })
 

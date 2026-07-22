@@ -43,8 +43,22 @@ export interface BindOptions extends ApplyMaskOptions {
 
 /** Options for {@link applyDecimalMask}, {@link processDecimal}, {@link unmaskDecimal}, {@link formatDecimalValue}, and {@link bindDecimal}. */
 export interface DecimalMaskOptions {
-  /** Number of fixed fractional digits. Negative/fractional values are floored to `0`. @default 2 */
+  /**
+   * Number of fixed fractional digits, zero-padded and always shown once
+   * set. Negative/fractional values are floored to `0`. Left unset, the
+   * fraction is optional and uncapped: the decimal separator and any digits
+   * after it only appear once the user actually types them, and there's no
+   * limit on how many digits they can type. @default undefined (optional, unlimited)
+   */
   decimalPlaces?: number
+  /**
+   * Fixed width for the integer part, left-padded with zeros to that width.
+   * Digits typed beyond this width are dropped instead of shifting the
+   * window — the mirror image of {@link decimalPlaces} for the fraction.
+   * Useful for fixed-width segments like a time field (`"00:00"`, hours
+   * capped and padded to 2 digits). @default undefined (no limit)
+   */
+  numberPlaces?: number
   /** Group the integer part into thousands using `separator`. @default true */
   segmented?: boolean
   /** Thousands grouping separator, used when `segmented` is `true`. @default ',' */

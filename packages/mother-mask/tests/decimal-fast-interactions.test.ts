@@ -137,7 +137,7 @@ describe('bindDecimal() fast typing — digits inserted before any rAF fires', (
 
   it('4 digits typed fast cross the thousands-grouping threshold correctly', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input, { prefix: '$' })
+    bindDecimal(input, { decimalPlaces: 2, prefix: '$' })
     typeChars(input, '1234')
     await flushRafs()
     expect(input.value).toBe('$1,234.00')
@@ -145,7 +145,7 @@ describe('bindDecimal() fast typing — digits inserted before any rAF fires', (
 
   it('7 digits typed fast group into two thousands separators', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input)
+    bindDecimal(input, { decimalPlaces: 2 })
     typeChars(input, '1234567')
     await flushRafs()
     expect(input.value).toBe('1,234,567.00')
@@ -153,7 +153,7 @@ describe('bindDecimal() fast typing — digits inserted before any rAF fires', (
 
   it('no keydown is ever defaultPrevented while typing digits (no max-length concept)', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input)
+    bindDecimal(input, { decimalPlaces: 2 })
     let anyPrevented = false
     let v = ''
     for (const ch of '123456789012345') {
@@ -171,7 +171,7 @@ describe('bindDecimal() fast typing — digits inserted before any rAF fires', (
 
   it('typing digit, separator, then fraction digits fast fills the fraction left to right', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input)
+    bindDecimal(input, { decimalPlaces: 2 })
     typeChars(input, '423.4')
     await flushRafs()
     expect(input.value).toBe('423.40')
@@ -179,7 +179,7 @@ describe('bindDecimal() fast typing — digits inserted before any rAF fires', (
 
   it('typing past decimalPlaces fast drops the overflow digit instead of shifting the window', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input)
+    bindDecimal(input, { decimalPlaces: 2 })
     typeChars(input, '423.4567')
     await flushRafs()
     expect(input.value).toBe('423.45')
@@ -188,13 +188,21 @@ describe('bindDecimal() fast typing — digits inserted before any rAF fires', (
   it('rapid keystrokes each schedule their own rAF but converge to one correct final value', async () => {
     const { bindDecimal } = await import('../src/index')
     const cb = vi.fn()
-    bindDecimal(input, { prefix: '$', onChange: cb })
+    bindDecimal(input, { decimalPlaces: 2, prefix: '$', onChange: cb })
     typeChars(input, '9999')
     // Deliberately flush every pending rAF (one per keystroke) rather than
     // just the minimum — every intermediate reformat must still be valid.
     await flushRafs(8)
     expect(input.value).toBe('$9,999.00')
     expect(cb).toHaveBeenLastCalledWith('$9,999.00', 9999)
+  })
+
+  it('with decimalPlaces unset, fast typing never truncates or pads the fraction', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input)
+    typeChars(input, '423.4567')
+    await flushRafs()
+    expect(input.value).toBe('423.4567')
   })
 })
 
@@ -217,7 +225,7 @@ describe('bindDecimal() fast delete sequences', () => {
 
   it('backspacing the whole fraction one digit at a time re-pads with zeros each step', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input)
+    bindDecimal(input, { decimalPlaces: 2 })
     input.value = '423.42'
     input.setSelectionRange(6, 6)
     backspaceN(input, 1)
@@ -227,7 +235,7 @@ describe('bindDecimal() fast delete sequences', () => {
 
   it('backspacing through the separator merges then unmerges to drop the last integer digit', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input, { prefix: '$' })
+    bindDecimal(input, { decimalPlaces: 2, prefix: '$' })
     // "$423.00", caret right after "3" (before "."): backspace removes "3".
     input.value = '$423.00'
     input.setSelectionRange(4, 4)
@@ -306,7 +314,7 @@ describe('bindDecimal() simulated mouse interactions', () => {
 
   it('click to place caret then type a digit inserts it at that position', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input)
+    bindDecimal(input, { decimalPlaces: 2 })
     input.value = '15'
     clickAt(input, 1) // caret between "1" and "5"
     insertAt(input, 1, '2')
@@ -325,7 +333,7 @@ describe('bindDecimal() simulated mouse interactions', () => {
 
   it('double-click select-all then retype replaces the whole value', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input, { prefix: '$' })
+    bindDecimal(input, { decimalPlaces: 2, prefix: '$' })
     input.value = '$1,234.00'
     input.setSelectionRange(0, 9)
     doubleClickSelectAll(input)
@@ -336,7 +344,7 @@ describe('bindDecimal() simulated mouse interactions', () => {
 
   it('drag-select across the decimal separator and retype collapses to a fresh value', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input)
+    bindDecimal(input, { decimalPlaces: 2 })
     input.value = '423.42'
     // Select "3.4" (indices 2..5, spanning the separator) and replace with
     // "9" — the browser produces raw text "4292" (the separator itself was
@@ -405,7 +413,7 @@ describe('bindDecimal() copy / cut / paste edge cases', () => {
 
   it('pastes a negative value when allowNegative is enabled', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input, { prefix: '$', allowNegative: true })
+    bindDecimal(input, { decimalPlaces: 2, prefix: '$', allowNegative: true })
     input.setSelectionRange(0, 0)
     pasteAt(input, '-1234.5')
     await flushRafs(1)
@@ -414,7 +422,7 @@ describe('bindDecimal() copy / cut / paste edge cases', () => {
 
   it('pastes a negative value that is dropped when allowNegative is disabled (default)', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input, { prefix: '$' })
+    bindDecimal(input, { decimalPlaces: 2, prefix: '$' })
     input.setSelectionRange(0, 0)
     pasteAt(input, '-1234.5')
     await flushRafs(1)
@@ -423,7 +431,7 @@ describe('bindDecimal() copy / cut / paste edge cases', () => {
 
   it('replaces the entire value on paste when everything was selected first (Ctrl+A then paste)', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input)
+    bindDecimal(input, { decimalPlaces: 2 })
     input.value = '9,999.99'
     input.setSelectionRange(0, 8)
     pasteAt(input, '42')
@@ -433,7 +441,7 @@ describe('bindDecimal() copy / cut / paste edge cases', () => {
 
   it('a cut (no paste/keydown fired) leaves the raw post-cut value unmasked until the next interaction', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input, { prefix: '$' })
+    bindDecimal(input, { decimalPlaces: 2, prefix: '$' })
     input.value = '$1,234.56'
     input.setSelectionRange(0, 9)
     // Simulate the browser's native cut: selection removed, only a 'cut'
@@ -468,7 +476,7 @@ describe('bindDecimal() negative-sign interactions', () => {
 
   it('typing "-" anywhere in the digit stream (not just at the start) still flips the sign', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input, { allowNegative: true })
+    bindDecimal(input, { decimalPlaces: 2, allowNegative: true })
     input.value = '42'
     input.setSelectionRange(2, 2)
     // Types "-" in the middle: "4-2"
@@ -489,7 +497,7 @@ describe('bindDecimal() negative-sign interactions', () => {
 
   it('typing a second "-" once already negative does not toggle back to positive (it is dropped as noise)', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input, { allowNegative: true })
+    bindDecimal(input, { decimalPlaces: 2, allowNegative: true })
     input.value = '-42'
     input.setSelectionRange(3, 3)
     insertAt(input, 3, '-')
@@ -518,7 +526,7 @@ describe('bindDecimal() fast interactions — iOS (keyup events)', () => {
   it('fast digit burst via keyup reaches the correct final masked value', async () => {
     vi.stubGlobal('navigator', { userAgent: 'iPad; CPU OS 16_0 like Mac OS X' })
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input, { prefix: '$' })
+    bindDecimal(input, { decimalPlaces: 2, prefix: '$' })
     typeChars(input, '1234', 'keyup')
     await flushRafs()
     expect(input.value).toBe('$1,234.00')
@@ -567,7 +575,7 @@ describe('bindDecimal() fast interactions — locale and option combinations', (
 
   it('EU-style separators (comma decimal, dot thousands) format correctly under fast typing', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input, { separator: '.', decimalSeparator: ',', suffix: ' €' })
+    bindDecimal(input, { decimalPlaces: 2, separator: '.', decimalSeparator: ',', suffix: ' €' })
     typeChars(input, '1234')
     await flushRafs()
     expect(input.value).toBe('1.234,00 €')
@@ -575,7 +583,7 @@ describe('bindDecimal() fast interactions — locale and option combinations', (
 
   it('a numeric-keypad "." is normalized to the configured "," decimalSeparator mid-burst', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input, { decimalSeparator: ',' })
+    bindDecimal(input, { decimalPlaces: 2, decimalSeparator: ',' })
     typeChars(input, '42')
     input.value = '42.'
     press(input, '.', '42.', 3)
@@ -595,10 +603,22 @@ describe('bindDecimal() fast interactions — locale and option combinations', (
 
   it('segmented: false (no thousands grouping) still fast-formats correctly', async () => {
     const { bindDecimal } = await import('../src/index')
-    bindDecimal(input, { segmented: false })
+    bindDecimal(input, { decimalPlaces: 2, segmented: false })
     typeChars(input, '1234567')
     await flushRafs()
     expect(input.value).toBe('1234567.00')
+  })
+
+  it('decimalPlaces unset still normalizes "," and lets the fraction grow unbounded under fast typing', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalSeparator: ',' })
+    typeChars(input, '42')
+    input.value = '42.'
+    press(input, '.', '42.', 3)
+    input.value = '42,456'
+    press(input, '6', '42,456', 6)
+    await flushRafs()
+    expect(input.value).toBe('42,456')
   })
 })
 

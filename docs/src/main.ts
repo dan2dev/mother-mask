@@ -98,7 +98,12 @@ bind($('ex-date-flat'), '99/99/9999', { segmented: false })
 
 // ── Time ─────────────────────────────────────────────────────────────────────
 
-bind($('ex-time'), '99:99')
+bindDecimal($('ex-time'), {
+	decimalPlaces: 2,
+	numberPlaces: 2,
+	decimalSeparator: ":",
+	separator: ""
+})
 
 // ── Plates ───────────────────────────────────────────────────────────────────
 
@@ -122,10 +127,10 @@ bind($('ex-card'), ['9999 999999 99999', '9999 9999 9999 9999'], (v) => {
 
 // ── Decimal / currency ───────────────────────────────────────────────────────
 
-bindDecimal($('ex-usd'), { prefix: '$' })
-bindDecimal($('ex-eur'), { separator: '.', decimalSeparator: ',', suffix: ' €' })
+bindDecimal($('ex-usd'), { decimalPlaces: 2, prefix: '$' })
+bindDecimal($('ex-eur'), { decimalPlaces: 2, separator: '.', decimalSeparator: ',', suffix: ' €' })
 bindDecimal($('ex-qty'), { decimalPlaces: 0, suffix: ' units' })
-bindDecimal($('ex-balance'), { prefix: '$', allowNegative: true })
+bindDecimal($('ex-balance'), { decimalPlaces: 2, prefix: '$', allowNegative: true })
 
 // ── Masked vs. raw ───────────────────────────────────────────────────────────
 

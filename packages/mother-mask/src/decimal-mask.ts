@@ -13,7 +13,16 @@ function isDigitChar(ch: string): boolean {
 // ---------------------------------------------------------------------------
 
 interface ResolvedDecimalOptions {
-  decimalPlaces: number
+  /**
+   * `undefined` means an optional, uncapped fraction (default) — the
+   * decimal separator and fraction only appear once the user actually types
+   * them, and there's no limit on how many digits follow. `0` means no
+   * fraction at all. A positive number is a fixed, zero-padded width that's
+   * always shown, even before the user types anything.
+   */
+  decimalPlaces: number | undefined
+  /** `undefined` means unlimited (default) — the integer part grows freely. */
+  numberPlaces: number | undefined
   segmented: boolean
   separator: string
   decimalSeparator: string
@@ -24,10 +33,17 @@ interface ResolvedDecimalOptions {
 
 /** @internal exported for {@link bindDecimal}'s "." / "," key normalization */
 export function resolveDecimalOptions(options?: DecimalMaskOptions): ResolvedDecimalOptions {
-  const rawPlaces = options?.decimalPlaces ?? 2
-  const decimalPlaces = Number.isFinite(rawPlaces) ? Math.max(0, Math.floor(rawPlaces)) : 2
+  const rawPlaces = options?.decimalPlaces
+  const decimalPlaces =
+    rawPlaces != null && Number.isFinite(rawPlaces) ? Math.max(0, Math.floor(rawPlaces)) : undefined
+  const rawNumberPlaces = options?.numberPlaces
+  const numberPlaces =
+    rawNumberPlaces != null && Number.isFinite(rawNumberPlaces)
+      ? Math.max(1, Math.floor(rawNumberPlaces))
+      : undefined
   return {
     decimalPlaces,
+    numberPlaces,
     segmented: options?.segmented ?? true,
     separator: options?.separator ?? ',',
     decimalSeparator: options?.decimalSeparator ?? '.',
@@ -82,10 +98,13 @@ function caretForDigitsBefore(s: string, digitsBefore: number): number {
 // ---------------------------------------------------------------------------
 // Segmented parsing — integer digits before the decimal separator, fraction
 // digits after. Unlike a slot-pattern mask, the integer segment has no fixed
-// length; only the fraction is fixed-width (`decimalPlaces`), zero-padded on
-// the right so a shorter fraction reads as its low-order (trailing) digits
-// being zero rather than reflowing/shifting — e.g. editing "423,42" down to
-// "423,4" produces "423,40", not "42,34".
+// length. The fraction is only fixed-width when `decimalPlaces` is set to a
+// positive number — zero-padded on the right so a shorter fraction reads as
+// its low-order (trailing) digits being zero rather than reflowing/shifting
+// (e.g. editing "423,42" down to "423,4" produces "423,40", not "42,34").
+// When `decimalPlaces` is left unset, the fraction is optional and uncapped:
+// it only exists once the user types the separator, and grows to however
+// many digits they type.
 //
 // The decimal separator only has meaning as the *first* occurrence of
 // `opts.decimalSeparator`; every other non-digit character (thousands
@@ -105,13 +124,13 @@ function computeDecimalParts(raw: string, opts: ResolvedDecimalOptions): Decimal
   let fracDigits = ''
   let isNegative = false
   let inFraction = false
-  const canHaveFraction = opts.decimalPlaces > 0
+  const canHaveFraction = opts.decimalPlaces !== 0
 
   for (const ch of raw) {
     if (isDigitChar(ch)) {
       if (inFraction) {
-        if (fracDigits.length < opts.decimalPlaces) fracDigits += ch
-      } else {
+        if (opts.decimalPlaces == null || fracDigits.length < opts.decimalPlaces) fracDigits += ch
+      } else if (opts.numberPlaces == null || intDigits.length < opts.numberPlaces) {
         intDigits += ch
       }
       continue
@@ -138,14 +157,18 @@ function locateCaretSegment(
   caret: number,
   opts: ResolvedDecimalOptions,
 ): { inFraction: boolean; digitsBefore: number } {
-  const canHaveFraction = opts.decimalPlaces > 0
+  const canHaveFraction = opts.decimalPlaces !== 0
   let inFraction = false
   let digitsBefore = 0
 
   for (let i = 0; i < caret; i++) {
     const ch = raw[i]
     if (isDigitChar(ch)) {
-      if (!inFraction || digitsBefore < opts.decimalPlaces) digitsBefore++
+      if (inFraction) {
+        if (opts.decimalPlaces == null || digitsBefore < opts.decimalPlaces) digitsBefore++
+      } else if (opts.numberPlaces == null || digitsBefore < opts.numberPlaces) {
+        digitsBefore++
+      }
       continue
     }
     if (canHaveFraction && !inFraction && ch === opts.decimalSeparator) {
@@ -165,7 +188,10 @@ function locateCaretSegment(
  * Apply a decimal/currency mask to a value, producing the masked output and
  * a computed caret position. Digits typed before the decimal separator
  * extend the integer part; the fraction only starts once the separator is
- * typed, and is always displayed zero-padded to `decimalPlaces` width.
+ * typed. With a fixed `decimalPlaces` it's always displayed zero-padded to
+ * that width, even before the user types it; left unset, the fraction is
+ * optional — it only appears once the separator is typed, and is shown
+ * exactly as typed (no padding, no cap on how many digits).
  */
 export function applyDecimalMask(
   value: string,
@@ -179,18 +205,27 @@ export function applyDecimalMask(
   if (intDigits === '' && fracDigits === '' && !hasSeparator) return { value: '', caret: 0 }
 
   const intPart = stripLeadingZeros(intDigits || '0')
-  const groupedInt = opts.segmented ? groupThousands(intPart, opts.separator) : intPart
-  const fracPadded = opts.decimalPlaces > 0 ? fracDigits.padEnd(opts.decimalPlaces, '0') : ''
-  const numberStr = groupedInt + (opts.decimalPlaces > 0 ? opts.decimalSeparator + fracPadded : '')
+  const paddedInt = opts.numberPlaces != null ? intPart.padStart(opts.numberPlaces, '0') : intPart
+  const groupedInt = opts.segmented ? groupThousands(paddedInt, opts.separator) : paddedInt
+  const fracPadded =
+    opts.decimalPlaces != null && opts.decimalPlaces > 0
+      ? fracDigits.padEnd(opts.decimalPlaces, '0')
+      : fracDigits
+  const showFraction = opts.decimalPlaces === 0 ? false : opts.decimalPlaces != null || hasSeparator
+  const numberStr = groupedInt + (showFraction ? opts.decimalSeparator + fracPadded : '')
   const signStr = isNegative ? '-' : ''
   const output = signStr + opts.prefix + numberStr + opts.suffix
 
   const clampedCaret = Math.max(0, Math.min(inputCaret, value.length))
   const { inFraction, digitsBefore } = locateCaretSegment(value, clampedCaret, opts)
   const prefixLen = signStr.length + opts.prefix.length
+  // Left-padding zeros are synthetic — prepended ahead of every real typed
+  // digit — so they shift where the caret's `digitsBefore`-th real digit
+  // lands in `groupedInt` by the padding's width.
+  const padLength = paddedInt.length - intPart.length
   const caret = inFraction
     ? prefixLen + groupedInt.length + opts.decimalSeparator.length + digitsBefore
-    : prefixLen + caretForDigitsBefore(groupedInt, digitsBefore)
+    : prefixLen + caretForDigitsBefore(groupedInt, digitsBefore + padLength)
 
   return { value: output, caret }
 }
@@ -222,19 +257,24 @@ export function unmaskDecimal(value: string, options?: DecimalMaskOptions): numb
  * to sit at the end of the integer part — is the one Backspace actually
  * removed, so it's dropped (not kept) — "$25.00" → "$2.00".
  *
- * Every reformat re-appends `decimalSeparator` whenever `decimalPlaces > 0`,
- * so its absence from `value` is an unambiguous signal that this exact
- * keystroke just deleted it — no "value before this keystroke" snapshot is
- * needed. Returns `null` when there's nothing to restore (the separator is
- * still present, `decimalPlaces` is `0`, or too few digits remain), so the
- * caller falls through to a plain {@link applyDecimalMask} call.
+ * Only applies when `decimalPlaces` is a fixed positive number — that's
+ * what "the trailing N digits are the fraction" means. Every reformat
+ * re-appends `decimalSeparator` in that case, so its absence from `value`
+ * is an unambiguous signal that this exact keystroke just deleted it — no
+ * "value before this keystroke" snapshot is needed. With `decimalPlaces`
+ * unset (optional, uncapped fraction) there's no fixed width to reconstruct
+ * from, so the merged digits are left as one continuous integer instead —
+ * the same reasoning `numberPlaces` uses for an unbounded integer part.
+ * Returns `null` when there's nothing to restore (the separator is still
+ * present, `decimalPlaces` is `0` or unset, or too few digits remain), so
+ * the caller falls through to a plain {@link applyDecimalMask} call.
  */
 export function applyDecimalMaskUnmergingSeparator(
   value: string,
   options?: DecimalMaskOptions,
 ): MaskResult | null {
   const opts = resolveDecimalOptions(options)
-  if (opts.decimalPlaces <= 0) return null
+  if (opts.decimalPlaces == null || opts.decimalPlaces <= 0) return null
 
   const { isNegative, intDigits, hasSeparator } = computeDecimalParts(value, opts)
   if (hasSeparator || intDigits.length < opts.decimalPlaces + 1) return null
@@ -249,18 +289,30 @@ export function applyDecimalMaskUnmergingSeparator(
 }
 
 /**
- * Special-cases typing a single digit into a field whose integer part is
- * exactly the auto-inserted "0" placeholder: the new digit replaces that
- * zero instead of combining with it — e.g. "$0.00" with the caret anywhere
- * against that lone "0" and typing "2" gives "$2.00", not "$20.00"/"$02.00".
- * Any already-typed fraction is preserved.
+ * Special-cases typing a single digit into an integer segment that isn't
+ * yet full of *real* digits — either because it's still the auto-inserted
+ * zero placeholder ("0", or a wider "00" from a `numberPlaces`-padded field
+ * that hasn't been touched), or because `numberPlaces` is left-padding a
+ * partially-typed segment with synthetic zeros (e.g. "02" is really just
+ * the one real digit "2", padded out to width 2 for display). Those padding
+ * zeros aren't editable content, so the new digit extends the real digit
+ * stream instead of combining with a padding zero at the caret:
+ *
+ * - "$0.00" + "2" → "$2.00" (not "$20.00")
+ * - a `numberPlaces: 2` time field's untouched "00:00" + "5" → "05:00"
+ * - that same field's "02:00" (one real digit, one padding zero) + "4" →
+ *   "24:00" — the real "2" is kept, the padding "0" is not
+ *
+ * A segment that's already full of real digits — e.g. "23:00", both digits
+ * genuinely typed — doesn't match here and falls through to the default
+ * {@link applyDecimalMask}, which already drops the overflow keystroke
+ * (typing a 3rd real digit leaves "23:00" unchanged).
  *
  * `value`/`caret` must be the state *after* the browser has already
  * inserted `digit` at `caret - 1` (the same post-insertion snapshot
  * `applyDecimalMask` itself expects from `bindDecimal`). Returns `null`
- * when the pattern doesn't apply — either the integer part has real digits
- * already, or the caret wasn't against that lone zero — so the caller falls
- * through to a plain {@link applyDecimalMask} call.
+ * when the pattern doesn't apply, so the caller falls through to a plain
+ * {@link applyDecimalMask} call.
  */
 export function applyDecimalMaskReplacingLoneZero(
   value: string,
@@ -274,30 +326,45 @@ export function applyDecimalMaskReplacingLoneZero(
 
   const withoutDigit = value.slice(0, insertIdx) + value.slice(caret)
   const { isNegative, intDigits, fracDigits, hasSeparator } = computeDecimalParts(withoutDigit, opts)
-  if (intDigits !== '0') return null
+
+  const realDigits = stripLeadingZeros(intDigits || '0')
+  const hasRealDigits = realDigits !== '0'
+  const hasPaddingRoom =
+    hasRealDigits && opts.numberPlaces != null && realDigits.length < opts.numberPlaces
+  if (hasRealDigits && !hasPaddingRoom) return null
 
   const prefixLen = (isNegative ? 1 : 0) + opts.prefix.length
-  if (insertIdx < prefixLen || insertIdx > prefixLen + 1) return null
+  if (insertIdx < prefixLen || insertIdx > prefixLen + intDigits.length) return null
 
   const signPart = isNegative ? '-' : ''
-  const raw = signPart + digit + (hasSeparator ? opts.decimalSeparator + fracDigits : '')
-  return applyDecimalMask(raw, signPart.length + 1, opts)
+  const newIntDigits = (hasRealDigits ? realDigits : '') + digit
+  const raw = signPart + newIntDigits + (hasSeparator ? opts.decimalSeparator + fracDigits : '')
+  return applyDecimalMask(raw, signPart.length + newIntDigits.length, opts)
 }
 
-/** Format a plain JS number into its masked display string. */
+/**
+ * Format a plain JS number into its masked display string. With a fixed
+ * `decimalPlaces` the fraction is rounded/padded to that exact width, even
+ * for a whole number; left unset, the fraction is only shown when the value
+ * actually has one, with as many digits as `value` naturally carries (no
+ * padding, no rounding).
+ */
 export function formatDecimalValue(value: number, options?: DecimalMaskOptions): string {
   const opts = resolveDecimalOptions(options)
   if (!Number.isFinite(value)) return ''
 
   const isNegative = opts.allowNegative && value < 0
-  const fixed = Math.abs(value).toFixed(opts.decimalPlaces)
+  const abs = Math.abs(value)
+  const fixed = opts.decimalPlaces != null ? abs.toFixed(opts.decimalPlaces) : String(abs)
   const dotIdx = fixed.indexOf('.')
   const intRaw = dotIdx === -1 ? fixed : fixed.slice(0, dotIdx)
   const fracPart = dotIdx === -1 ? '' : fixed.slice(dotIdx + 1)
   const intPart = stripLeadingZeros(intRaw || '0')
+  const paddedInt = opts.numberPlaces != null ? intPart.padStart(opts.numberPlaces, '0') : intPart
 
-  const groupedInt = opts.segmented ? groupThousands(intPart, opts.separator) : intPart
-  const numberStr = groupedInt + (opts.decimalPlaces > 0 ? opts.decimalSeparator + fracPart : '')
+  const groupedInt = opts.segmented ? groupThousands(paddedInt, opts.separator) : paddedInt
+  const showFraction = opts.decimalPlaces === 0 ? false : fracPart !== ''
+  const numberStr = groupedInt + (showFraction ? opts.decimalSeparator + fracPart : '')
 
   return (isNegative ? '-' : '') + opts.prefix + numberStr + opts.suffix
 }

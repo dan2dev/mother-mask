@@ -128,9 +128,9 @@
 
             <div class="example">
               <h3>Time</h3>
-              <code class="snippet">bind(input, '99:99')</code>
+              <code class="snippet">bindDecimal(input, { decimalPlaces: 2, numberPlaces: 2, decimalSeparator: ':', separator: '' })</code>
               <input id="ex-time" placeholder="HH:MM" inputmode="numeric" value="14:30" />
-              <span class="hint">independent fields, same as date</span>
+              <span class="hint">both segments fixed-width and zero-padded</span>
             </div>
 
             <div class="example">
