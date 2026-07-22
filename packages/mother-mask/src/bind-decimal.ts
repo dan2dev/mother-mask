@@ -73,6 +73,21 @@ export function bindDecimal(
   let lockInput = false
   const keyEventName = isIos() ? 'keyup' : 'keydown'
 
+  // requestAnimationFrame callbacks scheduled below outlive a single keystroke
+  // handler and close over `target` (the input element). If `dispose()` runs
+  // before a frame fires — e.g. the field unmounts right after the user types
+  // — the uncancelled callback keeps that element (and this closure) alive
+  // until the next paint, which can be a very long time on a backgrounded
+  // tab. Track every scheduled frame so dispose can cancel what's pending.
+  const pendingFrames = new Set<number>()
+  const scheduleFrame = (callback: () => void): void => {
+    const id = requestAnimationFrame(() => {
+      pendingFrames.delete(id)
+      callback()
+    })
+    pendingFrames.add(id)
+  }
+
   const applyResult = (target: HTMLInputElement, m: MaskResult): void => {
     target.value = m.value
     target.setSelectionRange(m.caret, m.caret)
@@ -81,7 +96,7 @@ export function bindDecimal(
 
   const onPaste = (e: Event): void => {
     const target = e.target as HTMLInputElement
-    requestAnimationFrame(() => {
+    scheduleFrame(() => {
       applyResult(target, applyDecimalMask(target.value, target.value.length, decimalOptions))
     })
   }
@@ -93,10 +108,10 @@ export function bindDecimal(
     // Older Android WebViews may fire key events without a `key` value.
     if (!(ke as { key?: string }).key) {
       lockInput = true
-      requestAnimationFrame(() => {
+      scheduleFrame(() => {
         const pos = target.selectionStart ?? target.value.length
         applyResult(target, applyDecimalMask(target.value, pos, decimalOptions))
-        requestAnimationFrame(() => {
+        scheduleFrame(() => {
           lockInput = false
         })
       })
@@ -126,7 +141,7 @@ export function bindDecimal(
     // callback rather than synchronously here, since the browser's native
     // character insertion for this keystroke isn't guaranteed to have landed
     // yet at the point a keydown listener runs — only by the next frame.
-    requestAnimationFrame(() => {
+    scheduleFrame(() => {
       const pos = target.selectionStart ?? target.value.length
 
       // Backspace that just deleted the decimal separator merges the
@@ -172,5 +187,7 @@ export function bindDecimal(
     input.removeEventListener(keyEventName, onKey)
     input.removeAttribute(MASKED_ATTR)
     for (const name of attrsSetHere) input.removeAttribute(name)
+    for (const id of pendingFrames) cancelAnimationFrame(id)
+    pendingFrames.clear()
   }
 }
