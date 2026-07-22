@@ -118,11 +118,7 @@ bind($('ex-date-flat'), '99/99/9999', { segmented: false })
 
 // ── Time ─────────────────────────────────────────────────────────────────────
 
-bindDecimal($('ex-time'), {
-  decimalPlaces: 2,
-  decimalSeparator: ':',
-  separator: '',
-})
+bind($('ex-time'), '99:99')
 
 // ── Plates ───────────────────────────────────────────────────────────────────
 
