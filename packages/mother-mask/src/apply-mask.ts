@@ -103,12 +103,20 @@ function applyFlatMask(value: string, mask: string, inputCaret: number): MaskRes
 
 type MaskToken = { kind: 'literal'; text: string } | { kind: 'slots'; chars: string }
 
+// A bound input re-applies the same (static) mask string on every keystroke,
+// so tokenizing it is pure, repeated work — cache by mask string instead of
+// re-walking and re-allocating tokens on every keystroke.
+const tokenCache = new Map<string, MaskToken[]>()
+
 /**
  * Split a mask into alternating literal and slot-run tokens (e.g. "99/99/9999"
  * → slots"99", literal"/", slots"99", literal"/", slots"9999"), so the masking
  * pass can reason about segment boundaries instead of a flat character stream.
  */
 function tokenizeMask(mask: string): MaskToken[] {
+  const cached = tokenCache.get(mask)
+  if (cached) return cached
+
   const tokens: MaskToken[] = []
   let i = 0
   while (i < mask.length) {
@@ -118,6 +126,7 @@ function tokenizeMask(mask: string): MaskToken[] {
     const text = mask.slice(start, i)
     tokens.push(wantSlots ? { kind: 'slots', chars: text } : { kind: 'literal', text })
   }
+  tokenCache.set(mask, tokens)
   return tokens
 }
 

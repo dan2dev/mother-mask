@@ -53,12 +53,17 @@ export function bind(
     }
   }
 
+  // Computed once here rather than inside `onKey` — the mask never changes
+  // for the lifetime of this binding, and `onKey` is a synchronous, hot,
+  // input-blocking path run on every keystroke.
+  const maxLength = getMaxLength(mask)
+
   input.setAttribute(MASKED_ATTR, Array.isArray(mask) ? mask.join('|') : mask)
   setIfMissing('autocomplete', 'off')
   setIfMissing('autocorrect', 'off')
   setIfMissing('autocapitalize', 'off')
   setIfMissing('spellcheck', 'false')
-  setIfMissing('maxlength', String(getMaxLength(mask)))
+  setIfMissing('maxlength', String(maxLength))
 
   let lockInput = false
 
@@ -102,7 +107,7 @@ export function bind(
 
     // Block inserting when mask is full (desktop only — iOS handles this natively)
     if (isCharInsert && target.selectionStart === target.selectionEnd) {
-      if (oldValue.length >= getMaxLength(mask) && !isIos()) {
+      if (oldValue.length >= maxLength && !isIos()) {
         ke.preventDefault()
         return
       }
