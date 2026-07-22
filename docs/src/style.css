@@ -700,6 +700,28 @@ input:focus {
   }
 }
 
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.feature {
+  min-width: 0;
+  border-left: 3px solid var(--accent);
+  padding: 4px 0 4px 16px;
+}
+
+.feature p {
+  margin-bottom: 0;
+  color: var(--text);
+  font-size: 15px;
+}
+
 .example {
   border: 1px solid var(--border);
   border-radius: 8px;

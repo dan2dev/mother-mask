@@ -3,8 +3,74 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="mother-mask — a zero-dependency, TypeScript-first input mask library for the browser. bind() a pattern or bindDecimal() a currency to any input in one line." />
-    <title>mother-mask — input masking for the browser</title>
+    <meta name="description" content="mother-mask is a zero-dependency TypeScript input mask library for browser forms. Format phone, CPF, CNPJ, currency, dates, ZIP, SSN and IBAN inputs." />
+    <meta name="keywords" content="input mask, input masking, TypeScript input mask, JavaScript input mask, browser form masks, currency mask, phone mask, CPF mask, CNPJ mask" />
+    <meta name="author" content="Danilo Celestino de Castro" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://dan2dev.github.io/mother-mask/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="mother-mask" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://dan2dev.github.io/mother-mask/" />
+    <meta property="og:title" content="mother-mask — TypeScript input masks for browser forms" />
+    <meta property="og:description" content="Zero-dependency TypeScript input masks for phone, CPF, CNPJ, currency, dates, ZIP, SSN, IBAN and custom browser form fields." />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="mother-mask — TypeScript input masks for browser forms" />
+    <meta name="twitter:description" content="Zero-dependency TypeScript input masks for phone, CPF, CNPJ, currency, dates, ZIP, SSN, IBAN and custom browser form fields." />
+    <meta name="theme-color" content="#1769aa" />
+    <title>mother-mask — TypeScript input masks for browser forms</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "SoftwareSourceCode",
+            "@id": "https://dan2dev.github.io/mother-mask/#software",
+            "name": "mother-mask",
+            "description": "Zero-dependency TypeScript input mask library for browser forms, with bind(), bindDecimal(), array masks, segmented editing, and ESM, CJS, and UMD builds.",
+            "url": "https://dan2dev.github.io/mother-mask/",
+            "codeRepository": "https://github.com/dan2dev/mother-mask",
+            "downloadUrl": "https://www.npmjs.com/package/mother-mask",
+            "programmingLanguage": "TypeScript",
+            "runtimePlatform": "Browser",
+            "softwareVersion": "3.4.0",
+            "license": "https://opensource.org/licenses/MIT",
+            "keywords": [
+              "input mask",
+              "input masking",
+              "TypeScript input mask",
+              "JavaScript input mask",
+              "browser form masks",
+              "currency mask",
+              "phone mask",
+              "CPF mask",
+              "CNPJ mask"
+            ],
+            "author": {
+              "@type": "Person",
+              "name": "Danilo Celestino de Castro",
+              "url": "https://github.com/dan2dev"
+            }
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://dan2dev.github.io/mother-mask/#webpage",
+            "url": "https://dan2dev.github.io/mother-mask/",
+            "name": "mother-mask documentation",
+            "description": "Documentation, API reference, install guide, CDN usage, and live examples for the mother-mask TypeScript input mask library.",
+            "isPartOf": {
+              "@type": "WebSite",
+              "@id": "https://dan2dev.github.io/mother-mask/#website",
+              "name": "mother-mask",
+              "url": "https://dan2dev.github.io/mother-mask/"
+            },
+            "about": {
+              "@id": "https://dan2dev.github.io/mother-mask/#software"
+            }
+          }
+        ]
+      }
+    </script>
     <script>
       (function () {
         var stored = localStorage.getItem('theme')
@@ -94,7 +160,7 @@
         <section class="hero" id="top">
           <div class="hero-copy">
             <p class="eyebrow">TypeScript input masking</p>
-            <h1>Predictable masks for browser inputs.</h1>
+            <h1>TypeScript input masks for browser forms.</h1>
             <p>
               Bind a pattern to any input and keep edits, selections, and pasted values formatted
               without a framework dependency.
@@ -126,6 +192,41 @@
             <div class="hero-demo-footer">
               <span id="hero-phone-hint">10 digits</span>
               <span>paste-safe</span>
+            </div>
+          </div>
+        </section>
+
+        <section id="overview" aria-labelledby="overview-heading">
+          <h2 id="overview-heading">Lightweight JavaScript input masking</h2>
+          <p class="section-sub">
+            mother-mask formats form fields as people type, paste, select, and replace text. Use it
+            in plain browser apps or alongside any UI framework because the package only needs an
+            <code>HTMLInputElement</code>.
+          </p>
+
+          <div class="feature-grid">
+            <div class="feature">
+              <h3>Pattern masks</h3>
+              <p>
+                Add phone, date, CPF, CNPJ, CEP, SSN, ZIP+4, postal code, IBAN, VAT ID, license
+                plate, credit card, and custom input masks with <code>bind()</code>.
+              </p>
+            </div>
+
+            <div class="feature">
+              <h3>Decimal and currency masks</h3>
+              <p>
+                Format money, quantities, localized separators, prefixes, suffixes, and negative
+                values with <code>bindDecimal()</code> and decimal helper exports.
+              </p>
+            </div>
+
+            <div class="feature">
+              <h3>Small browser package</h3>
+              <p>
+                Ships with zero runtime dependencies, TypeScript types, ESM, CJS, and UMD builds
+                for npm installs or direct CDN usage.
+              </p>
             </div>
           </div>
         </section>
