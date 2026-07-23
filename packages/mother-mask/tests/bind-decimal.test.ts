@@ -464,6 +464,185 @@ describe('bindDecimal() — event handlers', () => {
   })
 })
 
+describe('bindDecimal() — select-and-replace race (keydown fallback frame vs. browser default action)', () => {
+  // Same real-Firefox race fixed in `bind.ts`: the `keydown` +
+  // `requestAnimationFrame` fallback frame can fire before the browser has
+  // actually applied the keystroke's default action. If the selection is
+  // still a real (non-collapsed) range at that point and the value hasn't
+  // changed yet, formatting must not run — `formatCurrentValue` ends in
+  // `setCaret`, which would collapse the range the browser's own pending
+  // replace-selection edit still needs.
+  let input: HTMLInputElement
+
+  beforeEach(() => {
+    input = document.createElement('input')
+    document.body.appendChild(input)
+  })
+
+  afterEach(() => {
+    input.remove()
+    vi.unstubAllGlobals()
+    vi.resetModules()
+  })
+
+  it('character insert: does not collapse the selection when the frame fires before the edit lands', async () => {
+    const { bindDecimal } = await import('../src/index')
+    const cb = vi.fn()
+    bindDecimal(input, { decimalPlaces: 2, prefix: '$', onChange: cb })
+    input.value = '$1,234.00'
+    input.setSelectionRange(0, 9) // full selection
+    dispatchKey(input, '5')
+    await flushRafs()
+    expect(input.selectionStart).toBe(0)
+    expect(input.selectionEnd).toBe(9)
+    expect(input.value).toBe('$1,234.00')
+    expect(cb).not.toHaveBeenCalled()
+  })
+
+  it('Backspace: does not collapse a real selection when the frame fires before the edit lands', async () => {
+    const { bindDecimal } = await import('../src/index')
+    const cb = vi.fn()
+    bindDecimal(input, { decimalPlaces: 2, onChange: cb })
+    input.value = '1,234.00'
+    input.setSelectionRange(1, 5) // ",234" selected
+    dispatchKey(input, 'Backspace')
+    await flushRafs()
+    expect(input.selectionStart).toBe(1)
+    expect(input.selectionEnd).toBe(5)
+    expect(input.value).toBe('1,234.00')
+    expect(cb).not.toHaveBeenCalled()
+  })
+
+  it('Delete: does not collapse a real selection when the frame fires before the edit lands', async () => {
+    const { bindDecimal } = await import('../src/index')
+    const cb = vi.fn()
+    bindDecimal(input, { decimalPlaces: 2, onChange: cb })
+    input.value = '1,234.00'
+    input.setSelectionRange(2, 6)
+    dispatchKey(input, 'Delete')
+    await flushRafs()
+    expect(input.selectionStart).toBe(2)
+    expect(input.selectionEnd).toBe(6)
+    expect(input.value).toBe('1,234.00')
+    expect(cb).not.toHaveBeenCalled()
+  })
+
+  it('Android missing-key path: does not collapse a real selection and releases lockInput when the edit has not landed', async () => {
+    const { bindDecimal } = await import('../src/index')
+    const cb = vi.fn()
+    bindDecimal(input, { decimalPlaces: 2, onChange: cb })
+    input.value = '1,234.00'
+    input.setSelectionRange(0, 8)
+    const ev = new KeyboardEvent('keydown', { bubbles: true, cancelable: true })
+    Object.defineProperty(ev, 'key', { value: undefined, configurable: true })
+    input.dispatchEvent(ev)
+    await flushRafs()
+    expect(input.selectionStart).toBe(0)
+    expect(input.selectionEnd).toBe(8)
+    expect(input.value).toBe('1,234.00')
+    expect(cb).not.toHaveBeenCalled()
+
+    // Bailing must still release `lockInput` for the next keystroke.
+    input.value = '5'
+    input.setSelectionRange(1, 1)
+    const next = new KeyboardEvent('keydown', { key: '5', bubbles: true, cancelable: true })
+    input.dispatchEvent(next)
+    expect(next.defaultPrevented).toBe(false)
+    await flushRafs()
+    expect(cb).toHaveBeenCalled()
+  })
+
+  it('does not bail when the selection is already collapsed (the common, always-tested case)', async () => {
+    const { bindDecimal } = await import('../src/index')
+    const cb = vi.fn()
+    bindDecimal(input, { decimalPlaces: 2, onChange: cb })
+    input.value = '5'
+    input.setSelectionRange(1, 1)
+    dispatchKey(input, '5')
+    await flushRafs()
+    expect(cb).toHaveBeenCalled()
+  })
+
+  it('does not bail when the value has already changed, even if the resulting selection happens to be a range', async () => {
+    const { bindDecimal } = await import('../src/index')
+    const cb = vi.fn()
+    bindDecimal(input, { decimalPlaces: 2, onChange: cb })
+    input.value = '1,234.00'
+    input.setSelectionRange(0, 8)
+    dispatchKey(input, '9')
+    // Simulate the browser landing on a different value than oldValue while
+    // leaving a non-collapsed selection.
+    input.value = '9,999.00'
+    input.setSelectionRange(0, 1)
+    await flushRafs()
+    expect(cb).toHaveBeenCalled()
+  })
+
+  it('recovers correctly once the browser applies the edit and fires `input`, even after the fallback frame bailed', async () => {
+    const { bindDecimal } = await import('../src/index')
+    const cb = vi.fn()
+    bindDecimal(input, { decimalPlaces: 2, prefix: '$', onChange: cb })
+    input.value = '$1,234.00'
+    input.setSelectionRange(0, 9)
+    dispatchKey(input, '5')
+    await flushRafs()
+    expect(input.selectionStart).toBe(0)
+    expect(input.selectionEnd).toBe(9)
+
+    input.value = '5'
+    input.setSelectionRange(1, 1)
+    dispatchInput(input, { data: '5', inputType: 'insertText' })
+
+    expect(input.value).toBe('$5.00')
+    expect(cb).toHaveBeenCalledWith('$5.00', 5)
+  })
+})
+
+describe('bindDecimal() — navigation and shortcut keys never schedule a reformat', () => {
+  let input: HTMLInputElement
+
+  beforeEach(() => {
+    input = document.createElement('input')
+    document.body.appendChild(input)
+  })
+
+  afterEach(() => {
+    input.remove()
+    vi.unstubAllGlobals()
+    vi.resetModules()
+  })
+
+  const cases: Array<{ name: string; init: () => KeyboardEventInit }> = [
+    { name: 'Ctrl+A', init: () => ({ key: 'a', ctrlKey: true }) },
+    { name: 'Cmd+A (Meta)', init: () => ({ key: 'a', metaKey: true }) },
+    { name: 'Ctrl+C', init: () => ({ key: 'c', ctrlKey: true }) },
+    { name: 'ArrowLeft', init: () => ({ key: 'ArrowLeft' }) },
+    { name: 'ArrowRight', init: () => ({ key: 'ArrowRight' }) },
+    { name: 'Home', init: () => ({ key: 'Home' }) },
+    { name: 'End', init: () => ({ key: 'End' }) },
+    { name: 'Tab', init: () => ({ key: 'Tab' }) },
+    { name: 'Shift+ArrowRight', init: () => ({ key: 'ArrowRight', shiftKey: true }) },
+  ]
+
+  for (const { name, init } of cases) {
+    it(`${name}: leaves value, selection, and onChange untouched`, async () => {
+      const { bindDecimal } = await import('../src/index')
+      const cb = vi.fn()
+      bindDecimal(input, { decimalPlaces: 2, prefix: '$', onChange: cb })
+      input.value = '$1,234.00'
+      input.setSelectionRange(2, 6)
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { ...init(), bubbles: true, cancelable: true }),
+      )
+      await flushRafs()
+      expect(input.value).toBe('$1,234.00')
+      expect(input.selectionStart).toBe(2)
+      expect(input.selectionEnd).toBe(6)
+      expect(cb).not.toHaveBeenCalled()
+    })
+  }
+})
+
 describe('bindDecimal() — caret / selection', () => {
   let input: HTMLInputElement
 
