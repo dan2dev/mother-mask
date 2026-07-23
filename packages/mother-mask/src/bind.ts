@@ -222,6 +222,12 @@ export function bind(
     if (!(ke as { key?: string }).key) {
       lockInput = true
       scheduleFrame(() => {
+        // The browser hasn't applied this keystroke's default action yet —
+        // see the comment on the identical check below.
+        if (target.value === oldValue && target.selectionStart !== target.selectionEnd) {
+          lockInput = false
+          return
+        }
         const pos = target.selectionStart ?? 999
         const m = buildMask(target.value, mask, pos, { segmented })
         target.value = m.process()
@@ -255,7 +261,33 @@ export function bind(
       return
     }
 
+    // Navigation (arrows, Home/End, Tab, ...), selection, and shortcut keys
+    // (Ctrl/Cmd+A, Ctrl/Cmd+C, ...) don't change the text — leave the
+    // browser's native caret/selection handling alone instead of recomputing
+    // and overwriting it on every keystroke. Without this guard, a key like
+    // Ctrl+A schedules a reformat frame that never gets cancelled (select-all
+    // fires no `input` event), and that stray frame's `target.value =
+    // m.process()` reassignment races the browser's own pending selection —
+    // the reported Firefox bug where selecting all and retyping fast
+    // occasionally drops the caret to the start instead of replacing the
+    // selection.
+    if (!isBackspace && !isDelete && !isCharInsert && !isUnidentified) return
+
     scheduleFrame(() => {
+      // The scheduled frame can fire before the browser has actually applied
+      // this keystroke's default action (confirmed via real-Firefox
+      // tracing: `target.value` is still unchanged here). If the selection
+      // is still a real range at that point, it's the range the user had
+      // *before* typing — not a post-edit collapsed caret — and the browser
+      // still intends to use it to replace-with-the-typed-character. Calling
+      // `setSelectionRange` below would collapse that range out from under
+      // the pending native edit, so the character gets inserted at the
+      // collapsed point instead of replacing the selection (or dropped
+      // entirely). Bail and let the authoritative `input` handler take over
+      // once the edit actually lands — a collapsed caret (the case every
+      // other test/path exercises) is unaffected by this check.
+      if (target.value === oldValue && target.selectionStart !== target.selectionEnd) return
+
       const pos = target.selectionStart ?? 999
       const m = buildMask(target.value, mask, pos, { segmented })
       target.value = m.process()

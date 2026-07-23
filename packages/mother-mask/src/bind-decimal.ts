@@ -240,6 +240,7 @@ export function bindDecimal(
     const ke = e as KeyboardEvent
     const target = ke.target as HTMLInputElement
     const keyStart = getCaret(target)
+    const oldValue = target.value
 
     if (isComposing) return
 
@@ -252,6 +253,12 @@ export function bindDecimal(
     if (!(ke as { key?: string }).key) {
       lockInput = true
       scheduleFrame(() => {
+        // The browser hasn't applied this keystroke's default action yet —
+        // see the comment on the identical check below.
+        if (target.value === oldValue && target.selectionStart !== target.selectionEnd) {
+          lockInput = false
+          return
+        }
         formatCurrentValue(target)
         scheduleFrame(() => {
           lockInput = false
@@ -293,6 +300,18 @@ export function bindDecimal(
     // character insertion for this keystroke isn't guaranteed to have landed
     // yet at the point a keydown listener runs — only by the next frame.
     scheduleFrame(() => {
+      // The frame can fire before the browser has actually applied this
+      // keystroke's default action. If the selection is still a real range
+      // at that point, it's the range the user had *before* typing — not a
+      // post-edit collapsed caret — and the browser still intends to use it
+      // to replace-with-the-typed-character. Formatting now would collapse
+      // that range via `setCaret` inside `formatCurrentValue` before the
+      // pending native edit can use it, dropping or corrupting the
+      // keystroke instead of replacing the selection with it (the same
+      // Firefox race fixed in `bind.ts`). A collapsed caret (every other
+      // path/test) is unaffected by this check.
+      if (target.value === oldValue && target.selectionStart !== target.selectionEnd) return
+
       formatCurrentValue(target, {
         insertedText: isCharInsert ? ke.key : null,
         insertedAt: isCharInsert ? keyStart : undefined,
