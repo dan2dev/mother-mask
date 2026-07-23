@@ -149,6 +149,33 @@ describe('bind() — event handlers', () => {
     expect(input.value).toBe('12')
   })
 
+  it('does not collapse a real selection range if the keydown fallback frame fires before the browser applies the edit', async () => {
+    // Regression test for a real-Firefox race, captured via tracing: select
+    // all, then type a character over a full field. The keydown+rAF
+    // fallback frame can fire *before* Firefox has actually replaced the
+    // selection with the typed character — at that point `target.value` is
+    // still unchanged and the selection is still the full pre-edit range.
+    // The old code blindly reformatted and called `setSelectionRange`,
+    // collapsing that range to a single point before the browser's own
+    // pending replace-selection edit could use it — dropping or corrupting
+    // the keystroke instead of replacing the selection.
+    const { bind } = await import('../src/index')
+    const cb = vi.fn()
+    bind(input, '999.999.999-99', cb)
+    input.value = '098.098.098-08'
+    input.setSelectionRange(0, 14)
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: '0', bubbles: true, cancelable: true }),
+    )
+    // No `input` event dispatched — simulating the browser not having
+    // applied the edit yet by the time the fallback frame fires.
+    await flushRafs()
+    expect(input.selectionStart).toBe(0)
+    expect(input.selectionEnd).toBe(14)
+    expect(input.value).toBe('098.098.098-08')
+    expect(cb).not.toHaveBeenCalled()
+  })
+
   it('handles keydown with missing key (Android WebView style)', async () => {
     const { bind } = await import('../src/index')
     bind(input, '99')
