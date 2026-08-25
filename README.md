@@ -107,6 +107,24 @@ For classic reflow behavior, pass `segmented: false`:
 bind(input, '999.999.999-99', { segmented: false })
 ```
 
+## Eager Mode
+
+On by default: the next literal separator is revealed as soon as the segment before it is completely filled, instead of waiting for the first character of the next segment:
+
+```ts
+bind(input, '99/99/9999')
+// typing "25" shows "25/" right away
+```
+
+Pass `eager: false` to wait for the next real character instead:
+
+```ts
+bind(input, '99/99/9999', { eager: false })
+// typing "25" shows "25" until the next digit arrives
+```
+
+Backspace/Delete never resurrect a separator eager just added — deleting the "." off `"012."` leaves `"012"`, not `"012."` again, so removing a character always feels like removing exactly one character.
+
 ## CDN
 
 ```html

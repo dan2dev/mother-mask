@@ -239,7 +239,7 @@ describe('stress — typing from the middle of the input', () => {
 
   it('insert a single digit between two existing digits', async () => {
     const { bind } = await import('../src/index')
-    bind(input, '999-999')
+    bind(input, '999-999', { eager: false })
     input.value = '15'
     input.setSelectionRange(1, 1) // caret between "1" and "5"
     insertAt(input, 1, '2')

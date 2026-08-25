@@ -482,6 +482,43 @@
                                 </div>
 
                                 <div class="example">
+                                    <h3>Date — eager (default)</h3>
+                                    <code class="snippet"
+                                        >bind(input, '99/99/9999')</code
+                                    >
+                                    <input
+                                        id="ex-date-eager"
+                                        placeholder="DD/MM/YYYY"
+                                        inputmode="numeric"
+                                    />
+                                    <span class="hint"
+                                        >type "25" — the "/" appears before you
+                                        type it</span
+                                    >
+                                </div>
+
+                                <div class="example">
+                                    <h3>
+                                        Date — not eager (<code
+                                            >eager: false</code
+                                        >)
+                                    </h3>
+                                    <code class="snippet"
+                                        >bind(input, '99/99/9999', { eager:
+                                        false })</code
+                                    >
+                                    <input
+                                        id="ex-date-not-eager"
+                                        placeholder="DD/MM/YYYY"
+                                        inputmode="numeric"
+                                    />
+                                    <span class="hint"
+                                        >type "25" — the "/" waits for the next
+                                        digit</span
+                                    >
+                                </div>
+
+                                <div class="example">
                                     <h3>Time</h3>
                                     <code class="snippet"
                                         >bind(input, '99:99')</code

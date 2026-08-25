@@ -140,7 +140,7 @@ describe('bind() — Android-style fast typing via input events', () => {
 
   it('rapid backspace burst via input events drains the value without caret corruption', async () => {
     const { bind } = await import('../src/index')
-    bind(input, '999-999')
+    bind(input, '999-999', { eager: false })
     input.value = '123-456'
     input.setSelectionRange(7, 7)
     for (let i = 0; i < 7; i++) backspaceViaInput(input)
@@ -212,7 +212,7 @@ describe('bind() — Android-style fast typing via input events', () => {
 
   it('mid-burst caret stays correct when a middle char is corrected before continuing', async () => {
     const { bind } = await import('../src/index')
-    bind(input, '999-999')
+    bind(input, '999-999', { eager: false })
 
     typeCharViaInput(input, '1')
     typeCharViaInput(input, '2')

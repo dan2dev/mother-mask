@@ -283,7 +283,10 @@ describe('stress — keyboard-shortcut selection', () => {
     press(input, 'Backspace', '123-456-', 8, { ctrlKey: true })
     await flushRafs()
     expect(input.value.replace(/\D/g, '')).toBe('123456')
-    expect(input.value).toBe(process('123456', '999-999-999'))
+    // eager: false — this is a delete-type edit (Ctrl+Backspace), and eager
+    // must not resurrect the trailing "-" it just removed. See `eagerForEdit`
+    // in bind.ts.
+    expect(input.value).toBe(process('123456', '999-999-999', { eager: false }))
   })
 
   it('Ctrl+Delete (delete next word) removes multiple chars in one keystroke', async () => {

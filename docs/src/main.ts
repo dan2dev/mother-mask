@@ -115,6 +115,8 @@ bind($('ex-phone'), ['(99) 9999-9999', '(99) 99999-9999'], (v) => {
 
 bind($('ex-date-seg'), '99/99/9999')
 bind($('ex-date-flat'), '99/99/9999', { segmented: false })
+bind($('ex-date-eager'), '99/99/9999') // eager is on by default
+bind($('ex-date-not-eager'), '99/99/9999', { eager: false })
 
 // ── Time ─────────────────────────────────────────────────────────────────────
 

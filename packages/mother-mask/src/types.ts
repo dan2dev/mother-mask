@@ -33,6 +33,32 @@ export interface ApplyMaskOptions {
    * total) rather than independent fields.
    */
   segmented?: boolean
+  /**
+   * Reveal upcoming literal separators before the user has typed the
+   * character that would normally trigger them. **On by default**: once a
+   * segment's slots are completely filled, the mask immediately appends
+   * whatever fixed literal(s) come next — so typing `"25"` into
+   * `"99/99/9999"` shows `"25/"` right away instead of waiting for the first
+   * digit of the next segment.
+   *
+   * Only ever appends the literal that directly follows the segment just
+   * completed — it never skips ahead past a segment the user hasn't filled
+   * in yet — and only at the tail of the current value, so editing an
+   * earlier segment of an already-complete value is unaffected.
+   *
+   * `bind()` also never lets eager resurrect a literal the user just
+   * removed with Backspace/Delete — deleting the eagerly-added "." off
+   * "012." leaves "012", not "012." again, even though `applyMask` alone
+   * (given only the resulting value and caret, with no memory of *how* it
+   * got there) can't distinguish that from three fresh digits. `applyMask`/
+   * `buildMask`/`process` are pure functions of `(value, caret)`, so this
+   * distinction is necessarily a `bind()`-only behavior, not something a
+   * one-off `applyMask` call can offer.
+   *
+   * Pass `eager: false` to opt out and wait for the next real character
+   * instead.
+   */
+  eager?: boolean
 }
 
 /** Options for {@link bind}. */

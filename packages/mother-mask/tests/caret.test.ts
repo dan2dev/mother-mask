@@ -11,7 +11,11 @@ function expectCaret(
   inputCaret: number,
   expected: { value: string; caret: number },
 ): void {
-  expect(applyMask(value, mask, inputCaret)).toEqual(expected)
+  // `eager: false` — this file is about the base caret math, not the
+  // eager-reveal feature (covered separately in eager.test.ts), so it opts
+  // out of the on-by-default eager literal reveal to keep these expectations
+  // about exactly the characters the user typed.
+  expect(applyMask(value, mask, inputCaret, { eager: false })).toEqual(expected)
 }
 
 describe('applyMask() — caret positions (boundaries)', () => {

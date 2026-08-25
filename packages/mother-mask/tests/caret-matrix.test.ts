@@ -89,39 +89,55 @@ function assertNoFailures(failures: string[], total: number): void {
   expect(failures, `${failures.length}/${total} cases failed:\n${preview}`).toEqual([])
 }
 
+/** Merge an explicit eager setting into a mask config's options. */
+function withEager(cfg: MaskConfig, eager: boolean): ApplyMaskOptions {
+  return { ...cfg.options, eager }
+}
+
+// Insert and select+replace are both eager-sensitive (they're the "insert"
+// family `bind()` never overrides), so both are swept once with eager on
+// (the library default) and once with it explicitly turned off, using
+// `buildMask()` under the exact same option as an independent oracle. This
+// is what proves eager's tail-reveal and its opt-out both hold at *every*
+// caret position/selection, not just the hand-picked cases in eager.test.ts.
+const EAGER_SETTINGS = [true, false] as const
+
 // ---------------------------------------------------------------------------
 // 1. Insert at every caret position (append, middle, start) with every char
 // ---------------------------------------------------------------------------
 
 describe('caret matrix — insert at every position', () => {
   for (const cfg of MASKS) {
-    it(cfg.name, () => {
-      const failures: string[] = []
-      let total = 0
+    for (const eager of EAGER_SETTINGS) {
+      it(`${cfg.name} [eager: ${eager}]`, () => {
+        const options = withEager(cfg, eager)
+        const failures: string[] = []
+        let total = 0
 
-      for (let pos = 0; pos <= cfg.full.length; pos++) {
-        for (const ch of cfg.chars) {
-          total++
-          const input = makeInput(cfg.mask, cfg.full, cfg.options)
-          const raw = cfg.full.slice(0, pos) + ch + cfg.full.slice(pos)
-          input.value = raw
-          input.setSelectionRange(pos + 1, pos + 1)
-          dispatchInput(input, { data: ch, inputType: 'insertText' })
+        for (let pos = 0; pos <= cfg.full.length; pos++) {
+          for (const ch of cfg.chars) {
+            total++
+            const input = makeInput(cfg.mask, cfg.full, options)
+            const raw = cfg.full.slice(0, pos) + ch + cfg.full.slice(pos)
+            input.value = raw
+            input.setSelectionRange(pos + 1, pos + 1)
+            dispatchInput(input, { data: ch, inputType: 'insertText' })
 
-          const m = buildMask(raw, cfg.mask, pos + 1, cfg.options)
-          const expectedValue = m.process()
-          const expectedCaret = m.caret
+            const m = buildMask(raw, cfg.mask, pos + 1, options)
+            const expectedValue = m.process()
+            const expectedCaret = m.caret
 
-          if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
-            failures.push(
-              `pos=${pos} ch=${JSON.stringify(ch)}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
-            )
+            if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
+              failures.push(
+                `pos=${pos} ch=${JSON.stringify(ch)}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
+              )
+            }
           }
         }
-      }
 
-      assertNoFailures(failures, total)
-    })
+        assertNoFailures(failures, total)
+      })
+    }
   }
 })
 
@@ -131,36 +147,39 @@ describe('caret matrix — insert at every position', () => {
 
 describe('caret matrix — select + replace at every selection range', () => {
   for (const cfg of MASKS) {
-    it(cfg.name, () => {
-      const failures: string[] = []
-      let total = 0
-      const len = cfg.full.length
+    for (const eager of EAGER_SETTINGS) {
+      it(`${cfg.name} [eager: ${eager}]`, () => {
+        const options = withEager(cfg, eager)
+        const failures: string[] = []
+        let total = 0
+        const len = cfg.full.length
 
-      for (let start = 0; start <= len; start++) {
-        for (let end = start + 1; end <= len; end++) {
-          for (const ch of cfg.chars) {
-            total++
-            const input = makeInput(cfg.mask, cfg.full, cfg.options)
-            const raw = cfg.full.slice(0, start) + ch + cfg.full.slice(end)
-            input.value = raw
-            input.setSelectionRange(start + 1, start + 1)
-            dispatchInput(input, { data: ch, inputType: 'insertText' })
+        for (let start = 0; start <= len; start++) {
+          for (let end = start + 1; end <= len; end++) {
+            for (const ch of cfg.chars) {
+              total++
+              const input = makeInput(cfg.mask, cfg.full, options)
+              const raw = cfg.full.slice(0, start) + ch + cfg.full.slice(end)
+              input.value = raw
+              input.setSelectionRange(start + 1, start + 1)
+              dispatchInput(input, { data: ch, inputType: 'insertText' })
 
-            const m = buildMask(raw, cfg.mask, start + 1, cfg.options)
-            const expectedValue = m.process()
-            const expectedCaret = m.caret
+              const m = buildMask(raw, cfg.mask, start + 1, options)
+              const expectedValue = m.process()
+              const expectedCaret = m.caret
 
-            if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
-              failures.push(
-                `[${start},${end}) ch=${JSON.stringify(ch)}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
-              )
+              if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
+                failures.push(
+                  `[${start},${end}) ch=${JSON.stringify(ch)}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
+                )
+              }
             }
           }
         }
-      }
 
-      assertNoFailures(failures, total)
-    })
+        assertNoFailures(failures, total)
+      })
+    }
   }
 })
 
@@ -170,46 +189,57 @@ describe('caret matrix — select + replace at every selection range', () => {
 
 describe('caret matrix — select + delete at every selection range', () => {
   for (const cfg of MASKS) {
-    it(cfg.name, () => {
-      const failures: string[] = []
-      let total = 0
-      const len = cfg.full.length
+    // Delete-family edits are swept at both configured eager settings too —
+    // but unlike insert, the *oracle* always computes with eager off (see
+    // below), so this also proves the invariant that delete/backspace behave
+    // identically no matter how `eager` was configured on `bind()`.
+    for (const eager of EAGER_SETTINGS) {
+      it(`${cfg.name} [eager: ${eager}]`, () => {
+        const options = withEager(cfg, eager)
+        const failures: string[] = []
+        let total = 0
+        const len = cfg.full.length
 
-      for (let start = 0; start <= len; start++) {
-        for (let end = start + 1; end <= len; end++) {
-          for (const mode of ['backspace', 'delete'] as const) {
-            total++
-            const input = makeInput(cfg.mask, cfg.full, cfg.options)
-            const raw = cfg.full.slice(0, start) + cfg.full.slice(end)
-            input.value = raw
-            input.setSelectionRange(start, start)
-            dispatchInput(input, {
-              inputType: mode === 'backspace' ? 'deleteContentBackward' : 'deleteContentForward',
-            })
+        for (let start = 0; start <= len; start++) {
+          for (let end = start + 1; end <= len; end++) {
+            for (const mode of ['backspace', 'delete'] as const) {
+              total++
+              const input = makeInput(cfg.mask, cfg.full, options)
+              const raw = cfg.full.slice(0, start) + cfg.full.slice(end)
+              input.value = raw
+              input.setSelectionRange(start, start)
+              dispatchInput(input, {
+                inputType: mode === 'backspace' ? 'deleteContentBackward' : 'deleteContentForward',
+              })
 
-            const m = buildMask(raw, cfg.mask, start, cfg.options)
-            const expectedValue = m.process()
-            // Backspace is a direct pass-through of the post-deletion caret
-            // (`start`). Delete additionally nudges past a reflowed literal
-            // when the masked length is unchanged by the edit — re-derived
-            // here from the two independently computed lengths. Either way,
-            // `setSelectionRange` clamps to the (possibly shorter, reflowed)
-            // value length, same as any real browser.
-            const rawCaret =
-              mode === 'backspace' ? start : cfg.full.length === expectedValue.length ? start + 1 : start
-            const expectedCaret = Math.min(rawCaret, expectedValue.length)
+              // Oracle mirrors `bind()`'s own delete-vs-insert tie-break: eager
+              // never resurrects a literal the edit just deleted (see
+              // `eagerForEdit` in bind.ts), so this is always computed with
+              // eager off, regardless of `options.eager`.
+              const m = buildMask(raw, cfg.mask, start, { ...options, eager: false })
+              const expectedValue = m.process()
+              // Backspace is a direct pass-through of the post-deletion caret
+              // (`start`). Delete additionally nudges past a reflowed literal
+              // when the masked length is unchanged by the edit — re-derived
+              // here from the two independently computed lengths. Either way,
+              // `setSelectionRange` clamps to the (possibly shorter, reflowed)
+              // value length, same as any real browser.
+              const rawCaret =
+                mode === 'backspace' ? start : cfg.full.length === expectedValue.length ? start + 1 : start
+              const expectedCaret = Math.min(rawCaret, expectedValue.length)
 
-            if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
-              failures.push(
-                `[${start},${end}) ${mode}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
-              )
+              if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
+                failures.push(
+                  `[${start},${end}) ${mode}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
+                )
+              }
             }
           }
         }
-      }
 
-      assertNoFailures(failures, total)
-    })
+        assertNoFailures(failures, total)
+      })
+    }
   }
 })
 
@@ -219,64 +249,72 @@ describe('caret matrix — select + delete at every selection range', () => {
 
 describe('caret matrix — Backspace at every position (no selection)', () => {
   for (const cfg of MASKS) {
-    it(cfg.name, () => {
-      const failures: string[] = []
-      let total = 0
+    for (const eager of EAGER_SETTINGS) {
+      it(`${cfg.name} [eager: ${eager}]`, () => {
+        const options = withEager(cfg, eager)
+        const failures: string[] = []
+        let total = 0
 
-      for (let pos = 1; pos <= cfg.full.length; pos++) {
-        total++
-        const input = makeInput(cfg.mask, cfg.full, cfg.options)
-        const raw = cfg.full.slice(0, pos - 1) + cfg.full.slice(pos)
-        input.value = raw
-        input.setSelectionRange(pos - 1, pos - 1)
-        dispatchInput(input, { inputType: 'deleteContentBackward' })
+        for (let pos = 1; pos <= cfg.full.length; pos++) {
+          total++
+          const input = makeInput(cfg.mask, cfg.full, options)
+          const raw = cfg.full.slice(0, pos - 1) + cfg.full.slice(pos)
+          input.value = raw
+          input.setSelectionRange(pos - 1, pos - 1)
+          dispatchInput(input, { inputType: 'deleteContentBackward' })
 
-        const m = buildMask(raw, cfg.mask, pos - 1, cfg.options)
-        const expectedValue = m.process()
-        // `setSelectionRange` clamps to the (possibly shorter, reflowed) value length.
-        const expectedCaret = Math.min(pos - 1, expectedValue.length)
+          // eager off — see the comment in the "select + delete" matrix above.
+          const m = buildMask(raw, cfg.mask, pos - 1, { ...options, eager: false })
+          const expectedValue = m.process()
+          // `setSelectionRange` clamps to the (possibly shorter, reflowed) value length.
+          const expectedCaret = Math.min(pos - 1, expectedValue.length)
 
-        if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
-          failures.push(
-            `pos=${pos}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
-          )
+          if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
+            failures.push(
+              `pos=${pos}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
+            )
+          }
         }
-      }
 
-      assertNoFailures(failures, total)
-    })
+        assertNoFailures(failures, total)
+      })
+    }
   }
 })
 
 describe('caret matrix — Delete-forward at every position (no selection)', () => {
   for (const cfg of MASKS) {
-    it(cfg.name, () => {
-      const failures: string[] = []
-      let total = 0
+    for (const eager of EAGER_SETTINGS) {
+      it(`${cfg.name} [eager: ${eager}]`, () => {
+        const options = withEager(cfg, eager)
+        const failures: string[] = []
+        let total = 0
 
-      for (let pos = 0; pos < cfg.full.length; pos++) {
-        total++
-        const input = makeInput(cfg.mask, cfg.full, cfg.options)
-        const raw = cfg.full.slice(0, pos) + cfg.full.slice(pos + 1)
-        input.value = raw
-        input.setSelectionRange(pos, pos)
-        dispatchInput(input, { inputType: 'deleteContentForward' })
+        for (let pos = 0; pos < cfg.full.length; pos++) {
+          total++
+          const input = makeInput(cfg.mask, cfg.full, options)
+          const raw = cfg.full.slice(0, pos) + cfg.full.slice(pos + 1)
+          input.value = raw
+          input.setSelectionRange(pos, pos)
+          dispatchInput(input, { inputType: 'deleteContentForward' })
 
-        const m = buildMask(raw, cfg.mask, pos, cfg.options)
-        const expectedValue = m.process()
-        const rawCaret = cfg.full.length === expectedValue.length ? pos + 1 : pos
-        // `setSelectionRange` clamps to the (possibly shorter, reflowed) value length.
-        const expectedCaret = Math.min(rawCaret, expectedValue.length)
+          // eager off — see the comment in the "select + delete" matrix above.
+          const m = buildMask(raw, cfg.mask, pos, { ...options, eager: false })
+          const expectedValue = m.process()
+          const rawCaret = cfg.full.length === expectedValue.length ? pos + 1 : pos
+          // `setSelectionRange` clamps to the (possibly shorter, reflowed) value length.
+          const expectedCaret = Math.min(rawCaret, expectedValue.length)
 
-        if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
-          failures.push(
-            `pos=${pos}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
-          )
+          if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
+            failures.push(
+              `pos=${pos}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
+            )
+          }
         }
-      }
 
-      assertNoFailures(failures, total)
-    })
+        assertNoFailures(failures, total)
+      })
+    }
   }
 })
 
@@ -298,27 +336,30 @@ async function flushRafs(times = 2): Promise<void> {
 
 describe('caret matrix — legacy keydown fallback, fastest-possible burst (zero flush)', () => {
   for (const cfg of MASKS) {
-    it(cfg.name, async () => {
-      const input = document.createElement('input')
-      document.body.appendChild(input)
-      createdInputs.push(input)
-      bind(input, cfg.mask, cfg.options ?? null)
+    for (const eager of EAGER_SETTINGS) {
+      it(`${cfg.name} [eager: ${eager}]`, async () => {
+        const options = withEager(cfg, eager)
+        const input = document.createElement('input')
+        document.body.appendChild(input)
+        createdInputs.push(input)
+        bind(input, cfg.mask, options)
 
-      let raw = ''
-      for (const ch of cfg.full.replace(/[^a-zA-Z0-9]/g, '')) {
-        raw += ch
-        input.dispatchEvent(new KeyboardEvent('keydown', { key: ch, bubbles: true, cancelable: true }))
-        input.value = raw
-        input.setSelectionRange(raw.length, raw.length)
-        // Deliberately no `flushRafs()` here — every keystroke in this burst
-        // lands before the browser gets a single animation frame to react.
-      }
-      await flushRafs()
+        let raw = ''
+        for (const ch of cfg.full.replace(/[^a-zA-Z0-9]/g, '')) {
+          raw += ch
+          input.dispatchEvent(new KeyboardEvent('keydown', { key: ch, bubbles: true, cancelable: true }))
+          input.value = raw
+          input.setSelectionRange(raw.length, raw.length)
+          // Deliberately no `flushRafs()` here — every keystroke in this burst
+          // lands before the browser gets a single animation frame to react.
+        }
+        await flushRafs()
 
-      const m = buildMask(raw, cfg.mask, raw.length, cfg.options)
-      expect(input.value).toBe(m.process())
-      expect(input.selectionStart).toBe(m.caret)
-    })
+        const m = buildMask(raw, cfg.mask, raw.length, options)
+        expect(input.value).toBe(m.process())
+        expect(input.selectionStart).toBe(m.caret)
+      })
+    }
   }
 })
 
@@ -330,44 +371,47 @@ describe('caret matrix — legacy keydown fallback, deliberate typing (flush eve
   const sampled = MASKS.filter((c) => c.name.startsWith('CPF') || c.name.startsWith('mercosul'))
 
   for (const cfg of sampled) {
-    it(cfg.name, async () => {
-      const failures: string[] = []
-      let total = 0
-      // Drop the last character so the field starts one slot short of full —
-      // inserting into an already-full value is correctly blocked by the
-      // desktop `keydown` max-length guard (`preventDefault`), which is a
-      // deliberate product behavior, not something this speed matrix targets.
-      const base = cfg.full.slice(0, -1)
+    for (const eager of EAGER_SETTINGS) {
+      it(`${cfg.name} [eager: ${eager}]`, async () => {
+        const options = withEager(cfg, eager)
+        const failures: string[] = []
+        let total = 0
+        // Drop the last character so the field starts one slot short of full —
+        // inserting into an already-full value is correctly blocked by the
+        // desktop `keydown` max-length guard (`preventDefault`), which is a
+        // deliberate product behavior, not something this speed matrix targets.
+        const base = cfg.full.slice(0, -1)
 
-      for (let pos = 0; pos <= base.length; pos++) {
-        for (const ch of cfg.chars) {
-          total++
-          const input = document.createElement('input')
-          document.body.appendChild(input)
-          bind(input, cfg.mask, cfg.options ?? null)
-          input.value = base
-          input.setSelectionRange(pos, pos)
+        for (let pos = 0; pos <= base.length; pos++) {
+          for (const ch of cfg.chars) {
+            total++
+            const input = document.createElement('input')
+            document.body.appendChild(input)
+            bind(input, cfg.mask, options)
+            input.value = base
+            input.setSelectionRange(pos, pos)
 
-          const raw = base.slice(0, pos) + ch + base.slice(pos)
-          input.dispatchEvent(new KeyboardEvent('keydown', { key: ch, bubbles: true, cancelable: true }))
-          input.value = raw
-          input.setSelectionRange(pos + 1, pos + 1)
-          await flushRafs()
+            const raw = base.slice(0, pos) + ch + base.slice(pos)
+            input.dispatchEvent(new KeyboardEvent('keydown', { key: ch, bubbles: true, cancelable: true }))
+            input.value = raw
+            input.setSelectionRange(pos + 1, pos + 1)
+            await flushRafs()
 
-          const m = buildMask(raw, cfg.mask, pos + 1, cfg.options)
-          const expectedValue = m.process()
-          const expectedCaret = m.caret
+            const m = buildMask(raw, cfg.mask, pos + 1, options)
+            const expectedValue = m.process()
+            const expectedCaret = m.caret
 
-          if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
-            failures.push(
-              `pos=${pos} ch=${JSON.stringify(ch)}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
-            )
+            if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
+              failures.push(
+                `pos=${pos} ch=${JSON.stringify(ch)}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
+              )
+            }
+            input.remove()
           }
-          input.remove()
         }
-      }
 
-      assertNoFailures(failures, total)
-    })
+        assertNoFailures(failures, total)
+      })
+    }
   }
 })

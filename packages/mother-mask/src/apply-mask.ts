@@ -43,7 +43,12 @@ function matchesSlot(ch: string, slot: string): boolean {
  * This correctly handles literal insertion, middle-of-string edits, and
  * characters that are skipped because they don't match the current slot.
  */
-function applyFlatMask(value: string, mask: string, inputCaret: number): MaskResult {
+function applyFlatMask(
+  value: string,
+  mask: string,
+  inputCaret: number,
+  eager: boolean,
+): MaskResult {
   let output = ''
   let pending = ''
   let valueIdx = 0
@@ -89,6 +94,18 @@ function applyFlatMask(value: string, mask: string, inputCaret: number): MaskRes
   // If every matched char was before the input caret (or no chars matched at
   // all past the caret), place the output caret at the end of the output.
   if (!caretResolved) outputCaret = output.length
+
+  // Eager mode: `pending` only survives to here holding the literal(s) that
+  // directly follow the slot(s) just filled — see the doc comment on
+  // `ApplyMaskOptions.eager`. Reveal it now instead of waiting for the next
+  // matching keystroke, and carry the caret past it only if the caret was
+  // already sitting at the end of the typed content (never yank it forward
+  // during a mid-string edit).
+  if (eager && pending) {
+    const wasAtEnd = outputCaret === output.length
+    output += pending
+    if (wasAtEnd) outputCaret = output.length
+  }
 
   return { value: output, caret: outputCaret }
 }
@@ -170,7 +187,12 @@ function remainingDataChars(value: string, fromIdx: number): number {
  * an array mask grow or shrink its pattern (moving every literal after the
  * change point) reflow correctly instead of losing a digit at the boundary.
  */
-function applySegmentedMask(value: string, mask: string, inputCaret: number): MaskResult {
+function applySegmentedMask(
+  value: string,
+  mask: string,
+  inputCaret: number,
+  eager: boolean,
+): MaskResult {
   const tokens = tokenizeMask(mask)
 
   let output = ''
@@ -240,6 +262,17 @@ function applySegmentedMask(value: string, mask: string, inputCaret: number): Ma
 
   if (!caretResolved) outputCaret = output.length
 
+  // Eager mode — see the matching comment in `applyFlatMask`. Here `pending`
+  // only ever holds at most the one literal token immediately following the
+  // segment just completed: reaching a second one would require passing
+  // through another slot token first, which forces `exhausted` before that
+  // can happen (there's no more `value` left to fill it from).
+  if (eager && pending) {
+    const wasAtEnd = outputCaret === output.length
+    output += pending
+    if (wasAtEnd) outputCaret = output.length
+  }
+
   return { value: output, caret: outputCaret }
 }
 
@@ -254,7 +287,8 @@ export function applyMask(
   options?: ApplyMaskOptions,
 ): MaskResult {
   if (!value) return { value: '', caret: 0 }
+  const eager = options?.eager !== false
   return options?.segmented === false
-    ? applyFlatMask(value, mask, inputCaret)
-    : applySegmentedMask(value, mask, inputCaret)
+    ? applyFlatMask(value, mask, inputCaret, eager)
+    : applySegmentedMask(value, mask, inputCaret, eager)
 }

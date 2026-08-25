@@ -94,7 +94,7 @@ describe('fast typing — multiple chars inserted before any rAF fires', () => {
 
   it('2 digits before any rAF — both chars reach final value ("99-99")', async () => {
     const { bind } = await import('../src/index')
-    bind(input, '99-99')
+    bind(input, '99-99', { eager: false })
     typeChars(input, '12')
     await flushRafs()
     expect(input.value).toBe('12')
@@ -165,7 +165,7 @@ describe('fast typing — multiple chars inserted before any rAF fires', () => {
 
   it('only valid digits appear in output when letters interleaved (digit mask)', async () => {
     const { bind } = await import('../src/index')
-    bind(input, '999-999')
+    bind(input, '999-999', { eager: false })
     // Simulate browser inserting an accidental letter between digits
     press(input, '1', '1', 1)
     press(input, 'a', '1a', 2)
@@ -180,7 +180,7 @@ describe('fast typing — multiple chars inserted before any rAF fires', () => {
 
   it('only valid letters appear in output when digits interleaved (Z mask)', async () => {
     const { bind } = await import('../src/index')
-    bind(input, 'ZZZ-ZZZ')
+    bind(input, 'ZZZ-ZZZ', { eager: false })
     press(input, 'a', 'a', 1)
     press(input, '1', 'a1', 2)
     press(input, 'b', 'a1b', 3)
@@ -203,7 +203,7 @@ describe('fast typing — multiple chars inserted before any rAF fires', () => {
 
   it('alphanumeric CNPJ mask — fast typing 8 mixed chars', async () => {
     const { bind } = await import('../src/index')
-    bind(input, 'AA.AAA.AAA/AAAA-99')
+    bind(input, 'AA.AAA.AAA/AAAA-99', { eager: false })
     typeChars(input, '1AB2C3D4')
     await flushRafs()
     expect(input.value).toBe('1A.B2C.3D4')
@@ -385,7 +385,7 @@ describe('fast delete sequences — multiple deletes before any rAF fires', () =
 
   it('backspace 2 times removes last 2 digits from "12-34"', async () => {
     const { bind } = await import('../src/index')
-    bind(input, '99-99')
+    bind(input, '99-99', { eager: false })
     input.value = '12-34'
     input.setSelectionRange(5, 5)
     backspaceN(input, 2)
@@ -400,7 +400,7 @@ describe('fast delete sequences — multiple deletes before any rAF fires', () =
 
   it('backspace 3 times crosses separator — separator removed and re-added by mask', async () => {
     const { bind } = await import('../src/index')
-    bind(input, '99-99')
+    bind(input, '99-99', { eager: false })
     input.value = '12-34'
     input.setSelectionRange(5, 5)
     backspaceN(input, 3) // removes "4", "3", then "-"
@@ -728,7 +728,7 @@ describe('mixed fast interactions — interleaved type, delete, and select', () 
 
   it('backspace then delete alternately drains value correctly', async () => {
     const { bind } = await import('../src/index')
-    bind(input, '99-99')
+    bind(input, '99-99', { eager: false })
     input.value = '12-34'
     input.setSelectionRange(5, 5)
     press(input, 'Backspace', '12-3', 4) // remove "4" from end
@@ -834,7 +834,7 @@ describe('fast typing — onChange callback consistency', () => {
   it('onChange called after fast backspace sequence — correct final value', async () => {
     const { bind } = await import('../src/index')
     const cb = vi.fn()
-    bind(input, '99-99', { onChange: cb })
+    bind(input, '99-99', { onChange: cb, eager: false })
     input.value = '12-34'
     input.setSelectionRange(5, 5)
     backspaceN(input, 3)

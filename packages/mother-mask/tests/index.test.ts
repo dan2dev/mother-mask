@@ -55,7 +55,7 @@ describe('process()', () => {
   })
 
   it('handles partial value shorter than mask', () => {
-    expect(process('123', '999-999')).toBe('123')
+    expect(process('123', '999-999', { eager: false })).toBe('123')
   })
 
   it('inserts literal separator correctly', () => {
@@ -63,7 +63,7 @@ describe('process()', () => {
   })
 
   it('does not add trailing literals when value is incomplete', () => {
-    expect(process('12', '99-99')).toBe('12')
+    expect(process('12', '99-99', { eager: false })).toBe('12')
   })
 
   it('truncates value that exceeds mask capacity', () => {
@@ -83,7 +83,7 @@ describe('process()', () => {
   })
 
   it('handles mask with only literals', () => {
-    expect(process('123', '---')).toBe('')
+    expect(process('123', '---', { eager: false })).toBe('')
   })
 
   it('handles value with mixed matching and non-matching for letter slots', () => {
@@ -139,7 +139,7 @@ describe('process() with alphanumeric A slot', () => {
   })
 
   it('CNPJ alfanumérico — partial input', () => {
-    expect(process('1AB2C', 'AA.AAA.AAA/AAAA-99')).toBe('1A.B2C')
+    expect(process('1AB2C', 'AA.AAA.AAA/AAAA-99', { eager: false })).toBe('1A.B2C')
   })
 
   it('CNPJ alfanumérico — strips special chars from input', () => {
@@ -153,7 +153,7 @@ describe('process() with alphanumeric A slot', () => {
   })
 
   it('mixed A and 9 slots — letters rejected by 9 slot', () => {
-    expect(process('12AB', 'AA-99')).toBe('12')
+    expect(process('12AB', 'AA-99', { eager: false })).toBe('12')
   })
 
   it('mixed A and Z slots — letters only fill both', () => {
@@ -287,7 +287,7 @@ describe('buildMask()', () => {
   })
 
   it('caret is updated after process()', () => {
-    const m = buildMask('123', '999-999', 3)
+    const m = buildMask('123', '999-999', 3, { eager: false })
     m.process()
     // "123" fills the first 3 slots; the '-' is not flushed (no 4th digit)
     expect(m.caret).toBe(3)
@@ -331,12 +331,12 @@ describe('applyMask() — caret tracking', () => {
   // -- Empty / trivial cases ------------------------------------------------
 
   it('empty value → caret 0', () => {
-    const r = applyMask('', '999', 0)
+    const r = applyMask('', '999', 0, { eager: false })
     expect(r).toEqual({ value: '', caret: 0 })
   })
 
   it('empty value with non-zero caret → caret 0', () => {
-    const r = applyMask('', '999', 5)
+    const r = applyMask('', '999', 5, { eager: false })
     expect(r).toEqual({ value: '', caret: 0 })
   })
 
@@ -344,40 +344,40 @@ describe('applyMask() — caret tracking', () => {
 
   it('first digit into phone mask', () => {
     // User types '1' → value="1", caret=1
-    const r = applyMask('1', '(99) 99999-9999', 1)
+    const r = applyMask('1', '(99) 99999-9999', 1, { eager: false })
     expect(r.value).toBe('(1')
     expect(r.caret).toBe(2)
   })
 
   it('second digit into phone mask', () => {
     // Displayed "(1", user types '2' → value="(12", caret=3
-    const r = applyMask('(12', '(99) 99999-9999', 3)
+    const r = applyMask('(12', '(99) 99999-9999', 3, { eager: false })
     expect(r.value).toBe('(12')
     expect(r.caret).toBe(3)
   })
 
   it('third digit triggers ") " literals', () => {
     // Displayed "(12", user types '3' → value="(123", caret=4
-    const r = applyMask('(123', '(99) 99999-9999', 4)
+    const r = applyMask('(123', '(99) 99999-9999', 4, { eager: false })
     expect(r.value).toBe('(12) 3')
     expect(r.caret).toBe(6)
   })
 
   it('typing digit into simple mask with separator', () => {
     // value="12345", caret=5, mask="99.999"
-    const r = applyMask('12345', '99.999', 5)
+    const r = applyMask('12345', '99.999', 5, { eager: false })
     expect(r.value).toBe('12.345')
     expect(r.caret).toBe(6)
   })
 
   it('caret at end of fully-filled mask', () => {
-    const r = applyMask('12345', '99-99-9', 5)
+    const r = applyMask('12345', '99-99-9', 5, { eager: false })
     expect(r.value).toBe('12-34-5')
     expect(r.caret).toBe(7)
   })
 
   it('caret past the end of input', () => {
-    const r = applyMask('12', '99-99', 999)
+    const r = applyMask('12', '99-99', 999, { eager: false })
     expect(r.value).toBe('12')
     expect(r.caret).toBe(2)
   })
@@ -386,21 +386,21 @@ describe('applyMask() — caret tracking', () => {
 
   it('insert in the middle — no literal between insertion and caret', () => {
     // "12" → insert '5' at pos 1 → "152", caret=2, mask "999"
-    const r = applyMask('152', '999', 2)
+    const r = applyMask('152', '999', 2, { eager: false })
     expect(r.value).toBe('152')
     expect(r.caret).toBe(2)
   })
 
   it('insert in the middle — literal after insertion point', () => {
     // "12-3" → insert '5' between '1' and '2' → "152-3", caret=2
-    const r = applyMask('152-3', '99-99', 2)
+    const r = applyMask('152-3', '99-99', 2, { eager: false })
     expect(r.value).toBe('15-23')
     expect(r.caret).toBe(2) // after "15", NOT after "15-"
   })
 
   it('insert in the middle of longer mask', () => {
     // "12-34-5" → insert '5' at pos 1 → "152-34-5", caret=2
-    const r = applyMask('152-34-5', '99-99-99', 2)
+    const r = applyMask('152-34-5', '99-99-99', 2, { eager: false })
     expect(r.value).toBe('15-23-45')
     expect(r.caret).toBe(2)
   })
@@ -408,7 +408,7 @@ describe('applyMask() — caret tracking', () => {
   it('insert at position 0 with leading literal', () => {
     // User types '5' at the very start of "(11) 999"
     // value="5(11) 999", caret=1
-    const r = applyMask('5(11) 999', '(99) 99999-9999', 1)
+    const r = applyMask('5(11) 999', '(99) 99999-9999', 1, { eager: false })
     expect(r.value).toBe('(51) 1999')
     expect(r.caret).toBe(2) // after "(5"
   })
@@ -416,7 +416,7 @@ describe('applyMask() — caret tracking', () => {
   it('insert after leading literal', () => {
     // User clicks after '(' in "(12) 3" and types '5'
     // Browser inserts at pos 1: "(512) 3", caret=2
-    const r = applyMask('(512) 3', '(99) 99999-9999', 2)
+    const r = applyMask('(512) 3', '(99) 99999-9999', 2, { eager: false })
     expect(r.value).toBe('(51) 23')
     expect(r.caret).toBe(2)
   })
@@ -424,13 +424,13 @@ describe('applyMask() — caret tracking', () => {
   // -- Caret at position 0 ------------------------------------------------
 
   it('caret 0 stays at 0', () => {
-    const r = applyMask('123', '999', 0)
+    const r = applyMask('123', '999', 0, { eager: false })
     expect(r.value).toBe('123')
     expect(r.caret).toBe(0)
   })
 
   it('caret 0 with leading literal', () => {
-    const r = applyMask('1', '(99)', 0)
+    const r = applyMask('1', '(99)', 0, { eager: false })
     expect(r.value).toBe('(1')
     expect(r.caret).toBe(0)
   })
@@ -440,34 +440,34 @@ describe('applyMask() — caret tracking', () => {
   it('skipped chars before caret do not inflate output caret', () => {
     // "a1b2", caret=2, mask "99" → 'a' skipped, '1' matched
     // rawBeforeCaret: only 'a' (skip) and '1' (match) are before pos 2
-    const r = applyMask('a1b2', '99', 2)
+    const r = applyMask('a1b2', '99', 2, { eager: false })
     expect(r.value).toBe('12')
     expect(r.caret).toBe(1) // after '1'
   })
 
   it('all chars before caret skipped → caret 0', () => {
     // "ab1", caret=1, mask "99" → 'a' is before caret, skipped
-    const r = applyMask('ab1', '99', 1)
+    const r = applyMask('ab1', '99', 1, { eager: false })
     expect(r.value).toBe('1')
     expect(r.caret).toBe(0)
   })
 
   it('multiple skipped chars before caret', () => {
     // "ab1", caret=2, mask "99" → 'a','b' before caret, both skipped
-    const r = applyMask('ab1', '99', 2)
+    const r = applyMask('ab1', '99', 2, { eager: false })
     expect(r.value).toBe('1')
     expect(r.caret).toBe(0)
   })
 
   it('caret between matched and skipped', () => {
     // "1a2", caret=2, mask "99" → '1' matched (pos 0 < 2), 'a' skipped (pos 1 < 2)
-    const r = applyMask('1a2', '99', 2)
+    const r = applyMask('1a2', '99', 2, { eager: false })
     expect(r.value).toBe('12')
     expect(r.caret).toBe(1) // after '1'
   })
 
   it('value has only non-matching chars → empty output, caret 0', () => {
-    const r = applyMask('abc', '999', 3)
+    const r = applyMask('abc', '999', 3, { eager: false })
     expect(r).toEqual({ value: '', caret: 0 })
   })
 
@@ -475,13 +475,13 @@ describe('applyMask() — caret tracking', () => {
 
   it('two leading literals', () => {
     // mask "((99))", user types '1' → value="1", caret=1
-    const r = applyMask('1', '((99))', 1)
+    const r = applyMask('1', '((99))', 1, { eager: false })
     expect(r.value).toBe('((1')
     expect(r.caret).toBe(3)
   })
 
   it('three leading literals', () => {
-    const r = applyMask('1', '(((9)))', 1)
+    const r = applyMask('1', '(((9)))', 1, { eager: false })
     expect(r.value).toBe('(((1')
     expect(r.caret).toBe(4)
   })
@@ -489,25 +489,25 @@ describe('applyMask() — caret tracking', () => {
   // -- Mixed digit / letter masks ------------------------------------------
 
   it('mixed mask Z9Z9', () => {
-    const r = applyMask('A1B2', 'Z9Z9', 4)
+    const r = applyMask('A1B2', 'Z9Z9', 4, { eager: false })
     expect(r.value).toBe('A1B2')
     expect(r.caret).toBe(4)
   })
 
   it('mixed mask with literal separator', () => {
     // "A-1" with mask "Z-9", caret=3 (end)
-    const r = applyMask('A-1', 'Z-9', 3)
+    const r = applyMask('A-1', 'Z-9', 3, { eager: false })
     expect(r.value).toBe('A-1')
     expect(r.caret).toBe(3)
   })
 
   it('letter typed where digit expected is skipped', () => {
-    const r = applyMask('a', '999', 1)
+    const r = applyMask('a', '999', 1, { eager: false })
     expect(r).toEqual({ value: '', caret: 0 })
   })
 
   it('digit typed where letter expected is skipped', () => {
-    const r = applyMask('1', 'ZZZ', 1)
+    const r = applyMask('1', 'ZZZ', 1, { eager: false })
     expect(r).toEqual({ value: '', caret: 0 })
   })
 
@@ -517,18 +517,18 @@ describe('applyMask() — caret tracking', () => {
     const mask = '(99) 99999-9999'
 
     // Type '1'
-    expect(applyMask('1', mask, 1)).toEqual({ value: '(1', caret: 2 })
+    expect(applyMask('1', mask, 1, { eager: false })).toEqual({ value: '(1', caret: 2 })
     // Type '1' → "(11"
-    expect(applyMask('(11', mask, 3)).toEqual({ value: '(11', caret: 3 })
+    expect(applyMask('(11', mask, 3, { eager: false })).toEqual({ value: '(11', caret: 3 })
     // Type '9' → "(119"
-    expect(applyMask('(119', mask, 4)).toEqual({ value: '(11) 9', caret: 6 })
+    expect(applyMask('(119', mask, 4, { eager: false })).toEqual({ value: '(11) 9', caret: 6 })
     // Type '9' → "(11) 99"
-    expect(applyMask('(11) 99', mask, 7)).toEqual({
+    expect(applyMask('(11) 99', mask, 7, { eager: false })).toEqual({
       value: '(11) 99',
       caret: 7,
     })
     // Fill rest: "(11) 99988-7766"
-    expect(applyMask('(11) 99988-7766', mask, 15)).toEqual({
+    expect(applyMask('(11) 99988-7766', mask, 15, { eager: false })).toEqual({
       value: '(11) 99988-7766',
       caret: 15,
     })
@@ -537,33 +537,33 @@ describe('applyMask() — caret tracking', () => {
   // -- Alphanumeric A slot caret tracking ------------------------------------
 
   it('A slot — typing digit at end', () => {
-    const r = applyMask('1', 'AA-AA', 1)
+    const r = applyMask('1', 'AA-AA', 1, { eager: false })
     expect(r.value).toBe('1')
     expect(r.caret).toBe(1)
   })
 
   it('A slot — typing letter at end', () => {
-    const r = applyMask('1A', 'AA-AA', 2)
+    const r = applyMask('1A', 'AA-AA', 2, { eager: false })
     expect(r.value).toBe('1A')
     expect(r.caret).toBe(2)
   })
 
   it('A slot — third char triggers literal separator', () => {
-    const r = applyMask('1AB', 'AA-AA', 3)
+    const r = applyMask('1AB', 'AA-AA', 3, { eager: false })
     expect(r.value).toBe('1A-B')
     expect(r.caret).toBe(4)
   })
 
   it('A slot — insert in middle with literal', () => {
     // "1A-B" → insert 'X' between '1' and 'A' → "1XA-B", caret=2
-    const r = applyMask('1XA-B', 'AA-AA', 2)
+    const r = applyMask('1XA-B', 'AA-AA', 2, { eager: false })
     expect(r.value).toBe('1X-AB')
     expect(r.caret).toBe(2)
   })
 
   it('A slot — non-alphanumeric skipped, caret unaffected', () => {
     // "@1A" with caret=1 → '@' before caret is skipped
-    const r = applyMask('@1A', 'AA', 1)
+    const r = applyMask('@1A', 'AA', 1, { eager: false })
     expect(r.value).toBe('1A')
     expect(r.caret).toBe(0)
   })
@@ -572,15 +572,15 @@ describe('applyMask() — caret tracking', () => {
     const mask = 'AA.AAA.AAA/AAAA-99'
 
     // Type '1'
-    expect(applyMask('1', mask, 1)).toEqual({ value: '1', caret: 1 })
+    expect(applyMask('1', mask, 1, { eager: false })).toEqual({ value: '1', caret: 1 })
     // Type 'A' → "1A"
-    expect(applyMask('1A', mask, 2)).toEqual({ value: '1A', caret: 2 })
+    expect(applyMask('1A', mask, 2, { eager: false })).toEqual({ value: '1A', caret: 2 })
     // Type 'B' → "1AB", literal '.' appears
-    expect(applyMask('1AB', mask, 3)).toEqual({ value: '1A.B', caret: 4 })
+    expect(applyMask('1AB', mask, 3, { eager: false })).toEqual({ value: '1A.B', caret: 4 })
     // Type '2' → "1A.B2"
-    expect(applyMask('1A.B2', mask, 5)).toEqual({ value: '1A.B2', caret: 5 })
+    expect(applyMask('1A.B2', mask, 5, { eager: false })).toEqual({ value: '1A.B2', caret: 5 })
     // Fill rest: "1A.B2C.3D4/5E6F-78" (18 chars = mask length)
-    expect(applyMask('1A.B2C.3D4/5E6F-78', mask, 19)).toEqual({
+    expect(applyMask('1A.B2C.3D4/5E6F-78', mask, 19, { eager: false })).toEqual({
       value: '1A.B2C.3D4/5E6F-78',
       caret: 18,
     })
@@ -590,7 +590,7 @@ describe('applyMask() — caret tracking', () => {
     const mask = 'AA.AAA.AAA/AAAA-99'
     // Last two slots are '9' — letter should be rejected
     // "1AB2C3D45E6FAB" → check digit slots expect digits, 'A','B' skipped
-    const r = applyMask('1AB2C3D45E6FAB', mask, 14)
+    const r = applyMask('1AB2C3D45E6FAB', mask, 14, { eager: false })
     expect(r.value).toBe('1A.B2C.3D4/5E6F')
     expect(r.caret).toBe(15)
   })
@@ -600,20 +600,20 @@ describe('applyMask() — caret tracking', () => {
   it('CPF mask — typing sequence', () => {
     const mask = '999.999.999-99'
 
-    expect(applyMask('1', mask, 1)).toEqual({ value: '1', caret: 1 })
-    expect(applyMask('12', mask, 2)).toEqual({ value: '12', caret: 2 })
-    expect(applyMask('123', mask, 3)).toEqual({ value: '123', caret: 3 })
+    expect(applyMask('1', mask, 1, { eager: false })).toEqual({ value: '1', caret: 1 })
+    expect(applyMask('12', mask, 2, { eager: false })).toEqual({ value: '12', caret: 2 })
+    expect(applyMask('123', mask, 3, { eager: false })).toEqual({ value: '123', caret: 3 })
     // Type '4' → "1234", literal '.' appears
-    expect(applyMask('1234', mask, 4)).toEqual({
+    expect(applyMask('1234', mask, 4, { eager: false })).toEqual({
       value: '123.4',
       caret: 5,
     })
-    expect(applyMask('123.456', mask, 7)).toEqual({
+    expect(applyMask('123.456', mask, 7, { eager: false })).toEqual({
       value: '123.456',
       caret: 7,
     })
     // Type '7' → "123.4567", second '.' appears
-    expect(applyMask('123.4567', mask, 8)).toEqual({
+    expect(applyMask('123.4567', mask, 8, { eager: false })).toEqual({
       value: '123.456.7',
       caret: 9,
     })

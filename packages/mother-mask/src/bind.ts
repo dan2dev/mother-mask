@@ -39,6 +39,29 @@ function classifyInputType(inputType: string | undefined): InputEditKind {
 }
 
 /**
+ * `eager`, unless this particular edit is a deletion.
+ *
+ * `applyMask`/`buildMask` are pure functions of `(value, caret)` — they have
+ * no memory of *how* the value got there. That's a problem for eager mode
+ * specifically: deleting the separator eager just added (e.g. backspacing
+ * the "." off "012.") produces the exact same `(value, caret)` — raw digits,
+ * caret right where the separator used to be — as the moment right before
+ * that separator first appeared. A stateless recompute can't tell those two
+ * apart, so eager would immediately re-add the separator the user just
+ * deleted, making backspace look like it does nothing.
+ *
+ * `bind()` is the one layer that *does* know which happened (the DOM event
+ * says so), so it's the right place to break the tie: suppress eager for the
+ * single recompute that follows a delete-type edit, and let it resume on the
+ * next insert. This never removes anything eager wouldn't otherwise have
+ * added — it only stops eager from resurrecting a literal the user just
+ * removed.
+ */
+function eagerForEdit(eager: boolean | undefined, isDeleteLike: boolean): boolean | undefined {
+  return isDeleteLike ? false : eager
+}
+
+/**
  * Bind a mask pattern to an input element.
  *
  * Idempotent — calling `bind()` on an already-bound element has no effect.
@@ -72,7 +95,7 @@ export function bind(
 ): () => void {
   if (input.getAttribute(MASKED_ATTR) !== null) return () => {}
 
-  const { onChange, segmented } = toBindOptions(third)
+  const { onChange, segmented, eager } = toBindOptions(third)
 
   /** Attribute names set by this bind call; removed on dispose so a later `bind()` can re-apply. */
   const attrsSetHere: string[] = []
@@ -127,7 +150,7 @@ export function bind(
   const onPaste = (e: Event): void => {
     const target = e.target as HTMLInputElement
     scheduleFrame(() => {
-      const m = buildMask(target.value, mask, 0, { segmented })
+      const m = buildMask(target.value, mask, 0, { segmented, eager })
       target.value = m.process()
       onChange?.(target.value)
     })
@@ -164,10 +187,13 @@ export function bind(
 
     const pos = getCaret(target)
     const previousLength = lastMaskedValue.length
-    const m = buildMask(target.value, mask, pos, { segmented })
+    const kind = classifyInputType(inputEvent.inputType)
+    const m = buildMask(target.value, mask, pos, {
+      segmented,
+      eager: eagerForEdit(eager, kind === 'backspace' || kind === 'delete'),
+    })
     target.value = m.process()
 
-    const kind = classifyInputType(inputEvent.inputType)
     if (kind === 'unidentified') {
       const newPos = target.value.length > previousLength ? m.caret : pos
       setCaret(target, newPos)
@@ -196,7 +222,7 @@ export function bind(
 
     const target = e.target as HTMLInputElement
     const pos = getCaret(target)
-    const m = buildMask(target.value, mask, pos, { segmented })
+    const m = buildMask(target.value, mask, pos, { segmented, eager })
     target.value = m.process()
     setCaret(target, m.caret)
 
@@ -229,7 +255,13 @@ export function bind(
           return
         }
         const pos = target.selectionStart ?? 999
-        const m = buildMask(target.value, mask, pos, { segmented })
+        // No reliable `key` here, so infer delete-vs-insert from the length
+        // delta the browser's already-applied default action left behind.
+        const isDeleteLike = target.value.length < oldValue.length
+        const m = buildMask(target.value, mask, pos, {
+          segmented,
+          eager: eagerForEdit(eager, isDeleteLike),
+        })
         target.value = m.process()
         target.setSelectionRange(m.caret, m.caret)
         scheduleFrame(() => {
@@ -289,7 +321,10 @@ export function bind(
       if (target.value === oldValue && target.selectionStart !== target.selectionEnd) return
 
       const pos = target.selectionStart ?? 999
-      const m = buildMask(target.value, mask, pos, { segmented })
+      const m = buildMask(target.value, mask, pos, {
+        segmented,
+        eager: eagerForEdit(eager, isBackspace || isDelete),
+      })
       target.value = m.process()
 
       if (isUnidentified) {
