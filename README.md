@@ -2,7 +2,7 @@
 
 Lightweight input masks for browser forms. Zero runtime dependencies, written in TypeScript, and published with ESM, CJS, and UMD builds.
 
-[npm](https://www.npmjs.com/package/mother-mask) | [Live demo](https://stackblitz.com/edit/mother-mask-simple-demo?file=src%2Fmain.ts)
+[npm](https://www.npmjs.com/package/mother-mask) | [Live demo](https://dan2dev.github.io/mother-mask/)
 
 ## Install
 
@@ -100,6 +100,16 @@ Masks are segmented by default. Separators behave like boundaries, which keeps f
 ```ts
 bind(input, '99/99/9999')
 ```
+
+Separators left in the value also anchor the characters around them, so an edit that replaces whole fields leaves the rest where it was:
+
+```ts
+bind(input, '999.999.999-99')
+// "012.153.441-39" — select "012.153.441", type "015"
+// → "015.|-39"     the "-" keeps "39" in the last field
+```
+
+Anchoring is only as precise as the separators allow. A mask whose separators are all the same character can produce a genuinely ambiguous value — with `'99/99/9999'`, `"1/2025"` reads equally well as `1 / 20 / 25` — and resolves it to the earliest field that fits. Masks with distinct separators (CPF, CNPJ, phone numbers) have no such gap.
 
 For classic reflow behavior, pass `segmented: false`:
 

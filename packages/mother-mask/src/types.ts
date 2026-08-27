@@ -26,6 +26,20 @@ export interface ApplyMaskOptions {
    * single field (e.g. the month in "99/99/9999" won't steal a digit from
    * the year).
    *
+   * Separators surviving in the value are read as positional anchors, so an
+   * edit that wipes out whole fields still leaves the rest where it was: with
+   * `"999.999.999-99"`, selecting `"012.153.441"` out of `"012.153.441-39"`
+   * and typing `"015"` gives `"015.-39"` — the `-` keeps `"39"` in the last
+   * field — rather than repacking every digit from the left into `"015.39"`.
+   * Separators around fields that end up empty are dropped, unless keeping
+   * one is what tells the *next* keystroke where the text after it belongs.
+   *
+   * Anchoring can only be as precise as the separators allow. A mask whose
+   * separators are all the same character (`"99/99/9999"`) can leave a
+   * genuinely ambiguous value — `"1/2025"` reads equally well as
+   * `1 / 20 / 25` — and resolves it to the earliest field that fits. Masks
+   * with distinct separators (CPF, CNPJ, phone numbers) have no such gap.
+   *
    * Pass `segmented: false` to opt into the classic flat/reflow behavior
    * instead, where deleting or replacing characters anywhere shifts
    * everything after it to close the gap — useful when a mask really is one

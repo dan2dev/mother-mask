@@ -117,7 +117,10 @@ async function runMatrix(
           input.setSelectionRange(start, start)
           dispatchInput(input, null, mode === 'backspace' ? 'deleteContentBackward' : 'deleteContentForward')
 
-          const m = window.motherMask.buildMask(raw, mask, start, options)
+          // bind() suppresses eager for delete-type edits, so a separator
+          // the user just removed is not immediately re-added — the pure
+          // expectation has to be computed the same way.
+          const m = window.motherMask.buildMask(raw, mask, start, { ...options, eager: false })
           const expectedValue = m.process()
           const rawCaret = mode === 'backspace' ? start : full.length === expectedValue.length ? start + 1 : start
           const expectedCaret = Math.min(rawCaret, expectedValue.length)
@@ -139,7 +142,8 @@ async function runMatrix(
       input.value = raw
       input.setSelectionRange(pos - 1, pos - 1)
       dispatchInput(input, null, 'deleteContentBackward')
-      const m = window.motherMask.buildMask(raw, mask, pos - 1, options)
+      // See the note on the selection-delete branch above.
+      const m = window.motherMask.buildMask(raw, mask, pos - 1, { ...options, eager: false })
       const expectedValue = m.process()
       const expectedCaret = Math.min(pos - 1, expectedValue.length)
       if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
@@ -157,7 +161,8 @@ async function runMatrix(
       input.value = raw
       input.setSelectionRange(pos, pos)
       dispatchInput(input, null, 'deleteContentForward')
-      const m = window.motherMask.buildMask(raw, mask, pos, options)
+      // See the note on the selection-delete branch above.
+      const m = window.motherMask.buildMask(raw, mask, pos, { ...options, eager: false })
       const expectedValue = m.process()
       const rawCaret = full.length === expectedValue.length ? pos + 1 : pos
       const expectedCaret = Math.min(rawCaret, expectedValue.length)
