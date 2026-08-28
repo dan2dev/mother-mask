@@ -50,7 +50,9 @@ test.describe('Android IME composition wrapping plain-text typing', () => {
     // The dash must show up the moment the 4th character lands — live,
     // not only once composition eventually ends (which, on Android typing
     // a space-less plate number, may never happen while typing at all).
-    expect(snapshots[2]).toBe('ABC')
+    // Eager reveal (on by default): the third letter completes the first
+    // segment, so the dash appears with it rather than waiting for the digit.
+    expect(snapshots[2]).toBe('ABC-')
     expect(snapshots[3]).toBe('ABC-1')
     expect(snapshots[6]).toBe('ABC-1234')
 
@@ -81,7 +83,9 @@ test.describe('Android IME composition wrapping plain-text typing', () => {
       return snaps
     })
 
-    expect(snapshots[2]).toBe('ABC')
+    // Eager reveal (on by default): the third letter completes the first
+    // segment, so the dash appears with it rather than waiting for the digit.
+    expect(snapshots[2]).toBe('ABC-')
     expect(snapshots[3]).toBe('ABC-1')
     expect(snapshots[6]).toBe('ABC-1D23')
     await expect(page.locator('#mercosul')).toHaveValue('ABC-1D23')

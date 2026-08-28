@@ -1,4 +1,4 @@
-.PHONY: help install up build test test-e2e dev publish release-patch release-minor release-major
+.PHONY: help install up build test test-e2e test-stress test-memory dev publish release-patch release-minor release-major
 
 PKG := packages/mother-mask
 E2E := e2e
@@ -13,6 +13,8 @@ help:
 	@echo "  build                Build the library"
 	@echo "  test                 Run tests with coverage"
 	@echo "  test-e2e             Run Playwright browser tests (real Chrome, desktop + mobile)"
+	@echo "  test-stress          Race/timing stress only: burst typing, select-replace, IME"
+	@echo "  test-memory          Leak checks only: forced GC, retained heap + DOM nodes"
 	@echo "  dev                  Watch mode (build on change)"
 	@echo ""
 	@echo "  publish              Bump PATCH, publish, commit, tag, push"
@@ -40,6 +42,21 @@ test:
 test-e2e:
 	cd $(PKG) && pnpm build
 	cd $(E2E) && bun install && bunx playwright install --with-deps chromium && bunx playwright test
+
+# Everything that can only fail under real browser timing: keystrokes arriving
+# faster than frames, select-and-replace against a pending default action, and
+# IME composition sessions that never end.
+test-stress:
+	cd $(PKG) && pnpm build
+	cd $(E2E) && bun install && bunx playwright install --with-deps chromium && \
+		bunx playwright test stress fast-typing speed-matrix select-replace-race android-composition
+
+# Forced-GC heap, DOM node and listener measurements. Chromium only — these
+# metrics come over CDP and have no cross-browser equivalent.
+test-memory:
+	cd $(PKG) && pnpm build
+	cd $(E2E) && bun install && bunx playwright install --with-deps chromium && \
+		bunx playwright test memory
 
 dev:
 	cd $(PKG) && pnpm dev

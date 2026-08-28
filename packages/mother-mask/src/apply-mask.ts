@@ -165,7 +165,24 @@ interface CompiledMask {
 // A bound input re-applies the same (static) mask string on every keystroke,
 // so compiling it is pure, repeated work — cache by mask string instead of
 // re-walking and re-allocating on every keystroke.
+//
+// Bounded, because the key is caller-supplied: an app that builds mask
+// strings dynamically (a width that varies per row, a mask derived from user
+// input) would otherwise grow this map for the lifetime of the page. Real
+// apps use a handful of static masks, so the cap is far above any honest
+// working set and eviction effectively never runs; when it does, the only
+// cost is recompiling a mask, which is linear in its length.
+const MAX_COMPILED_MASKS = 64
 const compiledCache = new Map<string, CompiledMask>()
+
+function cacheCompiled(mask: string, compiled: CompiledMask): void {
+  if (compiledCache.size >= MAX_COMPILED_MASKS) {
+    // Map iterates in insertion order, so this drops the oldest entry.
+    const oldest = compiledCache.keys().next()
+    if (!oldest.done) compiledCache.delete(oldest.value)
+  }
+  compiledCache.set(mask, compiled)
+}
 
 /**
  * Split a mask into alternating literal and slot-run tokens (e.g. "99/99/9999"
@@ -236,7 +253,7 @@ function compileMask(mask: string): CompiledMask {
     runAfterLiteral,
     totalSlots: offset,
   }
-  compiledCache.set(mask, compiled)
+  cacheCompiled(mask, compiled)
   return compiled
 }
 

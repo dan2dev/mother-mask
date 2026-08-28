@@ -196,7 +196,10 @@ test.describe('select-and-replace race: keydown fallback frame vs. browser defau
         el.value = '(11) 99988-7766'
       })
       await input.click()
-      await page.keyboard.press('Control+a')
+      // ControlOrMeta, not Control: on macOS Control+A is "move to start of
+      // line", so the field would never actually be selected and the test
+      // would exercise a plain caret-at-0 insert instead of a replace.
+      await page.keyboard.press('ControlOrMeta+a')
       await page.keyboard.type('5551234567', { delay: 0 })
       await page.waitForTimeout(20)
       const value = await input.inputValue()
@@ -241,7 +244,10 @@ test.describe('select-and-replace race: keydown fallback frame vs. browser defau
         el.value = '$1,234.00'
       })
       await input.click()
-      await page.keyboard.press('Control+a')
+      // ControlOrMeta, not Control: on macOS Control+A is "move to start of
+      // line", so the field would never actually be selected and the test
+      // would exercise a plain caret-at-0 insert instead of a replace.
+      await page.keyboard.press('ControlOrMeta+a')
       await page.keyboard.type('999', { delay: 0 })
       await page.waitForTimeout(20)
       const value = await input.inputValue()
