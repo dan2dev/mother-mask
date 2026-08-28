@@ -53,6 +53,13 @@ const MASKS: MaskConfig[] = [
     full: '1A.B2C.3D4/5E6F-78',
     chars: ['1', 'a', '#'],
   },
+  { name: 'custom hex', mask: 'HH:HH:HH', full: 'a1:b2:c3', options: { tokens: { H: /[0-9a-f]/i } }, chars: ['a', '1', 'g'] },
+  { name: 'transformed identifier', mask: 'UUU-999', full: 'ABC-123', options: { tokens: { U: { match: /[a-z]/i, transform: c => c.toUpperCase() } } }, chars: ['x', '1', '#'] },
+  { name: 'transformed flat identifier', mask: 'UUU-999', full: 'ABC-123', options: { segmented: false, tokens: { U: { match: /[a-z]/i, transform: c => c.toUpperCase() } } }, chars: ['x', '1', '#'] },
+  { name: 'escaped prefix', mask: '\\A-99.99', full: 'A-12.34', chars: ['1', 'A', '#'] },
+  { name: 'Unicode letters', mask: 'LLL-LLL', full: 'ЖλÁ-üøÇ', options: { tokens: { L: /\p{L}/u } }, chars: ['ñ', '1', '#'] },
+  { name: 'custom array', mask: ['HH-HH', 'HH-HH-HH'], full: 'ab-cd-ef', options: { tokens: { H: /[0-9a-f]/i } }, chars: ['a', '1', 'g'] },
+
 ]
 
 // ---------------------------------------------------------------------------
@@ -127,7 +134,7 @@ describe('caret matrix — insert at every position', () => {
             const expectedValue = m.process()
             const expectedCaret = m.caret
 
-            if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
+            if (input.value !== expectedValue || input.selectionStart !== expectedCaret || input.selectionEnd !== expectedCaret) {
               failures.push(
                 `pos=${pos} ch=${JSON.stringify(ch)}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
               )
@@ -168,7 +175,7 @@ describe('caret matrix — select + replace at every selection range', () => {
               const expectedValue = m.process()
               const expectedCaret = m.caret
 
-              if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
+              if (input.value !== expectedValue || input.selectionStart !== expectedCaret || input.selectionEnd !== expectedCaret) {
                 failures.push(
                   `[${start},${end}) ch=${JSON.stringify(ch)}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
                 )
@@ -228,7 +235,7 @@ describe('caret matrix — select + delete at every selection range', () => {
                 mode === 'backspace' ? start : cfg.full.length === expectedValue.length ? start + 1 : start
               const expectedCaret = Math.min(rawCaret, expectedValue.length)
 
-              if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
+              if (input.value !== expectedValue || input.selectionStart !== expectedCaret || input.selectionEnd !== expectedCaret) {
                 failures.push(
                   `[${start},${end}) ${mode}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
                 )
@@ -269,7 +276,7 @@ describe('caret matrix — Backspace at every position (no selection)', () => {
           // `setSelectionRange` clamps to the (possibly shorter, reflowed) value length.
           const expectedCaret = Math.min(pos - 1, expectedValue.length)
 
-          if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
+          if (input.value !== expectedValue || input.selectionStart !== expectedCaret || input.selectionEnd !== expectedCaret) {
             failures.push(
               `pos=${pos}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
             )
@@ -305,7 +312,7 @@ describe('caret matrix — Delete-forward at every position (no selection)', () 
           // `setSelectionRange` clamps to the (possibly shorter, reflowed) value length.
           const expectedCaret = Math.min(rawCaret, expectedValue.length)
 
-          if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
+          if (input.value !== expectedValue || input.selectionStart !== expectedCaret || input.selectionEnd !== expectedCaret) {
             failures.push(
               `pos=${pos}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
             )
@@ -401,7 +408,7 @@ describe('caret matrix — legacy keydown fallback, deliberate typing (flush eve
             const expectedValue = m.process()
             const expectedCaret = m.caret
 
-            if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
+            if (input.value !== expectedValue || input.selectionStart !== expectedCaret || input.selectionEnd !== expectedCaret) {
               failures.push(
                 `pos=${pos} ch=${JSON.stringify(ch)}: got value=${JSON.stringify(input.value)} caret=${input.selectionStart}, want value=${JSON.stringify(expectedValue)} caret=${expectedCaret}`,
               )

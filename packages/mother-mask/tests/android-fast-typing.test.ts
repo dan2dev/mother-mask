@@ -229,3 +229,63 @@ describe('bind() — Android-style fast typing via input events', () => {
     expect(input.selectionStart).toBe(7)
   })
 })
+
+describe('custom Unicode composition', () => {
+  for (const segmented of [true, false]) {
+    for (const eager of [true, false]) {
+      it(`leaves provisional text untouched until commit (segmented=${segmented}, eager=${eager})`, async () => {
+        const { bind } = await import('../src/index')
+        const input = document.createElement('input')
+        document.body.appendChild(input)
+        const onChange = vi.fn()
+        const resolveMask = vi.fn(() => 'L-L')
+        const dispose = bind(input, 'L-L', { segmented, eager, tokens: { L: /\p{L}/u }, resolveMask, onChange })
+        try {
+          input.dispatchEvent(new KeyboardEvent('keydown', { key: 'n', bubbles: true }))
+          input.dispatchEvent(new Event('compositionstart', { bubbles: true }))
+          for (const draft of ['n', 'ni', 'nihao']) {
+            input.value = draft
+            input.setSelectionRange(0, draft.length)
+            dispatchInput(input, { data: draft, inputType: 'insertCompositionText', isComposing: true })
+            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Unidentified', bubbles: true }))
+            input.dispatchEvent(new Event('paste', { bubbles: true }))
+            await flushRafs(1)
+            expect(input.value).toBe(draft)
+            expect(input.selectionStart).toBe(0)
+            expect(input.selectionEnd).toBe(draft.length)
+          }
+          expect(onChange).not.toHaveBeenCalled()
+          expect(resolveMask).not.toHaveBeenCalled()
+          input.value = '你'
+          input.setSelectionRange(1, 1)
+          input.dispatchEvent(new Event('compositionend', { bubbles: true }))
+          expect(input.value).toBe(eager ? '你-' : '你')
+          expect(input.selectionStart).toBe(eager ? 2 : 1)
+          expect(input.selectionEnd).toBe(input.selectionStart)
+          typeCharViaInput(input, '𐐀')
+          expect(input.value).toBe('你-𐐀')
+          expect(input.selectionStart).toBe(4)
+          expect(input.selectionEnd).toBe(4)
+        } finally { dispose(); input.remove() }
+      })
+    }
+  }
+
+  it('accepts a final noncomposing input even if compositionstart was omitted', async () => {
+    const { bind } = await import('../src/index')
+    const input = document.createElement('input')
+    const dispose = bind(input, 'L', { tokens: { L: /\p{L}/u } })
+    try {
+      input.value = 'nihao'
+      input.setSelectionRange(5, 5)
+      dispatchInput(input, { data: 'nihao', isComposing: true, inputType: 'insertCompositionText' })
+      expect(input.value).toBe('nihao')
+      input.value = '你'
+      input.setSelectionRange(1, 1)
+      dispatchInput(input, { data: '你', inputType: 'insertFromComposition' })
+      expect(input.value).toBe('你')
+      expect(input.selectionStart).toBe(1)
+      expect(input.selectionEnd).toBe(1)
+    } finally { dispose() }
+  })
+})

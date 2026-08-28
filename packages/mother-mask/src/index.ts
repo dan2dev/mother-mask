@@ -5,6 +5,10 @@ export type {
   DecimalMaskOptions,
   MaskPattern,
   MaskResult,
+  MaskTokenDefinition,
+  MaskTokens,
+  MaskResolver,
+  TokenMatcher,
 } from './types'
 export { applyMask } from './apply-mask'
 export { bind } from './bind'

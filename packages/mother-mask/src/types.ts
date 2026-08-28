@@ -1,7 +1,8 @@
 /**
  * Mask pattern — a single pattern string or an array ordered from shortest to longest.
- * `9` matches a digit, `Z` matches a letter, `A` matches alphanumeric (digit or letter),
- * anything else is a literal character.
+ * `9` matches an ASCII digit, `Z` an ASCII letter, `A` ASCII alphanumeric.
+ * Custom tokens extend/override these locally. Backslash escapes a token or
+ * another backslash; other characters are literal.
  *
  * @example
  * '(99) 99999-9999'
@@ -10,17 +11,41 @@
  */
 export type MaskPattern = string | string[]
 
+/** Receives one Unicode code point. RegExp lastIndex is never read or modified. */
+export type TokenMatcher = RegExp | ((char: string) => boolean)
+
+export interface MaskTokenDefinition {
+  match: TokenMatcher
+  /** Must return exactly one code point; use an idempotent, match-preserving transform. */
+  transform?: (char: string) => string
+}
+
+/** Single-code-point keys; backslash is reserved for escaping. Overrides are local. */
+export type MaskTokens = Record<string, TokenMatcher | MaskTokenDefinition>
+
+/** Called once per application with the candidate data, before slot transformations. */
+export type MaskResolver = (value: string) => MaskPattern
+
 /** Result of applying a mask to a value. */
 export interface MaskResult {
   readonly value: string
+  /** UTF-16 offset, as used by DOM selectionStart/selectionEnd. */
   readonly caret: number
 }
 
-/** Options for {@link applyMask} and {@link buildMask}. */
+/** Options shared by applyMask, buildMask, process, and bind. */
 export interface ApplyMaskOptions {
+  /** Additional/overridden tokens, scoped to this operation or binding. */
+  tokens?: MaskTokens
+  /** Resolve from code points accepted by slots in the fallback mask(s).
+   * Complete fallback literals (including escaped runs) and nonmatching text are removed.
+   * Resolver masks format this continuous stream, without retaining old separators.
+   */
+  resolveMask?: MaskResolver
   /**
    * Treat literal separators as hard boundaries between independent fields
-   * instead of one continuous digit/character stream. **On by default**: a
+   * instead of one continuous digit/character stream. For static patterns/arrays;
+   * resolver masks always reflow their continuous candidate data. **On by default**: a
    * mask made of independent fields — dates, times, phone area codes — never
    * bleeds digits from one field into a neighboring one when you edit a
    * single field (e.g. the month in "99/99/9999" won't steal a digit from

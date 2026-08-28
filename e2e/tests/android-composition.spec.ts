@@ -158,3 +158,65 @@ test.describe('Android IME composition wrapping plain-text typing', () => {
     expect(result.final).toBe('1A.B2C.3D4/5E6F-78')
   })
 })
+
+for (const eager of [true, false]) {
+  test(`custom Unicode token preserves actual Chromium IME candidates (eager=${eager})`, async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'Native composition injection uses Chromium CDP')
+    await page.goto('/')
+    await page.evaluate(eager => {
+      const input = document.createElement('input')
+      input.id = 'unicode-ime'
+      document.body.append(input)
+      window.motherMask.bind(input, 'L-L', { eager, tokens: { L: /\p{L}/u } })
+      input.focus()
+    }, eager)
+    const input = page.locator('#unicode-ime')
+    const cdp = await page.context().newCDPSession(page)
+    for (const text of ['n', 'ni', 'nihao']) {
+      await cdp.send('Input.imeSetComposition', { text, selectionStart: text.length, selectionEnd: text.length })
+      await expect(input).toHaveValue(text)
+      expect(await input.evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd])).toEqual([text.length, text.length])
+    }
+    await cdp.send('Input.insertText', { text: '你' })
+    const expected = eager ? '你-' : '你'
+    await expect(input).toHaveValue(expected)
+    expect(await input.evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd])).toEqual([expected.length, expected.length])
+    await page.keyboard.insertText('𐐀')
+    await expect(input).toHaveValue('你-𐐀')
+    expect(await input.evaluate((el: HTMLInputElement) => [el.selectionStart, el.selectionEnd])).toEqual([4, 4])
+    await cdp.detach()
+  })
+}
+
+test('multi-stage Unicode composition event ordering, cancellation and re-entry', async ({ page }) => {
+  await page.goto('/')
+  const result = await page.evaluate(() => {
+    const input = document.createElement('input')
+    document.body.append(input)
+    const dispose = window.motherMask.bind(input, 'L-L', { tokens: { L: /\p{L}/u } })
+    const states: Array<[string, number | null, number | null]> = []
+    const snapshot = () => states.push([input.value, input.selectionStart, input.selectionEnd])
+    for (const committed of ['', '你']) {
+      input.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }))
+      for (const draft of ['n', 'ni', 'nihao']) {
+        input.value = draft
+        input.setSelectionRange(0, draft.length)
+        input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertCompositionText', data: draft, isComposing: true }))
+        snapshot()
+      }
+      input.value = committed
+      input.setSelectionRange(committed.length, committed.length)
+      input.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: committed }))
+      snapshot()
+      // Some engines deliver a final input after compositionend.
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromComposition', data: committed }))
+      snapshot()
+    }
+    dispose(); input.remove()
+    return states
+  })
+  expect(result).toEqual([
+    ['n', 0, 1], ['ni', 0, 2], ['nihao', 0, 5], ['', 0, 0], ['', 0, 0],
+    ['n', 0, 1], ['ni', 0, 2], ['nihao', 0, 5], ['你-', 2, 2], ['你-', 2, 2],
+  ])
+})

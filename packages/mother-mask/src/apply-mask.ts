@@ -1,30 +1,9 @@
-import type { ApplyMaskOptions, MaskResult } from './types'
+import type { ApplyMaskOptions, MaskPattern, MaskResult } from './types'
+import { PatternCompiler, defaultCompiler, transformChar } from './pattern'
+import type { CompiledMask } from './pattern'
 
 // ---------------------------------------------------------------------------
-// Character classification (no regex — avoids the empty-string pitfall)
-// ---------------------------------------------------------------------------
-
-function isDigitChar(ch: string): boolean {
-  return ch >= '0' && ch <= '9'
-}
-
-function isLetterChar(ch: string): boolean {
-  return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
-}
-
-function isSlotChar(ch: string): boolean {
-  return ch === '9' || ch === 'Z' || ch === 'A'
-}
-
-function matchesSlot(ch: string, slot: string): boolean {
-  if (slot === '9') return isDigitChar(ch)
-  if (slot === 'Z') return isLetterChar(ch)
-  // slot === 'A' → alphanumeric
-  return isDigitChar(ch) || isLetterChar(ch)
-}
-
-// ---------------------------------------------------------------------------
-// Flat masking (default) — treats the mask as one continuous character
+// Flat masking (opt-in) — treats the mask as one continuous character
 // stream. Best for continuous identifiers (phone numbers, CPF/CNPJ, credit
 // cards) where deleting/inserting a digit anywhere is expected to reflow
 // every digit after it — this is the classic mother-mask behavior and is
@@ -45,32 +24,51 @@ function matchesSlot(ch: string, slot: string): boolean {
  */
 function applyFlatMask(
   value: string,
-  mask: string,
+  plan: CompiledMask,
   inputCaret: number,
   eager: boolean,
+  readLiterals: boolean,
+  caretAfterLiteral: boolean,
 ): MaskResult {
   let output = ''
   let pending = ''
   let valueIdx = 0
   let outputCaret = 0
   let caretResolved = false
+  const leading = plan.tokens[0]
+  let leadingConsumed = false
 
-  for (let maskIdx = 0; maskIdx < mask.length; maskIdx++) {
-    const maskCh = mask[maskIdx]
-
-    if (maskCh !== '9' && maskCh !== 'Z' && maskCh !== 'A') {
-      pending += maskCh
+  for (const part of plan.parts) {
+    if ('kind' in part) {
+      pending += part.text
+      if (readLiterals && value.startsWith(part.text, valueIdx)) {
+        valueIdx += part.text.length
+        if (part === leading) leadingConsumed = true
+      }
       continue
     }
 
     // Find next value character that matches this slot
     let found = false
     while (valueIdx < value.length) {
-      const ch = value[valueIdx++]
+      const literal = readLiterals && plan.hasEscapes && plan.literals.find(part => value.startsWith(part.text, valueIdx))
+      if (literal) {
+        valueIdx += literal.text.length
+        continue
+      }
+      if (readLiterals && !leadingConsumed && leading?.kind === 'literal' &&
+          value.startsWith(leading.text, valueIdx)) {
+        valueIdx += leading.text.length
+        leadingConsumed = true
+        continue
+      }
+      const ch = String.fromCodePoint(value.codePointAt(valueIdx)!)
+      valueIdx += ch.length
 
-      if (matchesSlot(ch, maskCh)) {
+      if (part.match(ch)) {
         // Flush pending literals then write the matched char
-        output += pending + ch
+        if (caretAfterLiteral && !caretResolved && valueIdx > inputCaret) outputCaret = output.length + pending.length
+        output += pending + transformChar(ch, part)
         pending = ''
         found = true
 
@@ -132,131 +130,6 @@ function applyFlatMask(
 // the digits from the left into "015.39".
 // ---------------------------------------------------------------------------
 
-type MaskToken = { kind: 'literal'; text: string } | { kind: 'slots'; chars: string }
-
-/**
- * A mask string pre-chewed into the lookups both passes need.
- *
- * "Run" throughout means one uninterrupted stretch of slot characters — the
- * segment a user thinks of as a single field ("999", "9999", …). Runs are
- * numbered in mask order; token indices index {@link CompiledMask.tokens}.
- */
-interface CompiledMask {
-  /** Alternating literal / slot-run tokens, in mask order. */
-  tokens: MaskToken[]
-  /** Slot characters of each run (e.g. `["999", "999", "999", "99"]`). */
-  runChars: string[]
-  /** Index into a flat, run-concatenated slot array where each run starts. */
-  runOffset: number[]
-  /** Token index of the literal directly before run `i`, or `-1` at the mask start. */
-  literalBeforeRun: number[]
-  /** Total slot capacity of runs `i..end`; `capacityFromRun[runCount]` is `0`. */
-  capacityFromRun: number[]
-  /** For each token, the run it *is* (`-1` for literals). */
-  runOfToken: number[]
-  /** For each literal token, the run directly before it (`-1` when it opens the mask). */
-  runBeforeLiteral: number[]
-  /** For each literal token, the run directly after it (`-1` when it closes the mask). */
-  runAfterLiteral: number[]
-  /** Total number of slots in the mask. */
-  totalSlots: number
-}
-
-// A bound input re-applies the same (static) mask string on every keystroke,
-// so compiling it is pure, repeated work — cache by mask string instead of
-// re-walking and re-allocating on every keystroke.
-//
-// Bounded, because the key is caller-supplied: an app that builds mask
-// strings dynamically (a width that varies per row, a mask derived from user
-// input) would otherwise grow this map for the lifetime of the page. Real
-// apps use a handful of static masks, so the cap is far above any honest
-// working set and eviction effectively never runs; when it does, the only
-// cost is recompiling a mask, which is linear in its length.
-const MAX_COMPILED_MASKS = 64
-const compiledCache = new Map<string, CompiledMask>()
-
-function cacheCompiled(mask: string, compiled: CompiledMask): void {
-  if (compiledCache.size >= MAX_COMPILED_MASKS) {
-    // Map iterates in insertion order, so this drops the oldest entry.
-    const oldest = compiledCache.keys().next()
-    if (!oldest.done) compiledCache.delete(oldest.value)
-  }
-  compiledCache.set(mask, compiled)
-}
-
-/**
- * Split a mask into alternating literal and slot-run tokens (e.g. "99/99/9999"
- * → slots"99", literal"/", slots"99", literal"/", slots"9999") and derive the
- * run/literal adjacency both passes rely on.
- */
-function compileMask(mask: string): CompiledMask {
-  const cached = compiledCache.get(mask)
-  if (cached) return cached
-
-  const tokens: MaskToken[] = []
-  const runOfToken: number[] = []
-  const runChars: string[] = []
-  const runToken: number[] = []
-
-  let i = 0
-  while (i < mask.length) {
-    const start = i
-    const wantSlots = isSlotChar(mask[i])
-    while (i < mask.length && isSlotChar(mask[i]) === wantSlots) i++
-    const text = mask.slice(start, i)
-    if (wantSlots) {
-      runOfToken.push(runChars.length)
-      runToken.push(tokens.length)
-      runChars.push(text)
-      tokens.push({ kind: 'slots', chars: text })
-    } else {
-      runOfToken.push(-1)
-      tokens.push({ kind: 'literal', text })
-    }
-  }
-
-  const runCount = runChars.length
-  const runOffset: number[] = new Array(runCount)
-  const literalBeforeRun: number[] = new Array(runCount)
-  const capacityFromRun: number[] = new Array(runCount + 1)
-  const runBeforeLiteral: number[] = new Array(tokens.length).fill(-1)
-  const runAfterLiteral: number[] = new Array(tokens.length).fill(-1)
-
-  let offset = 0
-  for (let r = 0; r < runCount; r++) {
-    runOffset[r] = offset
-    offset += runChars[r].length
-    // Tokens alternate, so the token just before a run is always a literal
-    // when it exists at all.
-    literalBeforeRun[r] = runToken[r] > 0 ? runToken[r] - 1 : -1
-  }
-
-  capacityFromRun[runCount] = 0
-  for (let r = runCount - 1; r >= 0; r--) {
-    capacityFromRun[r] = capacityFromRun[r + 1] + runChars[r].length
-  }
-
-  for (let t = 0; t < tokens.length; t++) {
-    if (tokens[t].kind !== 'literal') continue
-    runBeforeLiteral[t] = t > 0 ? runOfToken[t - 1] : -1
-    runAfterLiteral[t] = t + 1 < tokens.length ? runOfToken[t + 1] : -1
-  }
-
-  const compiled: CompiledMask = {
-    tokens,
-    runChars,
-    runOffset,
-    literalBeforeRun,
-    capacityFromRun,
-    runOfToken,
-    runBeforeLiteral,
-    runAfterLiteral,
-    totalSlots: offset,
-  }
-  cacheCompiled(mask, compiled)
-  return compiled
-}
-
 /**
  * Text of the separator that introduces run `run`.
  *
@@ -269,11 +142,12 @@ function separatorBefore(plan: CompiledMask, run: number): string {
 }
 
 /** Count of remaining slot-matchable (digit/letter) characters in `value` from `fromIdx` onward. */
-function remainingDataChars(value: string, fromIdx: number): number {
+function remainingDataChars(value: string, fromIdx: number, compiler: PatternCompiler, plan: CompiledMask): number {
   let count = 0
-  for (let i = fromIdx; i < value.length; i++) {
-    const ch = value[i]
-    if (isDigitChar(ch) || isLetterChar(ch)) count++
+  for (let i = fromIdx; i < value.length;) {
+    const ch = String.fromCodePoint(value.codePointAt(i)!)
+    i += ch.length
+    if (compiler.isData(ch, plan)) count++
   }
   return count
 }
@@ -282,7 +156,7 @@ function remainingDataChars(value: string, fromIdx: number): number {
 interface Assignment {
   /** Flat, run-concatenated slot array: the character in each slot, or `''` when empty. */
   slotChar: string[]
-  /** `value` index each filled slot came from; meaningless where `slotChar` is `''`. */
+  /** Exclusive source end of each filled code point; meaningless for empty slots. */
   slotSource: number[]
   /** How many slots of each run are filled (always a prefix of the run). */
   runFilled: number[]
@@ -308,10 +182,12 @@ function findAnchorRun(
   valueIdx: number,
   plan: CompiledMask,
   fromRun: number,
+  compiler: PatternCompiler,
 ): number {
-  const remaining = remainingDataChars(value, valueIdx)
   for (let run = fromRun + 1; run < plan.runChars.length; run++) {
-    if (!value.startsWith(separatorBefore(plan, run), valueIdx)) continue
+    const text = separatorBefore(plan, run)
+    if (!value.startsWith(text, valueIdx)) continue
+    const remaining = remainingDataChars(value, valueIdx + text.length, compiler, plan)
     return remaining <= plan.capacityFromRun[run] ? run : -1
   }
   return -1
@@ -330,7 +206,7 @@ function findAnchorRun(
  * Within a run, filled slots are always a prefix — the walk never goes
  * backwards, so a run can be partially filled but never has holes.
  */
-function assignToSlots(value: string, plan: CompiledMask): Assignment {
+function assignToSlots(value: string, plan: CompiledMask, compiler: PatternCompiler, readLiterals: boolean): Assignment {
   const runCount = plan.runChars.length
   const slotChar: string[] = new Array(plan.totalSlots).fill('')
   const slotSource: number[] = new Array(plan.totalSlots).fill(-1)
@@ -340,17 +216,38 @@ function assignToSlots(value: string, plan: CompiledMask): Assignment {
   let runIdx = 0
   let slotIdx = 0
   let valueIdx = 0
+  const leading = plan.tokens[0]
+  if (readLiterals && leading?.kind === 'literal' && value.startsWith(leading.text)) {
+    literalSource[0] = 0
+    valueIdx = leading.text.length
+  }
 
   while (valueIdx < value.length && runIdx < runCount) {
+    if (readLiterals && literalSource[0] < 0 && leading?.kind === 'literal' &&
+        value.startsWith(leading.text, valueIdx)) {
+      literalSource[0] = valueIdx
+      valueIdx += leading.text.length
+      continue
+    }
     const chars = plan.runChars[runIdx]
-    const ch = value[valueIdx]
+    const ch = String.fromCodePoint(value.codePointAt(valueIdx)!)
+    const matches = chars[slotIdx].match(ch)
+    const anchor = readLiterals && (!matches || plan.hasEscapes)
+      ? findAnchorRun(value, valueIdx, plan, runIdx, compiler) : -1
+    if (anchor >= 0) {
+      literalSource[plan.literalBeforeRun[anchor]] = valueIdx
+      valueIdx += separatorBefore(plan, anchor).length
+      runIdx = anchor
+      slotIdx = 0
+      continue
+    }
 
-    if (matchesSlot(ch, chars[slotIdx])) {
+    if (matches) {
       const flat = plan.runOffset[runIdx] + slotIdx
-      slotChar[flat] = ch
-      slotSource[flat] = valueIdx
+      slotChar[flat] = transformChar(ch, chars[slotIdx])
+      slotSource[flat] = valueIdx + ch.length
       runFilled[runIdx] = slotIdx + 1
-      valueIdx++
+      valueIdx += ch.length
       slotIdx++
 
       if (slotIdx === chars.length) {
@@ -358,7 +255,7 @@ function assignToSlots(value: string, plan: CompiledMask): Assignment {
         slotIdx = 0
         // This segment is done: if its separator is the next thing in
         // `value`, consume it here so the following run starts clean.
-        if (runIdx < runCount) {
+        if (readLiterals && runIdx < runCount) {
           const text = separatorBefore(plan, runIdx)
           if (value.startsWith(text, valueIdx)) {
             literalSource[plan.literalBeforeRun[runIdx]] = valueIdx
@@ -369,16 +266,7 @@ function assignToSlots(value: string, plan: CompiledMask): Assignment {
       continue
     }
 
-    const anchor = findAnchorRun(value, valueIdx, plan, runIdx)
-    if (anchor >= 0) {
-      literalSource[plan.literalBeforeRun[anchor]] = valueIdx
-      valueIdx += separatorBefore(plan, anchor).length
-      runIdx = anchor
-      slotIdx = 0
-      continue
-    }
-
-    valueIdx++ // stray/noise char — skip it
+    valueIdx += ch.length // stray/noise char — skip it
   }
 
   return { slotChar, slotSource, runFilled, literalSource }
@@ -467,6 +355,7 @@ function renderAssignment(
   visible: boolean[],
   inputCaret: number,
   eager: boolean,
+  caretAfterLiteral: boolean,
 ): MaskResult {
   const { tokens, runChars, runOffset, runBeforeLiteral, runAfterLiteral, runOfToken } = plan
   const { slotChar, slotSource, runFilled } = assignment
@@ -496,7 +385,7 @@ function renderAssignment(
       output += token.text
       if (
         atFrontier &&
-        ((revealedEagerly && opensEmptySegment) || (source >= 0 && source < inputCaret))
+        (caretAfterLiteral || (revealedEagerly && opensEmptySegment) || (source >= 0 && source < inputCaret))
       ) {
         outputCaret = output.length
       }
@@ -508,7 +397,7 @@ function renderAssignment(
     for (let s = 0; s < runFilled[run]; s++) {
       output += slotChar[offset + s]
       if (caretResolved) continue
-      if (slotSource[offset + s] < inputCaret) outputCaret = output.length
+      if (slotSource[offset + s] <= inputCaret) outputCaret = output.length
       else caretResolved = true
     }
   }
@@ -522,29 +411,55 @@ function renderAssignment(
  */
 function applySegmentedMask(
   value: string,
-  mask: string,
+  plan: CompiledMask,
   inputCaret: number,
   eager: boolean,
+  compiler: PatternCompiler,
+  readLiterals: boolean,
+  caretAfterLiteral: boolean,
 ): MaskResult {
-  const plan = compileMask(mask)
-  const assignment = assignToSlots(value, plan)
+  const assignment = assignToSlots(value, plan, compiler, readLiterals)
   const visible = resolveLiteralVisibility(plan, assignment, eager)
-  return renderAssignment(plan, assignment, visible, inputCaret, eager)
+  return renderAssignment(plan, assignment, visible, inputCaret, eager, caretAfterLiteral)
 }
 
 // ---------------------------------------------------------------------------
 // Public entry point
 // ---------------------------------------------------------------------------
 
-export function applyMask(
+/** Internal entry shared by pure APIs and the binding's private compiler. */
+export function applyWithCompiler(
   value: string,
-  mask: string,
-  inputCaret = 0,
-  options?: ApplyMaskOptions,
+  mask: MaskPattern,
+  inputCaret: number,
+  options: ApplyMaskOptions | undefined,
+  compiler: PatternCompiler,
 ): MaskResult {
+  let effective: CompiledMask
+  let caretAfterLiteral = false
+  if (options?.resolveMask) {
+    // Content-dependent layouts describe one continuous identifier. Resolve once
+    // from its candidate stream, then render it without stale source separators.
+    const patterns = Array.isArray(mask) ? mask : [mask]
+    const data = compiler.data(value, inputCaret, patterns.map((pattern) => compiler.compile(pattern)))
+    effective = compiler.resolve(data.value, options.resolveMask(data.value), false)
+    value = data.value
+    inputCaret = data.caret
+    caretAfterLiteral = data.afterLiteral
+  } else effective = compiler.resolve(value, mask)
   if (!value) return { value: '', caret: 0 }
   const eager = options?.eager !== false
   return options?.segmented === false
-    ? applyFlatMask(value, mask, inputCaret, eager)
-    : applySegmentedMask(value, mask, inputCaret, eager)
+    ? applyFlatMask(value, effective, inputCaret, eager, !options.resolveMask, caretAfterLiteral)
+    : applySegmentedMask(value, effective, inputCaret, eager, compiler, !options?.resolveMask, caretAfterLiteral)
+}
+
+export function applyMask(
+  value: string,
+  mask: MaskPattern,
+  inputCaret = 0,
+  options?: ApplyMaskOptions,
+): MaskResult {
+  const compiler = options?.tokens ? new PatternCompiler(options.tokens) : defaultCompiler
+  return applyWithCompiler(value, mask, inputCaret, options, compiler)
 }

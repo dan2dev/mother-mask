@@ -42,6 +42,13 @@ const MASKS: MaskConfig[] = [
   },
   { name: 'mercosul plate', mask: 'ZZZ-9Z99', full: 'ABC-1D23', chars: ['a', '1', '#'] },
   { name: 'CNPJ alnum', mask: 'AA.AAA.AAA/AAAA-99', full: '1A.B2C.3D4/5E6F-78', chars: ['1', 'a', '#'] },
+  { name: 'custom hex', mask: 'HH:HH:HH', full: 'a1:b2:c3', options: { tokens: { H: /[0-9a-f]/i } }, chars: ['a', '1', 'g'] },
+  { name: 'transformed identifier', mask: 'UUU-999', full: 'ABC-123', options: { tokens: { U: { match: /[a-z]/i, transform: c => c.toUpperCase() } } }, chars: ['x', '1', '#'] },
+  { name: 'transformed flat identifier', mask: 'UUU-999', full: 'ABC-123', options: { segmented: false, tokens: { U: { match: /[a-z]/i, transform: c => c.toUpperCase() } } }, chars: ['x', '1', '#'] },
+  { name: 'escaped prefix', mask: '\\A-99.99', full: 'A-12.34', chars: ['1', 'A', '#'] },
+  { name: 'Unicode letters', mask: 'LLL-LLL', full: 'ЖλÁ-üøÇ', options: { tokens: { L: /\p{L}/u } }, chars: ['ñ', '1', '#'] },
+  { name: 'custom array', mask: ['HH-HH', 'HH-HH-HH'], full: 'ab-cd-ef', options: { tokens: { H: /[0-9a-f]/i } }, chars: ['a', '1', 'g'] },
+
 ]
 
 /** Fire the post-mutation `input` event the browser would, with a real `inputType`. */
@@ -69,7 +76,7 @@ describe('bind() agrees with buildMask() at every edit position', () => {
       }
 
       const check = (label: string, input: HTMLInputElement, value: string, caret: number): void => {
-        if (input.value !== value || input.selectionStart !== caret) {
+        if (input.value !== value || input.selectionStart !== caret || input.selectionEnd !== caret) {
           failures.push(
             `${label}: got ${JSON.stringify(input.value)}@${input.selectionStart} want ${JSON.stringify(value)}@${caret}`,
           )

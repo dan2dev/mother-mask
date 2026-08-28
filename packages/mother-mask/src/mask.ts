@@ -1,5 +1,4 @@
 import { applyMask } from './apply-mask'
-import { resolveMask } from './pattern'
 import type { ApplyMaskOptions, MaskPattern } from './types'
 
 export { getMaxLength } from './pattern'
@@ -14,10 +13,10 @@ export class Mask {
   caret: number
 
   private readonly _value: string
-  private readonly _mask: string
+  private readonly _mask: MaskPattern
   private readonly _options: ApplyMaskOptions | undefined
 
-  constructor(value: string, mask: string, caret = 0, options?: ApplyMaskOptions) {
+  constructor(value: string, mask: MaskPattern, caret = 0, options?: ApplyMaskOptions) {
     this._value = value
     this._mask = mask
     this.caret = caret
@@ -39,7 +38,7 @@ export function buildMask(
   caret = 0,
   options?: ApplyMaskOptions,
 ): Mask {
-  return new Mask(value, resolveMask(value, mask), caret, options)
+  return new Mask(value, mask, caret, options)
 }
 
 /** Apply a mask pattern to a raw value string and return the masked result. */

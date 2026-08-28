@@ -1,9 +1,13 @@
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
+// Firefox on macOS leaves Home to document navigation; Cmd+Left moves
+// to the input's start. Keep the actual value/caret assertions unchanged.
+const START_OF_LINE = process.platform === 'darwin' ? 'Meta+ArrowLeft' : 'Home'
+
 /**
  * The reported gesture, driven by a real mouse and a real keyboard: click into
- * a currency field, send the caret to the far left with Home — landing it
+ * a currency field, send the caret to the start of the line — landing it
  * *before* the "$" — and type. That has to produce the same thing as typing
  * with the caret one position to the right, which is where it visually looks
  * like it already is.
@@ -38,7 +42,7 @@ async function state(page: Page, selector: string): Promise<string> {
 }
 
 test.describe('decimal affixes are inert to real typing', () => {
-  test('caret sent to the far left with Home types into the number, not in front of the prefix', async ({
+  test('caret sent to the start of the line types into the number, not in front of the prefix', async ({
     page,
   }) => {
     await page.goto('/')
@@ -46,7 +50,7 @@ test.describe('decimal affixes are inert to real typing', () => {
     const input = page.locator(selector)
 
     await input.click()
-    await page.keyboard.press('Home')
+    await page.keyboard.press(START_OF_LINE)
     // Confirm the browser really parked the caret before the "$" — otherwise
     // this test would pass without exercising the case at all.
     expect(await input.evaluate((el: HTMLInputElement) => el.selectionStart)).toBe(0)
@@ -61,13 +65,13 @@ test.describe('decimal affixes are inert to real typing', () => {
 
     const selector = await freshDecimalInput(page, options, '$0.00')
     await page.locator(selector).click()
-    await page.keyboard.press('Home')
+    await page.keyboard.press(START_OF_LINE)
     await page.keyboard.type('2')
     const fromFarLeft = await state(page, selector)
 
     await freshDecimalInput(page, options, '$0.00')
     await page.locator(selector).click()
-    await page.keyboard.press('Home')
+    await page.keyboard.press(START_OF_LINE)
     await page.keyboard.press('ArrowRight')
     await page.keyboard.type('2')
     const fromAfterPrefix = await state(page, selector)
@@ -80,7 +84,7 @@ test.describe('decimal affixes are inert to real typing', () => {
     await page.goto('/')
     const selector = await freshDecimalInput(page, { prefix: 'R$ ', decimalPlaces: 2 }, 'R$ 0.00')
     await page.locator(selector).click()
-    await page.keyboard.press('Home')
+    await page.keyboard.press(START_OF_LINE)
     await page.keyboard.type('1234', { delay: 0 })
     expect(await state(page, selector)).toBe('R$ 1,234|.00')
   })
@@ -102,7 +106,7 @@ test.describe('decimal affixes are inert to real typing', () => {
     await page.goto('/')
     const selector = await freshDecimalInput(page, { prefix: 'Q1 ', decimalPlaces: 2 }, 'Q1 0.00')
     await page.locator(selector).click()
-    await page.keyboard.press('Home')
+    await page.keyboard.press(START_OF_LINE)
     await page.keyboard.type('1234', { delay: 0 })
     expect(await state(page, selector)).toBe('Q1 1,234|.00')
   })

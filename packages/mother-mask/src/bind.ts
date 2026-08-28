@@ -1,4 +1,5 @@
-import { buildMask, getMaxLength } from './mask'
+import { applyWithCompiler } from './apply-mask'
+import { getMaxLength, PatternCompiler } from './pattern'
 import { isIos } from './platform'
 import type { BindOptions, MaskPattern } from './types'
 
@@ -22,9 +23,24 @@ function getCaret(target: HTMLInputElement): number {
 
 function setCaret(target: HTMLInputElement, caret: number): void {
   try {
+    // DOM selections use UTF-16 offsets; never leave the caret inside a pair.
+    if (
+      caret > 0 && caret < target.value.length &&
+      target.value.charCodeAt(caret) >= 0xdc00 && target.value.charCodeAt(caret) <= 0xdfff &&
+      target.value.charCodeAt(caret - 1) >= 0xd800 && target.value.charCodeAt(caret - 1) <= 0xdbff
+    ) caret--
     target.setSelectionRange(caret, caret)
   } catch {
     // Some input types (for example type="number") do not support text selection.
+  }
+}
+
+/** A retained dispose handle must not retain the binding after it has run. */
+function releaseOnce(cleanup: (() => void) | undefined): () => void {
+  return () => {
+    const release = cleanup
+    cleanup = undefined
+    release?.()
   }
 }
 
@@ -95,7 +111,15 @@ export function bind(
 ): () => void {
   if (input.getAttribute(MASKED_ATTR) !== null) return () => {}
 
-  const { onChange, segmented, eager } = toBindOptions(third)
+  const { onChange, segmented, eager, tokens, resolveMask } = toBindOptions(third)
+
+  const compiler = new PatternCompiler(tokens)
+  const format = (value: string, caret: number, editEager = eager) =>
+    applyWithCompiler(value, mask, caret, { tokens, resolveMask, segmented, eager: editEager }, compiler)
+  // Arbitrary custom predicates cannot be inspected for their alphabet. Defer
+  // *all custom-token* compositions, but retain live Android formatting for
+  // built-in-only masks. Provisional Pinyin/Kana may be much longer than output.
+  const deferComposition = !!tokens && Object.keys(tokens).length > 0
 
   /** Attribute names set by this bind call; removed on dispose so a later `bind()` can re-apply. */
   const attrsSetHere: string[] = []
@@ -106,17 +130,17 @@ export function bind(
     }
   }
 
-  // Computed once here rather than inside `onKey` — the mask never changes
-  // for the lifetime of this binding, and `onKey` is a synchronous, hot,
-  // input-blocking path run on every keystroke.
-  const maxLength = getMaxLength(mask)
+  // Resolver capacity is unknowable; custom-token IME drafts may exceed even
+  // the two-UTF-16-unit-per-slot bound. Enforce those capacities in the engine.
+  // Author-supplied maxlength remains an intentional application constraint.
+  const maxLength = resolveMask || deferComposition ? Infinity : getMaxLength(mask)
 
   input.setAttribute(MASKED_ATTR, Array.isArray(mask) ? mask.join('|') : mask)
   setIfMissing('autocomplete', 'off')
   setIfMissing('autocorrect', 'off')
   setIfMissing('autocapitalize', 'off')
   setIfMissing('spellcheck', 'false')
-  setIfMissing('maxlength', String(maxLength))
+  if (Number.isFinite(maxLength)) setIfMissing('maxlength', String(maxLength))
 
   let lockInput = false
   let isComposing = false
@@ -149,9 +173,14 @@ export function bind(
 
   const onPaste = (e: Event): void => {
     const target = e.target as HTMLInputElement
+    const oldValue = target.value
     scheduleFrame(() => {
-      const m = buildMask(target.value, mask, 0, { segmented, eager })
-      target.value = m.process()
+      if (deferComposition && isComposing) return
+      if (target.value === oldValue && target.selectionStart !== target.selectionEnd) return
+      const m = format(target.value, getCaret(target))
+      target.value = m.value
+      setCaret(target, m.caret)
+      lastMaskedValue = target.value
       onChange?.(target.value)
     })
   }
@@ -166,35 +195,27 @@ export function bind(
   // below stays as a `requestAnimationFrame` fallback for browsers that don't
   // fire `input` reliably.
   //
-  // Deliberately does NOT bail out while `isComposing` is true. Android's
-  // on-screen keyboard wraps essentially all typing in a full-QWERTY text
-  // field into an IME composition session for its own autocorrect/
-  // suggestion-strip bookkeeping — not just genuine multi-candidate input
-  // (Pinyin, Kana, …). Since a mask's alphabet is always plain ASCII
-  // digits/letters (see `matchesSlot`), whatever Android is "composing" is
-  // already the final intended character, not a provisional candidate — so
-  // reformatting immediately is safe. Waiting for `compositionend` instead
-  // (as this used to) meant the mask never visibly applied while typing a
-  // space-less value like a plate number, since Android only ends the
-  // composition on a word boundary (space/punctuation) or blur, which may
-  // never happen mid-entry.
+  // Built-ins keep the existing Android autocorrect path. Custom alphabets
+  // leave provisional composition text and selection completely untouched.
   const onInput = (e: Event): void => {
     const inputEvent = e as InputEvent
     const target = e.target as HTMLInputElement
     cancelPendingFrames()
     lockInput = false
     skipNextKeyup = true
+    if (deferComposition && (isComposing || inputEvent.isComposing)) return
+    if (target.value === lastMaskedValue && target.selectionStart !== target.selectionEnd) return
 
     const pos = getCaret(target)
     const previousLength = lastMaskedValue.length
     const kind = classifyInputType(inputEvent.inputType)
-    const m = buildMask(target.value, mask, pos, {
-      segmented,
-      eager: eagerForEdit(eager, kind === 'backspace' || kind === 'delete'),
-    })
-    target.value = m.process()
+    const rawValue = target.value
+    const m = format(rawValue, pos, eagerForEdit(eager, kind === 'backspace' || kind === 'delete'))
+    target.value = m.value
 
-    if (kind === 'unidentified') {
+    if (resolveMask && m.value !== rawValue && m.value !== lastMaskedValue) {
+      setCaret(target, m.caret)
+    } else if (kind === 'unidentified') {
       const newPos = target.value.length > previousLength ? m.caret : pos
       setCaret(target, newPos)
     } else if (kind === 'delete') {
@@ -222,8 +243,8 @@ export function bind(
 
     const target = e.target as HTMLInputElement
     const pos = getCaret(target)
-    const m = buildMask(target.value, mask, pos, { segmented, eager })
-    target.value = m.process()
+    const m = format(target.value, pos)
+    target.value = m.value
     setCaret(target, m.caret)
 
     lastMaskedValue = target.value
@@ -258,12 +279,10 @@ export function bind(
         // No reliable `key` here, so infer delete-vs-insert from the length
         // delta the browser's already-applied default action left behind.
         const isDeleteLike = target.value.length < oldValue.length
-        const m = buildMask(target.value, mask, pos, {
-          segmented,
-          eager: eagerForEdit(eager, isDeleteLike),
-        })
-        target.value = m.process()
-        target.setSelectionRange(m.caret, m.caret)
+        const m = format(target.value, pos, eagerForEdit(eager, isDeleteLike))
+        target.value = m.value
+        setCaret(target, m.caret)
+        lastMaskedValue = target.value
         scheduleFrame(() => {
           lockInput = false
         })
@@ -275,7 +294,7 @@ export function bind(
 
     const isBackspace = ke.key === 'Backspace'
     const isDelete = ke.key === 'Delete'
-    const isCharInsert = ke.key.length === 1 && !ke.ctrlKey && !ke.altKey && !ke.metaKey
+    const isCharInsert = Array.from(ke.key).length === 1 && !ke.ctrlKey && !ke.altKey && !ke.metaKey
     const isUnidentified = ke.key === 'Unidentified'
 
     // Block inserting when mask is full (desktop only — iOS handles this natively)
@@ -321,24 +340,25 @@ export function bind(
       if (target.value === oldValue && target.selectionStart !== target.selectionEnd) return
 
       const pos = target.selectionStart ?? 999
-      const m = buildMask(target.value, mask, pos, {
-        segmented,
-        eager: eagerForEdit(eager, isBackspace || isDelete),
-      })
-      target.value = m.process()
+      const rawValue = target.value
+      const m = format(rawValue, pos, eagerForEdit(eager, isBackspace || isDelete))
+      target.value = m.value
 
-      if (isUnidentified) {
+      if (resolveMask && m.value !== rawValue && m.value !== oldValue) {
+        setCaret(target, m.caret)
+      } else if (isUnidentified) {
         const newPos = target.value.length > oldValue.length ? m.caret : pos
-        target.setSelectionRange(newPos, newPos)
+        setCaret(target, newPos)
       } else if (isDelete) {
         const newPos = oldValue.length === target.value.length ? pos + 1 : pos
-        target.setSelectionRange(newPos, newPos)
+        setCaret(target, newPos)
       } else if (isBackspace) {
-        target.setSelectionRange(pos, pos)
+        setCaret(target, pos)
       } else if (isCharInsert) {
-        target.setSelectionRange(m.caret, m.caret)
+        setCaret(target, m.caret)
       }
 
+      lastMaskedValue = target.value
       onChange?.(target.value)
     })
   }
@@ -349,7 +369,7 @@ export function bind(
   input.addEventListener('compositionend', onCompositionEnd)
   input.addEventListener(keyEventName, onKey)
 
-  return () => {
+  return releaseOnce(() => {
     input.removeEventListener('paste', onPaste)
     input.removeEventListener('input', onInput)
     input.removeEventListener('compositionstart', onCompositionStart)
@@ -358,5 +378,5 @@ export function bind(
     input.removeAttribute(MASKED_ATTR)
     for (const name of attrsSetHere) input.removeAttribute(name)
     cancelPendingFrames()
-  }
+  })
 }

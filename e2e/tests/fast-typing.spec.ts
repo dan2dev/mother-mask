@@ -1,5 +1,9 @@
 import { test, expect, type Page } from '@playwright/test'
 
+// Firefox on macOS leaves Home to document navigation; Cmd+Left moves
+// to the input's start. Keep the actual value/caret assertions unchanged.
+const START_OF_LINE = process.platform === 'darwin' ? 'Meta+ArrowLeft' : 'Home'
+
 /**
  * Real-browser coverage for the caret-drift bug reported when typing very
  * fast on Chrome for Android: the caret would occasionally not land at the
@@ -97,8 +101,9 @@ test.describe('fast typing keeps the caret at the end while appending', () => {
     await expect(field).toHaveValue('123.456.789-01')
 
     // Select the first digit and replace it.
-    await page.keyboard.press('Home')
+    await page.keyboard.press(START_OF_LINE)
     await page.keyboard.press('Shift+ArrowRight')
+    expect(await field.evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd])).toEqual([0, 1])
     await page.keyboard.type('9', { delay: 0 })
 
     const value = await field.inputValue()

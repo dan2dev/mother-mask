@@ -96,8 +96,8 @@ bindDecimal(input, { prefix: 'Q1 ', decimalPlaces: 2 })
 | Character | Matches |
 | --- | --- |
 | `9` | Digit |
-| `Z` | Letter |
-| `A` | Letter or digit |
+| `Z` | ASCII letter |
+| `A` | ASCII letter or digit |
 | Anything else | Literal separator |
 
 Examples:
@@ -107,6 +107,105 @@ bind(input, '999.999.999-99')
 bind(input, '99/99/9999')
 bind(input, 'AA.AAA.AAA/AAAA-99')
 ```
+
+## Custom Tokens and Transforms
+
+Tokens are local to an operation or binding. A definition is a `RegExp`, a
+`(char: string) => boolean` matcher, or `{ match, transform? }`:
+
+```ts
+bind(input, 'HH-HH', { tokens: { H: /[0-9A-Fa-f]/ } })
+// "a1b2" → "a1-b2"; "g" is rejected
+
+bind(input, 'UUU-999', {
+  tokens: {
+    U: { match: /[a-z]/i, transform: char => char.toUpperCase() },
+  },
+})
+// "abc123" → "ABC-123"
+```
+
+Keys are single Unicode code points; `\` is reserved. Custom definitions may
+override `9`, `Z`, or `A` for that binding only. Definitions are snapshotted on
+bind; dispose and rebind to change them. Matchers should be pure. RegExp `g`/`y`
+flags are ignored on a private copy; the caller's `lastIndex` is never changed.
+
+A transform **must return exactly one Unicode code point**, otherwise a
+`RangeError` is thrown (for example, uppercasing `ß` to `SS` is not supported).
+Use an idempotent transform whose output still matches the token. UTF-16 width
+may change: the caret follows the source character, not the output's case or width.
+
+Custom tokens work with ordered arrays, segmented editing, eager literals,
+and all four APIs: `applyMask`, `process`, `buildMask`, and `bind`.
+
+## Content-dependent Masks
+
+```ts
+bind(input, '9999 9999 9999 9999', {
+  resolveMask(value) {
+    return value.startsWith('34') || value.startsWith('37')
+      ? '9999 999999 99999'
+      : '9999 9999 9999 9999'
+  },
+})
+```
+
+`resolveMask` is called **once per masking application**, before transforms,
+with candidate data: code points accepted by the slots of the supplied fallback
+pattern (or any fallback array member). Complete fallback literal runs at their
+slot boundaries (escaped runs also after a segment shrinks) and nonmatching characters are removed. Thus raw and formatted
+card numbers give the same digit stream, and invalid letters cannot change the
+prefix. Make the fallback alphabet cover every format your resolver can return.
+The callback can return a string or an ordered array; arrays retain capacity-based
+selection. No recursive resolution or caching of input values occurs.
+
+Resolver masks describe **one continuous identifier**: old separators are removed
+before rendering the selected layout, even with `segmented: true`. This prevents
+stale boundaries when equal-capacity layouts switch. For independently editable
+fields, use a static pattern/array and segmented mode instead. Eager mode still
+applies; the caret tracks logical characters and already-crossed literal boundaries.
+
+`bind` does not add `maxlength` for resolvers (the maximum is unknowable) or
+custom tokens (IME drafts can exceed the final capacity). The engine still caps
+slots. Author-supplied `maxlength` is preserved. Disposal removes attributes added
+by the binding, so rebinding cannot inherit a library-created stale limit.
+
+## Escaped Literals
+
+```ts
+bind(input, '\\A-999999') // "123456" → "A-123456"
+bind(input, '\\9-99')     // "12" → "9-12"
+bind(input, '\\Z-99')     // "12" → "Z-12"
+bind(input, '\\\\99')      // a literal backslash, then two digits
+```
+
+In the pattern, backslash escapes a built-in/custom token or another backslash.
+Before any other character it remains literal; a trailing backslash also remains
+literal. Existing masks that used a backslash immediately before a token or
+backslash must double it to keep that backslash in the output.
+
+Complete literal runs are treated as formatting at their boundary; escaped runs
+remain formatting after a segment shrinks, rather than becoming slot data. If literal text also matches the data alphabet, raw
+and already-formatted input can be ambiguous: use a distinct separator (such as
+`'\\9-99'`) to distinguish the literal from user data. Resolver formats should
+likewise avoid introducing data-looking literals absent from the fallback pattern.
+
+## Unicode and Composition
+
+```ts
+bind(input, 'LLLL', { tokens: { L: /\p{L}/u } })
+// accepts Á, Ç, É, ñ, ü, ø, Ж, λ, and supplementary letters such as 𐐀
+```
+
+Matching is by **Unicode code point**, not UTF-16 code unit or grapheme cluster.
+Combining marks and joined emoji sequences therefore occupy separate slots if
+accepted; no normalization or grapheme segmentation is performed. Caret offsets
+remain DOM-compatible UTF-16 positions. Built-in `Z` and `A` remain ASCII-only.
+
+With custom tokens, provisional IME text and selection are left untouched until
+composition commits. This includes custom ASCII matchers: an arbitrary predicate's
+alphabet cannot be safely inferred. Built-in-only masks keep live formatting during
+Android autocorrect composition. No timeout or delayed commit is used.
 
 ## Segmented Editing
 
@@ -170,7 +269,7 @@ Main exports:
 - `applyMask(value, mask, inputCaret?, options?)`
 - `process(value, mask, options?)`
 - `buildMask(value, mask, caret?, options?)`
-- `getMaxLength(mask)`
+- `getMaxLength(mask, options?)` (formatted UTF-16 upper bound; `Infinity` with a resolver)
 - `applyDecimalMask(value, inputCaret?, options?)`
 - `processDecimal(value, options?)`
 - `unmaskDecimal(value, options?)`
@@ -180,6 +279,10 @@ Main exports:
 Exported types:
 
 - `MaskPattern`
+- `TokenMatcher`
+- `MaskTokenDefinition`
+- `MaskTokens`
+- `MaskResolver`
 - `MaskResult`
 - `ApplyMaskOptions`
 - `BindOptions`

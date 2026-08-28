@@ -555,3 +555,109 @@ describe('stress — randomized operation sequences (invariant checks)', () => {
     expect(input.value.replace(/\D/g, '').length).toBeLessThanOrEqual(9)
   })
 })
+
+// Keep a reproducible history, not timing thresholds, for the expanded alphabet.
+describe('advanced pattern seeded editing stress', () => {
+  const upper = { match: /[a-z]/gi, transform: (c: string) => c.toUpperCase() }
+  const cases: Array<{ name: string; mask: string | string[]; options: import('../src/index').ApplyMaskOptions; alphabet: string[]; allowed: RegExp; slots: number }> = [
+    { name: 'default', mask: '999.999-99', options: {}, alphabet: [...'0129x#.'], allowed: /^[0-9.-]*$/, slots: 8 },
+    { name: 'hex segmented', mask: 'HH:HH-HH', options: { tokens: { H: /[0-9a-f]/gy } }, alphabet: [...'01abfg:-#'], allowed: /^[0-9a-f:-]*$/, slots: 6 },
+    { name: 'uppercase', mask: 'UUU-UUU', options: { tokens: { U: upper } }, alphabet: [...'abXYZ19-#'], allowed: /^[A-Z-]*$/, slots: 6 },
+    { name: 'uppercase flat', mask: 'UUU-UUU', options: { segmented: false, tokens: { U: upper } }, alphabet: [...'abXYZ19-#'], allowed: /^[A-Z-]*$/, slots: 6 },
+    { name: 'escaped', mask: '\\A-99.99', options: {}, alphabet: [...'0129A-.#'], allowed: /^(?:A-)?[0-9.]*$/, slots: 4 },
+    { name: 'Unicode', mask: 'LL-LL', options: { tokens: { L: /\p{L}/u } }, alphabet: [...'Жλé𐐀1-#'], allowed: /^[\p{L}-]*$/u, slots: 4 },
+    { name: 'custom array', mask: ['UU-UU', 'UU-UU-UU'], options: { tokens: { U: upper } }, alphabet: [...'abXYZ19-#'], allowed: /^[A-Z-]*$/, slots: 6 },
+    { name: 'resolver', mask: '9999 9999 9999 9999', options: { resolveMask: value => value.startsWith('34') || value.startsWith('37') ? '9999 999999 99999' : value.startsWith('62') ? '9999 9999 9999 9999 999' : '9999 9999 9999 9999' }, alphabet: [...'01234679 #x'], allowed: /^[0-9 ]*$/, slots: 19 },
+  ]
+  for (const cfg of cases) {
+    for (const eager of [true, false]) {
+      it(`${cfg.name}: 3000 operations (seed 0x4d41534b, eager=${eager})`, async () => {
+        const { bind, process } = await import('../src/index')
+        const input = setupInput()
+        const options = { ...cfg.options, eager }
+        const dispose = bind(input, cfg.mask, options)
+        const rnd = makeRng(0x4d41534b)
+        const history: string[] = []
+        try {
+          for (let step = 0; step < 3000; step++) {
+            const positions = [0]
+            for (const ch of input.value) positions.push(positions[positions.length - 1] + ch.length)
+            let a = Math.floor(rnd() * positions.length)
+            let b = Math.floor(rnd() * positions.length)
+            if (a > b) [a, b] = [b, a]
+            const operation = Math.floor(rnd() * 8)
+            let text = ''
+            let kind = 'insertText'
+            if (operation === 0) {
+              input.setSelectionRange(positions[a], positions[b])
+              const before = input.value
+              input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true, bubbles: true }))
+              expect(input.value).toBe(before)
+              expect(input.selectionStart).toBe(positions[a])
+              expect(input.selectionEnd).toBe(positions[b])
+              continue
+            }
+            if (operation <= 2) {
+              kind = operation === 1 ? 'deleteContentBackward' : 'deleteContentForward'
+              if (a === b) {
+                if (operation === 1) a = Math.max(0, a - 1)
+                else b = Math.min(positions.length - 1, b + 1)
+              }
+            } else {
+              if (operation === 3) b = a
+              if (operation === 7) { a = 0; b = positions.length - 1 }
+              kind = operation >= 5 ? 'insertFromPaste' : 'insertText'
+              for (let n = 0, size = operation >= 5 ? 3 : 1; n < size; n++) text += cfg.alphabet[Math.floor(rnd() * cfg.alphabet.length)]
+            }
+            const raw = input.value.slice(0, positions[a]) + text + input.value.slice(positions[b])
+            const pos = positions[a] + text.length
+            history.push(`${step}:${kind} [${positions[a]},${positions[b]}] ${JSON.stringify(text)} in ${JSON.stringify(input.value)}`)
+            if (history.length > 12) history.shift()
+            input.value = raw
+            input.setSelectionRange(pos, pos)
+            input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: kind, data: text }))
+            const label = `seed=0x4d41534b\n${history.join('\n')}`
+            expect(input.value, label).toMatch(cfg.allowed)
+            const slotData = cfg.name === 'escaped' ? input.value.replace(/^A-/, '').replace(/\./g, '') : input.value.replace(/[: .-]/g, '')
+            expect(Array.from(slotData).length, label).toBeLessThanOrEqual(cfg.slots)
+            const editOptions = kind.startsWith('delete') ? { ...options, eager: false } : options
+            expect(process(input.value, cfg.mask, editOptions), label).toBe(input.value)
+            expect(input.selectionStart, label).toBeGreaterThanOrEqual(0)
+            expect(input.selectionStart, label).toBeLessThanOrEqual(input.value.length)
+            expect(input.selectionEnd, label).toBe(input.selectionStart)
+            const boundaries = [0]
+            for (const ch of input.value) boundaries.push(boundaries[boundaries.length - 1] + ch.length)
+            expect(boundaries, label).toContain(input.selectionStart)
+          }
+        } finally { dispose(); input.remove() }
+      })
+    }
+  }
+
+  it('switches resolver layouts 2000 times around the prefix without dropping the unchanged tail', async () => {
+    const { bind } = await import('../src/index')
+    const resolveMask = (value: string) => value.startsWith('34') || value.startsWith('37') ? '9999 999999 99999' : value.startsWith('62') ? '9999 9999 9999 9999 999' : '9999 9999 9999 9999'
+    const input = setupInput()
+    const dispose = bind(input, '9999 9999 9999 9999', { resolveMask })
+    const rnd = makeRng(98765)
+    const prefixes = ['34', '37', '62', '51']
+    let digits = '341234567890123'
+    try {
+      for (let i = 0; i < 2000; i++) {
+        const prefix = prefixes[Math.floor(rnd() * prefixes.length)]
+        digits = prefix + digits.slice(2)
+        input.value = i === 0 ? digits : prefix + input.value.slice(2)
+        input.setSelectionRange(2, 2)
+        input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: prefix }))
+        expect(input.value.replace(/ /g, '')).toBe(digits)
+        expect(input.selectionStart).toBe(2)
+        expect(input.selectionEnd).toBe(2)
+        const groups = prefix === '34' || prefix === '37' ? [4, 6, 5] : [4, 4, 4, 4, 3]
+        let offset = 0
+        const expected: string[] = []
+        for (const width of groups) { const part = digits.slice(offset, offset + width); if (part) expected.push(part); offset += width }
+        expect(input.value).toBe(expected.join(' '))
+      }
+    } finally { dispose(); input.remove() }
+  })
+})

@@ -116,10 +116,10 @@
                     clip-rule="evenodd"
                 />
             </symbol>
-            <symbol id="npm-icon" viewBox="0 0 27 18">
+            <symbol id="npm-icon" viewBox="0 0 18 7">
                 <path
                     fill="currentColor"
-                    d="M0 0h27v18H15v-1.8H12V18H0zm3.6 14.4h3.6V5.4h1.8v9H9V3.6H3.6zm10.8-10.8v10.8h3.6V5.4h1.8v9h1.8v-9h1.8v9h1.8V3.6z"
+                    d="M0 0h18v6H9v1H5V6H0V0zM1 5h2V2h1v3h1V1H1V5zM6 1v5h2V5h2V1H6zM8 2h1v2H8V2zM11 1v4h2V2h1v3h1V2h1v3h1V1H11z"
                 />
             </symbol>
             <symbol id="copy-icon" viewBox="0 0 20 20">
@@ -668,6 +668,49 @@
                             </div>
                         </section>
 
+                        <section id="advanced-patterns">
+                            <h2>Custom tokens and dynamic patterns</h2>
+                            <p class="section-sub">Formatting only: no date, card, or identifier validation.
+                                These options also work with applyMask, process, and buildMask.</p>
+                            <div class="examples-grid">
+                                <div class="example">
+                                    <h3>Hexadecimal MAC address</h3>
+                                    <code class="snippet">bind(input, 'HH:HH:HH:HH:HH:HH', { tokens: { H: /[0-9A-Fa-f]/ } })</code>
+                                    <input id="ex-hex" aria-label="MAC address" placeholder="a1:b2:c3:d4:e5:f6" />
+                                    <span class="hint">Try a1b2c3d4e5f6; g is rejected.</span>
+                                </div>
+                                <div class="example">
+                                    <h3>Uppercase identifier</h3>
+                                    <code class="snippet">bind(input, 'UUU-999', { tokens: { U: { match: /[a-z]/i, transform: c =&gt; c.toUpperCase() } } })</code>
+                                    <input id="ex-upper" aria-label="Uppercase identifier" placeholder="ABC-123" />
+                                    <span class="hint">Type abc123, then replace a letter in the middle.</span>
+                                </div>
+                                <div class="example example-wide">
+                                    <h3>Card layout by prefix</h3>
+                                    <code class="snippet">bind(input, '9999 9999 9999 9999', { resolveMask: v =&gt; v.startsWith('34') || v.startsWith('37') ? '9999 999999 99999' : '9999 9999 9999 9999' })</code>
+                                    <input id="ex-dynamic-card" aria-label="Card layout by prefix" inputmode="numeric" placeholder="3412 345678 90123" />
+                                    <span class="hint">Change 34 to 51: the layout changes while your caret stays at the edit.</span>
+                                </div>
+                                <div class="example">
+                                    <h3>Literal token character</h3>
+                                    <code class="snippet">bind(input, '\\A-999999')</code>
+                                    <input id="ex-escaped" aria-label="Literal A identifier" placeholder="A-123456" />
+                                    <span class="hint">The A is fixed text, not a slot.</span>
+                                </div>
+                                <div class="example">
+                                    <h3>Unicode letters</h3>
+                                    <code class="snippet">bind(input, 'LLLL', { tokens: { L: /\p{L}/u } })</code>
+                                    <input id="ex-unicode" aria-label="Unicode letters" placeholder="ÁЖλ𐐀" />
+                                    <span class="hint">One code point per slot; provisional IME text is preserved until commit.</span>
+                                </div>
+                            </div>
+                            <p>Custom tokens retain segmented and eager behavior with static masks and arrays.
+                                Resolvers receive candidate data from the fallback alphabet and reformat a continuous stream,
+                                so previous separators cannot anchor a new layout. Transforms must return one code point.
+                                See the <a href="https://github.com/dan2dev/mother-mask#custom-tokens-and-transforms">README</a>
+                                for escaping, composition, and maxlength contracts.</p>
+                        </section>
+
                         <section id="regional">
                             <h2>Regional formats</h2>
                             <p class="section-sub">
@@ -1105,8 +1148,19 @@ interface MaskResult {
   readonly caret: number
 }
 
+type TokenMatcher = RegExp | ((char: string) =&gt; boolean)
+interface MaskTokenDefinition {
+  match: TokenMatcher
+  transform?: (char: string) =&gt; string // exactly one code point
+}
+type MaskTokens = Record&lt;string, TokenMatcher | MaskTokenDefinition&gt;
+type MaskResolver = (value: string) =&gt; MaskPattern
+
 interface ApplyMaskOptions {
-  segmented?: boolean // hard field boundaries — on by default
+  segmented?: boolean // hard field boundaries for static masks — default true
+  eager?: boolean     // reveal upcoming literals — default true
+  tokens?: MaskTokens
+  resolveMask?: MaskResolver
 }
 
 interface BindOptions extends ApplyMaskOptions {

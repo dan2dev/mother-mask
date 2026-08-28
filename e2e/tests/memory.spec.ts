@@ -168,3 +168,36 @@ test.describe('memory', () => {
     expect((after.heapBytes - before.heapBytes) / MB, 'heap growth (MB) over 40k distinct masks').toBeLessThan(2)
   })
 })
+
+test('custom pattern memory: retained dispose handles release inputs, matchers, transformers and resolvers', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Forced garbage collection uses Chromium CDP')
+  await page.goto('/')
+  const cdp = await startMetrics(page)
+  await page.evaluate(() => {
+    const probes: WeakRef<object>[] = []
+    const handles: Array<() => void> = []
+    for (let i = 0; i < 100; i++) {
+      const input = document.createElement('input')
+      const match = (c: string) => /^[a-z]$/i.test(c)
+      const transform = (c: string) => c.toUpperCase()
+      const resolveMask = (value: string) => value.startsWith('a') ? 'UU-UU' : 'U-UUU'
+      document.body.append(input)
+      const dispose = window.motherMask.bind(input, 'UUUU', { tokens: { U: { match, transform } }, resolveMask })
+      input.value = 'abcd'
+      input.setSelectionRange(4, 4)
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }))
+      input.dispatchEvent(new Event('paste', { bubbles: true }))
+      dispose(); dispose(); input.remove()
+      probes.push(...[input, match, transform, resolveMask].map(value => new WeakRef(value)))
+      handles.push(dispose)
+    }
+    Object.assign(window, { __advancedProbes: probes, __advancedHandles: handles })
+  })
+  await sample(cdp)
+  const retained = await page.evaluate(() => {
+    const probes = (window as unknown as { __advancedProbes: WeakRef<object>[] }).__advancedProbes
+    return probes.filter(probe => probe.deref() !== undefined).length
+  })
+  expect(retained).toBe(0)
+  await cdp.detach()
+})

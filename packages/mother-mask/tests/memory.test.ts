@@ -212,3 +212,32 @@ describe('bindDecimal() releases everything it holds on dispose', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 })
+
+describe('custom tokens and resolvers are scoped to a disposable binding', () => {
+  it('repeated disposal cancels callbacks and rebinding never reuses prior definitions', async () => {
+    const input = setupInput()
+    const match = vi.fn((c: string) => /[a-z]/i.test(c))
+    const transform = vi.fn((c: string) => c.toUpperCase())
+    const resolveMask = vi.fn(() => 'UU-UU')
+    for (let cycle = 0; cycle < 100; cycle++) {
+      const dispose = bind(input, 'UU-UU', { tokens: { U: { match, transform } }, resolveMask })
+      input.value = 'abcd'
+      input.setSelectionRange(4, 4)
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }))
+      expect(input.value).toBe('AB-CD')
+      input.dispatchEvent(new Event('paste', { bubbles: true }))
+      dispose()
+      const counts = [match.mock.calls.length, transform.mock.calls.length, resolveMask.mock.calls.length]
+      dispose()
+      fireEveryHandledEvent(input)
+      await flushRafs(1)
+      expect([match.mock.calls.length, transform.mock.calls.length, resolveMask.mock.calls.length]).toEqual(counts)
+      const second = bind(input, 'UU-UU', { tokens: { U: /[0-9]/ } })
+      input.value = 'ab12'
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }))
+      expect(input.value).toBe('12-')
+      second()
+    }
+    input.remove()
+  })
+})
