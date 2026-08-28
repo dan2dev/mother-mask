@@ -2,16 +2,20 @@
 
 Monorepo for the [`mother-mask`](https://www.npmjs.com/package/mother-mask) npm package.
 
-End-user documentation (install, usage, API) lives in [`packages/mother-mask/README.md`](packages/mother-mask/README.md).
+End-user documentation (install, usage, API) lives in the root [`README.md`](README.md)
+and [`packages/mother-mask/README.md`](packages/mother-mask/README.md). Keep them
+identical so GitHub and npm show the same guidance. The website lives in [`docs/`](docs/README.md).
 
 ## Layout
 
 ```
 mother-mask/
 ├── packages/mother-mask/   # published npm package (source + build)
-├── examples/basic-examples/ # runnable examples (optional)
-├── Makefile                 # workspace-level commands
-└── package.json             # pnpm workspace root (private)
+├── docs/                   # Vite documentation website and live demos
+├── e2e/                    # real-browser tests and fixtures
+├── examples/basic-examples/ # standalone examples (optional)
+├── Makefile                # workspace-level commands
+└── package.json            # private workspace root
 ```
 
 ## Development
@@ -24,6 +28,33 @@ make test       # unit tests + coverage (jsdom)
 make build      # ESM + CJS + UMD
 make dev        # watch mode
 make up         # upgrade dependencies in the package
+```
+
+The Makefile uses pnpm for the library and Bun for browser-test dependencies.
+The docs deployment workflow uses Bun. The docs and browser-test projects have
+their own dependencies; `make install` installs the library dependencies only.
+
+### Documentation website
+
+See [`docs/README.md`](docs/README.md) for setup, preview, and deployment details.
+After installing dependencies, build the library before starting the docs:
+
+```bash
+make build
+cd docs
+bun install --no-save
+bun run dev
+```
+
+After editing documentation, sync the READMEs from the repository root and check
+both the package and website:
+
+```bash
+cp README.md packages/mother-mask/README.md
+make test
+make build
+cd docs
+bun run build
 ```
 
 ### Browser tests

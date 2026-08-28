@@ -2,7 +2,16 @@
 
 Lightweight input masks for browser forms. Zero runtime dependencies, written in TypeScript, and published with ESM, CJS, and UMD builds.
 
-[npm](https://www.npmjs.com/package/mother-mask) | [Live demo](https://dan2dev.github.io/mother-mask/)
+[npm](https://www.npmjs.com/package/mother-mask) | [Documentation and live examples](https://dan2dev.github.io/mother-mask/)
+
+Format phone numbers, dates, identifiers, and decimal inputs with static patterns,
+custom tokens, or a mask chosen from the value. Formatting does **not** validate
+dates, checksums, card networks, or whether an identifier exists; validate those
+separately in your application.
+
+[Basic usage](#basic-usage) · [Decimals](#decimal-inputs) ·
+[Patterns](#pattern-syntax) · [Custom tokens](#custom-tokens-and-transforms) ·
+[Dynamic masks](#content-dependent-masks) · [Editing](#segmented-editing) · [API](#api)
 
 ## Install
 
@@ -16,6 +25,12 @@ pnpm add mother-mask
 
 ## Basic Usage
 
+Use a text input with an appropriate keyboard hint:
+
+```html
+<input id="phone" type="text" inputmode="tel" aria-label="Phone number" />
+```
+
 ```ts
 import { bind } from 'mother-mask'
 
@@ -27,11 +42,15 @@ const dispose = bind(input, '(99) 99999-9999')
 dispose()
 ```
 
-Use an ordered mask array for values with more than one length:
+Use an ordered mask array for values with more than one length. Order by data
+capacity, shortest first; selection uses the number of accepted characters, not
+their content:
 
 ```ts
 bind(input, ['(99) 9999-9999', '(99) 99999-9999'])
 ```
+
+Use [`resolveMask`](#content-dependent-masks) when a prefix determines the layout.
 
 Listen for changes with either a callback or an options object:
 
@@ -46,6 +65,17 @@ bind(input, '999.999.999-99', {
   },
 })
 ```
+
+Bind each input once. Calling `bind` or `bindDecimal` on an already-bound input
+does nothing; dispose the existing binding before changing its options. In a UI
+framework, bind after the input mounts and call the disposer during cleanup.
+Disposal removes listeners, pending frames, and attributes added by the library;
+attributes that were already present are preserved.
+
+Binding does not format the initial value or fire an initial callback. Use the
+[pure helpers](#formatting-without-an-input) to prepare values before binding.
+Assignments to `input.value` do not dispatch an input event, so format programmatic
+updates yourself as well.
 
 ## Decimal Inputs
 
@@ -71,12 +101,33 @@ For Brazilian-style formatting:
 
 ```ts
 bindDecimal(input, {
+  decimalPlaces: 2,
   separator: '.',
   decimalSeparator: ',',
 })
 ```
 
-`prefix` and `suffix` are chrome, not content. Typing with the caret parked inside them lands the character at the nearest edge of the number, so every spot that looks like the start of the number behaves like it:
+Without `decimalPlaces`, the fraction is optional and has no length limit. Set it
+to `2` for two fixed, zero-padded places, or `0` for integers only. `numberPlaces`
+optionally pads and caps the integer part; it is unlimited by default.
+
+| Option | Default | Behavior |
+| --- | --- | --- |
+| `decimalPlaces` | Unset | Optional, unlimited fraction; set a width to pad and cap it |
+| `numberPlaces` | Unset | Unlimited integer part; set a width to pad and cap it |
+| `segmented` | `true` | Group the integer part into thousands |
+| `separator` | `','` | Thousands separator |
+| `decimalSeparator` | `'.'` | Separator before the fraction |
+| `prefix`, `suffix` | `''` | Fixed display text, excluded from numeric parsing |
+| `allowNegative` | `false` | Allow negative numbers |
+| `onChange` | Unset | Binding callback receiving the formatted string and JS number |
+
+For decimal masks, `segmented` controls thousands grouping. It is separate from
+the independent-field behavior of pattern masks. Use `type="text"` and
+`inputmode="decimal"` for formatted decimal fields.
+
+`prefix` and `suffix` are fixed display text. Typing inside the prefix inserts at
+the start of the number; typing inside the suffix inserts at the end:
 
 ```ts
 bindDecimal(input, { prefix: '$', decimalPlaces: 2 })
@@ -88,16 +139,19 @@ Their text is never read back as part of the number either, so an affix carrying
 
 ```ts
 bindDecimal(input, { prefix: 'Q1 ', decimalPlaces: 2 })
-// typing 1234 → "Q1 1,234.00", and unmaskDecimal() reports 1234
+// typing 1234 → "Q1 1,234.00"
+// unmaskDecimal('Q1 1,234.00', { prefix: 'Q1 ' }) → 1234
 ```
 
 ## Pattern Syntax
 
 | Character | Matches |
 | --- | --- |
-| `9` | Digit |
+| `9` | ASCII digit (`0`–`9`) |
 | `Z` | ASCII letter |
 | `A` | ASCII letter or digit |
+| Custom token | Matches its local definition (see below) |
+| `\` | Escapes a token or another backslash (see [escaping](#escaped-literals)) |
 | Anything else | Literal separator |
 
 Examples:
@@ -137,6 +191,9 @@ may change: the caret follows the source character, not the output's case or wid
 
 Custom tokens work with ordered arrays, segmented editing, eager literals,
 and all four APIs: `applyMask`, `process`, `buildMask`, and `bind`.
+
+Use token transforms to normalize case while preserving the caret, rather than
+rewriting `input.value` inside an `onChange` callback.
 
 ## Content-dependent Masks
 
@@ -233,7 +290,7 @@ bind(input, '999.999.999-99')
 // → "015.|-39"     the "-" keeps "39" in the last field
 ```
 
-Anchoring is only as precise as the separators allow. A mask whose separators are all the same character can produce a genuinely ambiguous value — with `'99/99/9999'`, `"1/2025"` reads equally well as `1 / 20 / 25` — and resolves it to the earliest field that fits. Masks with distinct separators (CPF, CNPJ, phone numbers) have no such gap.
+Anchoring is only as precise as the separators allow. A mask whose separators are all the same character can produce an ambiguous value — with `'99/99/9999'`, `"1/2025"` reads equally well as `1 / 20 / 25` — and resolves it to the earliest field that fits. Masks with distinct separators (CPF, CNPJ, phone numbers) have no such gap.
 
 For classic reflow behavior, pass `segmented: false`:
 
@@ -257,7 +314,34 @@ bind(input, '99/99/9999', { eager: false })
 // typing "25" shows "25" until the next digit arrives
 ```
 
-Backspace/Delete never resurrect a separator eager just added — deleting the "." off `"012."` leaves `"012"`, not `"012."` again, so removing a character always feels like removing exactly one character.
+`bind` does not reinsert an eager separator immediately after Backspace/Delete
+removes it: deleting the `"."` off `"012."` leaves `"012"`. This is binding behavior;
+the pure helpers have no edit history and apply the configured `eager` option on
+every call. Arrow keys, Home/End, and selection shortcuts retain native behavior.
+
+## Formatting Without an Input
+
+The pure helpers return strings or a formatted value with a caret position:
+
+```ts
+import { applyMask, process, processDecimal, formatDecimalValue, unmaskDecimal } from 'mother-mask'
+
+process('12345678901', '999.999.999-99') // '123.456.789-01'
+applyMask('25122025', '99/99/9999', 8) // { value: '25/12/2025', caret: 10 }
+
+processDecimal('1234.567') // '1,234.567' — optional, unlimited fraction
+processDecimal('1234.5', { decimalPlaces: 2, prefix: '$' }) // '$1,234.50'
+processDecimal('7.3', { numberPlaces: 2, decimalPlaces: 2 }) // '07.30'
+
+const euro = { decimalPlaces: 2, separator: '.', decimalSeparator: ',', suffix: ' €' }
+formatDecimalValue(1234.5, euro) // '1.234,50 €'
+unmaskDecimal('1.234,50 €', euro) // 1234.5
+```
+
+Pass the same locale and affix options when formatting and parsing.
+`formatDecimalValue` accepts a JS number; the other decimal helpers accept strings
+in the configured format. `unmaskDecimal` returns `0` for empty or digitless input.
+All caret arguments and results are UTF-16 offsets, matching DOM selections.
 
 ## CDN
 
@@ -272,19 +356,28 @@ The global name is `MotherMask`.
 
 ## API
 
-Main exports:
+| Export | Returns / purpose |
+| --- | --- |
+| `bind(input, mask, options?)` | Disposer; bind a static pattern, ordered array, or resolver via options |
+| `bindDecimal(input, options?)` | Disposer; bind a decimal input |
+| `applyMask(value, mask, inputCaret?, options?)` | `MaskResult`: `{ value, caret }` |
+| `process(value, mask, options?)` | Formatted string |
+| `buildMask(value, mask, caret?, options?)` | `Mask` instance; call `.process()` and read `.caret` afterward |
+| `new Mask(value, mask, caret?, options?)` | Low-level processor with the same options |
+| `getMaxLength(mask, options?)` | Formatted UTF-16 upper bound; `Infinity` with a resolver |
+| `applyDecimalMask(value, inputCaret?, options?)` | `MaskResult`: `{ value, caret }` |
+| `processDecimal(value, options?)` | Formatted decimal string |
+| `unmaskDecimal(value, options?)` | Parsed JS number |
+| `formatDecimalValue(value, options?)` | Display string from a JS number |
 
-- `bind(input, mask, options?)`
-- `bindDecimal(input, options?)`
-- `applyMask(value, mask, inputCaret?, options?)`
-- `process(value, mask, options?)`
-- `buildMask(value, mask, caret?, options?)`
-- `getMaxLength(mask, options?)` (formatted UTF-16 upper bound; `Infinity` with a resolver)
-- `applyDecimalMask(value, inputCaret?, options?)`
-- `processDecimal(value, options?)`
-- `unmaskDecimal(value, options?)`
-- `formatDecimalValue(value, options?)`
-- `Mask`
+Pattern options (`ApplyMaskOptions`) are `segmented` (default `true`), `eager`
+(default `true`), `tokens`, and `resolveMask`. `BindOptions` adds `onChange`.
+`bind` also accepts a `(value) => void` callback as its third argument;
+`bindDecimal` accepts `(value, numericValue) => void` as its second argument.
+
+Optional caret arguments default to `0`. `getMaxLength` counts literals and
+reserves up to two UTF-16 units per custom-token slot; it is not a count of data
+characters. See [dynamic masks](#content-dependent-masks) for `maxlength` handling.
 
 Exported types:
 
@@ -298,6 +391,14 @@ Exported types:
 - `BindOptions`
 - `DecimalMaskOptions`
 - `BindDecimalOptions`
+
+## Development
+
+See the [repository guide](https://github.com/dan2dev/mother-mask/blob/main/REPOSITORY.md)
+for builds, tests, and release commands, and the
+[docs guide](https://github.com/dan2dev/mother-mask/blob/main/docs/README.md) for
+running the documentation website. Keep this README and the published package
+README in sync.
 
 ## License
 

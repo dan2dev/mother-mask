@@ -71,6 +71,10 @@ function setHint(id: string, state: { text: string; ok?: boolean; error?: boolea
 
 const $ = <T extends HTMLElement>(id: string) => document.querySelector<T>(`#${id}`)!
 
+// Normalize accepted characters inside the mask so caret mapping stays intact.
+const uppercaseLetter = { match: /[a-z]/i, transform: (char: string) => char.toUpperCase() }
+const uppercaseAlphanumeric = { match: /[a-z0-9]/i, transform: (char: string) => char.toUpperCase() }
+
 // ── Hero preview ─────────────────────────────────────────────────────────────
 
 bind($('hero-phone'), '(999) 999-9999', (v) => {
@@ -82,23 +86,24 @@ bind($('hero-phone'), '(999) 999-9999', (v) => {
 
 bind($('ex-cpf'), '999.999.999-99', (v) => {
   const n = v.replace(/\D/g, '').length
-  setHint('ex-cpf-hint', n === 0 ? { text: '11 digits' } : n === 11 ? { text: '✓ valid', ok: true } : { text: `${n} / 11`, error: true })
+  setHint('ex-cpf-hint', n === 0 ? { text: '11 digits' } : n === 11 ? { text: '✓ complete', ok: true } : { text: `${n} / 11`, error: true })
 })
 
 // ── CNPJ (alphanumeric) ──────────────────────────────────────────────────────
 
-const cnpjEl = $<HTMLInputElement>('ex-cnpj')
-bind(cnpjEl, 'AA.AAA.AAA/AAAA-99', (v) => {
-  cnpjEl.value = v.toUpperCase()
-  const n = v.replace(/[^a-zA-Z0-9]/g, '').length
-  setHint('ex-cnpj-hint', n === 0 ? { text: '12 alphanumeric + 2 digits' } : n === 14 ? { text: '✓ valid', ok: true } : { text: `${n} / 14`, error: true })
+bind($('ex-cnpj'), 'AA.AAA.AAA/AAAA-99', {
+  tokens: { A: uppercaseAlphanumeric },
+  onChange: (v) => {
+    const n = v.replace(/[^a-zA-Z0-9]/g, '').length
+    setHint('ex-cnpj-hint', n === 0 ? { text: '12 alphanumeric + 2 digits' } : n === 14 ? { text: '✓ complete', ok: true } : { text: `${n} / 14`, error: true })
+  },
 })
 
 // ── CEP ──────────────────────────────────────────────────────────────────────
 
 bind($('ex-cep'), '99999-999', (v) => {
   const n = v.replace(/\D/g, '').length
-  setHint('ex-cep-hint', n === 0 ? { text: '8 digits' } : n === 8 ? { text: '✓ valid', ok: true } : { text: `${n} / 8`, error: true })
+  setHint('ex-cep-hint', n === 0 ? { text: '8 digits' } : n === 8 ? { text: '✓ complete', ok: true } : { text: `${n} / 8`, error: true })
 })
 
 // ── Phone — array mask ───────────────────────────────────────────────────────
@@ -107,7 +112,7 @@ bind($('ex-phone'), ['(99) 9999-9999', '(99) 99999-9999'], (v) => {
   const n = v.replace(/\D/g, '').length
   setHint(
     'ex-phone-hint',
-    n === 0 ? { text: '10 or 11 digits — mask switches automatically' } : n >= 10 ? { text: '✓ valid', ok: true } : { text: `${n} / 11`, error: true },
+    n === 0 ? { text: '10 or 11 digits — mask switches automatically' } : n >= 10 ? { text: '✓ complete', ok: true } : { text: `${n} / 11`, error: true },
   )
 })
 
@@ -117,6 +122,8 @@ bind($('ex-date-seg'), '99/99/9999')
 bind($('ex-date-flat'), '99/99/9999', { segmented: false })
 bind($('ex-date-eager'), '99/99/9999') // eager is on by default
 bind($('ex-date-not-eager'), '99/99/9999', { eager: false })
+bind($('ex-phone-edit'), '(999) 999-9999')
+bind($('ex-phone-edit-lazy'), '(999) 999-9999', { eager: false })
 
 // ── Time ─────────────────────────────────────────────────────────────────────
 
@@ -124,13 +131,8 @@ bind($('ex-time'), '99:99')
 
 // ── Plates ───────────────────────────────────────────────────────────────────
 
-const plateEl = $<HTMLInputElement>('ex-plate')
-bind(plateEl, 'ZZZ-9999', { segmented: false })
-plateEl.addEventListener('input', () => (plateEl.value = plateEl.value.toUpperCase()))
-
-const mercosulEl = $<HTMLInputElement>('ex-mercosul')
-bind(mercosulEl, 'ZZZ-9Z99')
-mercosulEl.addEventListener('input', () => (mercosulEl.value = mercosulEl.value.toUpperCase()))
+bind($('ex-plate'), 'ZZZ-9999', { segmented: false, tokens: { Z: uppercaseLetter } })
+bind($('ex-mercosul'), 'ZZZ-9Z99', { tokens: { Z: uppercaseLetter } })
 
 // ── Credit card — array mask ─────────────────────────────────────────────────
 
@@ -138,7 +140,7 @@ bind($('ex-card'), ['9999 999999 99999', '9999 9999 9999 9999'], (v) => {
   const n = v.replace(/\D/g, '').length
   setHint(
     'ex-card-hint',
-    n === 0 ? { text: 'Amex (15) vs Visa/Mastercard (16)' } : n === 15 || n === 16 ? { text: '✓ valid', ok: true } : { text: `${n} digits`, error: true },
+    n === 0 ? { text: '15 or 16 digits; length selects the layout' } : n === 15 || n === 16 ? { text: '✓ complete', ok: true } : { text: `${n} digits`, error: true },
   )
 })
 
@@ -148,19 +150,21 @@ bindDecimal($('ex-usd'), { decimalPlaces: 2, prefix: '$' })
 bindDecimal($('ex-eur'), { decimalPlaces: 2, separator: '.', decimalSeparator: ',', suffix: ' €' })
 bindDecimal($('ex-qty'), { decimalPlaces: 0, suffix: ' units' })
 bindDecimal($('ex-balance'), { decimalPlaces: 2, prefix: '$', allowNegative: true })
+bindDecimal($('ex-decimal-free'))
+bindDecimal($('ex-decimal-width'), { numberPlaces: 2, decimalPlaces: 2 })
 
 // ── US — phone ───────────────────────────────────────────────────────────────
 
 bind($('ex-us-phone'), '(999) 999-9999', (v) => {
   const n = v.replace(/\D/g, '').length
-  setHint('ex-us-phone-hint', n === 0 ? { text: '10 digits' } : n === 10 ? { text: '✓ valid', ok: true } : { text: `${n} / 10`, error: true })
+  setHint('ex-us-phone-hint', n === 0 ? { text: '10 digits' } : n === 10 ? { text: '✓ complete', ok: true } : { text: `${n} / 10`, error: true })
 })
 
 // ── US — SSN ─────────────────────────────────────────────────────────────────
 
 bind($('ex-us-ssn'), '999-99-9999', (v) => {
   const n = v.replace(/\D/g, '').length
-  setHint('ex-us-ssn-hint', n === 0 ? { text: '9 digits' } : n === 9 ? { text: '✓ valid', ok: true } : { text: `${n} / 9`, error: true })
+  setHint('ex-us-ssn-hint', n === 0 ? { text: '9 digits' } : n === 9 ? { text: '✓ complete', ok: true } : { text: `${n} / 9`, error: true })
 })
 
 // ── US — ZIP+4 ───────────────────────────────────────────────────────────────
@@ -169,47 +173,49 @@ bind($('ex-us-zip'), '99999-9999', (v) => {
   const n = v.replace(/\D/g, '').length
   setHint(
     'ex-us-zip-hint',
-    n === 0 ? { text: '5, or 9 with the +4 suffix' } : n === 5 || n === 9 ? { text: '✓ valid', ok: true } : { text: `${n} digits`, error: true },
+    n === 0 ? { text: '5, or 9 with the +4 suffix' } : n === 5 || n === 9 ? { text: '✓ complete', ok: true } : { text: `${n} digits`, error: true },
   )
 })
 
 // ── Canada — postal code ─────────────────────────────────────────────────────
 
-const caPostalEl = $<HTMLInputElement>('ex-ca-postal')
-bind(caPostalEl, 'Z9Z 9Z9', (v) => {
-  caPostalEl.value = v.toUpperCase()
-  const n = v.replace(/[^a-zA-Z0-9]/g, '').length
-  setHint('ex-ca-postal-hint', n === 0 ? { text: '6 alphanumeric characters' } : n === 6 ? { text: '✓ valid', ok: true } : { text: `${n} / 6`, error: true })
+bind($('ex-ca-postal'), 'Z9Z 9Z9', {
+  tokens: { Z: uppercaseLetter },
+  onChange: (v) => {
+    const n = v.replace(/[^a-zA-Z0-9]/g, '').length
+    setHint('ex-ca-postal-hint', n === 0 ? { text: '6 alphanumeric characters' } : n === 6 ? { text: '✓ complete', ok: true } : { text: `${n} / 6`, error: true })
+  },
 })
 
 // ── Canada — SIN ─────────────────────────────────────────────────────────────
 
 bind($('ex-ca-sin'), '999 999 999', (v) => {
   const n = v.replace(/\D/g, '').length
-  setHint('ex-ca-sin-hint', n === 0 ? { text: '9 digits' } : n === 9 ? { text: '✓ valid', ok: true } : { text: `${n} / 9`, error: true })
+  setHint('ex-ca-sin-hint', n === 0 ? { text: '9 digits' } : n === 9 ? { text: '✓ complete', ok: true } : { text: `${n} / 9`, error: true })
 })
 
 // ── Europe (DE) — IBAN ────────────────────────────────────────────────────────
 
-const ibanEl = $<HTMLInputElement>('ex-eu-iban')
-bind(ibanEl, 'ZZ99 9999 9999 9999 9999 99', (v) => {
-  ibanEl.value = v.toUpperCase()
-  const n = v.replace(/[^a-zA-Z0-9]/g, '').length
-  setHint('ex-eu-iban-hint', n === 0 ? { text: '2 letters + 20 digits' } : n === 22 ? { text: '✓ valid', ok: true } : { text: `${n} / 22`, error: true })
+bind($('ex-eu-iban'), 'ZZ99 9999 9999 9999 9999 99', {
+  tokens: { Z: uppercaseLetter },
+  onChange: (v) => {
+    const n = v.replace(/[^a-zA-Z0-9]/g, '').length
+    setHint('ex-eu-iban-hint', n === 0 ? { text: '2 letters + 20 digits' } : n === 22 ? { text: '✓ complete', ok: true } : { text: `${n} / 22`, error: true })
+  },
 })
 
 // ── Europe (DE) — VAT ID ─────────────────────────────────────────────────────
 
 bind($('ex-eu-vat'), 'DE999999999', (v) => {
   const n = v.replace(/\D/g, '').length
-  setHint('ex-eu-vat-hint', n === 0 ? { text: '9 digits after the DE prefix' } : n === 9 ? { text: '✓ valid', ok: true } : { text: `${n} / 9`, error: true })
+  setHint('ex-eu-vat-hint', n === 0 ? { text: '9 digits after the DE prefix' } : n === 9 ? { text: '✓ complete', ok: true } : { text: `${n} / 9`, error: true })
 })
 
 // ── Europe (PL) — postal code ────────────────────────────────────────────────
 
 bind($('ex-pl-postal'), '99-999', (v) => {
   const n = v.replace(/\D/g, '').length
-  setHint('ex-pl-postal-hint', n === 0 ? { text: '5 digits' } : n === 5 ? { text: '✓ valid', ok: true } : { text: `${n} / 5`, error: true })
+  setHint('ex-pl-postal-hint', n === 0 ? { text: '5 digits' } : n === 5 ? { text: '✓ complete', ok: true } : { text: `${n} / 5`, error: true })
 })
 
 // ── Masked vs. raw ───────────────────────────────────────────────────────────
@@ -235,11 +241,11 @@ document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]').forEach((link) => {
   })
 })
 
+// ── Advanced patterns ────────────────────────────────────────────────────────
 
-// Advanced pattern examples use the same engine as the pure APIs.
 bind($('ex-hex'), 'HH:HH:HH:HH:HH:HH', { tokens: { H: /[0-9A-Fa-f]/ } })
 bind($('ex-upper'), 'UUU-999', {
-  tokens: { U: { match: /[a-z]/i, transform: c => c.toUpperCase() } },
+  tokens: { U: uppercaseLetter },
 })
 bind($('ex-dynamic-card'), '9999 9999 9999 9999', {
   resolveMask: value => value.startsWith('34') || value.startsWith('37')

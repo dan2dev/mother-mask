@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <meta
             name="description"
-            content="mother-mask is a zero-dependency TypeScript input mask library for browser forms. Format phone, CPF, CNPJ, currency, dates, ZIP, SSN and IBAN inputs."
+            content="Zero-dependency TypeScript input masks with custom tokens, Unicode, dynamic patterns and decimal formatting. Documentation, API reference and live examples."
         />
         <meta
             name="keywords"
@@ -27,7 +27,7 @@
         />
         <meta
             property="og:description"
-            content="Zero-dependency TypeScript input masks for phone, CPF, CNPJ, currency, dates, ZIP, SSN, IBAN and custom browser form fields."
+            content="TypeScript input masks with custom tokens, Unicode, dynamic patterns and decimal formatting. Explore the API and try live examples."
         />
         <meta name="twitter:card" content="summary" />
         <meta
@@ -36,7 +36,7 @@
         />
         <meta
             name="twitter:description"
-            content="Zero-dependency TypeScript input masks for phone, CPF, CNPJ, currency, dates, ZIP, SSN, IBAN and custom browser form fields."
+            content="TypeScript input masks with custom tokens, Unicode, dynamic patterns and decimal formatting. Explore the API and try live examples."
         />
         <meta name="theme-color" content="#1769aa" />
         <title>mother-mask — TypeScript input masks for browser forms</title>
@@ -48,13 +48,13 @@
                         "@type": "SoftwareSourceCode",
                         "@id": "https://dan2dev.github.io/mother-mask/#software",
                         "name": "mother-mask",
-                        "description": "Zero-dependency TypeScript input mask library for browser forms, with bind(), bindDecimal(), array masks, segmented editing, and ESM, CJS, and UMD builds.",
+                        "description": "Zero-dependency TypeScript input masks with custom tokens, transforms, dynamic patterns, Unicode, segmented editing, and decimal formatting.",
                         "url": "https://dan2dev.github.io/mother-mask/",
                         "codeRepository": "https://github.com/dan2dev/mother-mask",
                         "downloadUrl": "https://www.npmjs.com/package/mother-mask",
                         "programmingLanguage": "TypeScript",
                         "runtimePlatform": "Browser",
-                        "softwareVersion": "3.4.0",
+                        "softwareVersion": "__MOTHER_MASK_VERSION__",
                         "license": "https://opensource.org/licenses/MIT",
                         "keywords": [
                             "input mask",
@@ -202,7 +202,11 @@
                         <nav class="mobile-menu-nav" aria-label="Primary">
                             <a href="#top">Overview</a>
                             <a href="#install">Install</a>
+                            <a href="#quick-start">Quick start</a>
                             <a href="#examples">Examples</a>
+                            <a href="#advanced-patterns">Custom patterns</a>
+                            <a href="#editing">Editing</a>
+                            <a href="#decimals">Decimals</a>
                             <a href="#regional">Regional</a>
                             <a href="#patterns">Patterns</a>
                             <a href="#cdn">CDN</a>
@@ -252,7 +256,11 @@
                     <nav class="primary-nav sidebar-nav" aria-label="Primary">
                         <a href="#top">Overview</a>
                         <a href="#install">Install</a>
+                        <a href="#quick-start">Quick start</a>
                         <a href="#examples">Examples</a>
+                        <a href="#advanced-patterns">Custom patterns</a>
+                        <a href="#editing">Editing</a>
+                        <a href="#decimals">Decimals</a>
                         <a href="#regional">Regional</a>
                         <a href="#patterns">Patterns</a>
                         <a href="#cdn">CDN</a>
@@ -264,7 +272,7 @@
                     <main>
                         <section class="hero" id="top">
                             <div class="hero-copy">
-                                <p class="eyebrow">TypeScript input masking</p>
+                                <p class="eyebrow">TypeScript input masking · v__MOTHER_MASK_VERSION__</p>
                                 <h1>
                                     TypeScript input masks for browser forms.
                                 </h1>
@@ -348,6 +356,9 @@
                                         ZIP+4, postal code, IBAN, VAT ID,
                                         license plate, credit card, and custom
                                         input masks with <code>bind()</code>.
+                                        Add custom tokens, case transforms,
+                                        Unicode letters, and layouts chosen
+                                        from the input value.
                                     </p>
                                 </div>
 
@@ -374,11 +385,54 @@
                             </div>
                         </section>
 
+                        <section id="quick-start">
+                            <h2>Quick start</h2>
+                            <p class="section-sub">
+                                Bind after the input exists and dispose when it
+                                is removed or needs a different mask.
+                            </p>
+                            <pre><code class="language-html">&lt;input id="phone" type="text" inputmode="tel" aria-label="Phone number" /&gt;</code></pre>
+                            <pre><code class="language-ts">import { bind, process } from 'mother-mask'
+
+const input = document.querySelector&lt;HTMLInputElement&gt;('#phone')!
+const mask = '(99) 99999-9999'
+input.value = process('11987654321', mask)
+
+const dispose = bind(input, mask, {
+  onChange: value =&gt; console.log(value),
+})
+
+// Call during cleanup, before rebinding or removing the input.
+dispose()</code></pre>
+                            <p>
+                                A binding formats edits, not the initial value or
+                                programmatic assignments. Use <code>process()</code>
+                                or <code>formatDecimalValue()</code> for those.
+                                Callbacks run after edits, not on initial binding.
+                                Rebinding an already-bound input does nothing;
+                                dispose the original binding first. Cleanup removes
+                                listeners, pending frames, and library-added
+                                attributes while preserving author-supplied attributes.
+                            </p>
+                        </section>
+
                         <section id="examples">
                             <h2>Examples</h2>
                             <p class="section-sub">
-                                Every field below is live.
+                                Every field below is live. “Complete” means the
+                                expected number of characters is present, not
+                                that a date, checksum, card, or identifier is valid.
+                                Validate those separately in your application.
                             </p>
+                            <p>Examples that normalize case share these local token definitions:</p>
+                            <pre><code class="language-ts">const uppercaseLetter = {
+  match: /[a-z]/i,
+  transform: (char: string) =&gt; char.toUpperCase(),
+}
+const uppercaseAlphanumeric = {
+  match: /[a-z0-9]/i,
+  transform: (char: string) =&gt; char.toUpperCase(),
+}</code></pre>
 
                             <div class="examples-grid">
                                 <div class="example">
@@ -399,7 +453,7 @@
                                 <div class="example">
                                     <h3>CNPJ (alphanumeric)</h3>
                                     <code class="snippet"
-                                        >bind(input, 'AA.AAA.AAA/AAAA-99')</code
+                                        >bind(input, 'AA.AAA.AAA/AAAA-99', { tokens: { A: uppercaseAlphanumeric } })</code
                                     >
                                     <input
                                         id="ex-cnpj"
@@ -538,7 +592,7 @@
                                     <h3>License plate</h3>
                                     <code class="snippet"
                                         >bind(input, 'ZZZ-9999', { segmented:
-                                        false })</code
+                                        false, tokens: { Z: uppercaseLetter } })</code
                                     >
                                     <input
                                         id="ex-plate"
@@ -552,11 +606,11 @@
                                 <div class="example">
                                     <h3>Mercosul plate</h3>
                                     <code class="snippet"
-                                        >bind(input, 'ZZZ-9Z99')</code
+                                        >bind(input, 'ZZZ-9Z99', { tokens: { Z: uppercaseLetter } })</code
                                     >
                                     <input
                                         id="ex-mercosul"
-                                        placeholder="ABC1D23"
+                                        placeholder="ABC-1D23"
                                     />
                                     <span class="hint"
                                         >letter/digit mixed pattern</span
@@ -575,14 +629,14 @@
                                         inputmode="numeric"
                                     />
                                     <span class="hint" id="ex-card-hint"
-                                        >Amex (15) vs Visa/Mastercard (16)</span
+                                        >15 or 16 digits; length selects the layout</span
                                     >
                                 </div>
 
                                 <div class="example">
                                     <h3>Currency (USD-style)</h3>
                                     <code class="snippet"
-                                        >bindDecimal(input, { prefix: '$'
+                                        >bindDecimal(input, { decimalPlaces: 2, prefix: '$'
                                         })</code
                                     >
                                     <input
@@ -595,7 +649,7 @@
                                 <div class="example">
                                     <h3>Currency (EUR-style)</h3>
                                     <code class="snippet"
-                                        >bindDecimal(input, { separator: '.',
+                                        >bindDecimal(input, { decimalPlaces: 2, separator: '.',
                                         decimalSeparator: ',', suffix: ' €'
                                         })</code
                                     >
@@ -625,7 +679,7 @@
                                 <div class="example">
                                     <h3>Negative values</h3>
                                     <code class="snippet"
-                                        >bindDecimal(input, { prefix: '$',
+                                        >bindDecimal(input, { decimalPlaces: 2, prefix: '$',
                                         allowNegative: true })</code
                                     >
                                     <input
@@ -642,8 +696,10 @@
                                 <div class="example example-wide">
                                     <h3>Masked value vs. raw value</h3>
                                     <code class="snippet"
-                                        >bind(input, '999.999.999-99', (value)
-                                        => &#123; masked, raw &#125;)</code
+                                        >bind(input, '999.999.999-99', value =&gt; {
+                                        document.getElementById('ex-raw-masked')!.textContent = value;
+                                        document.getElementById('ex-raw-digits')!.textContent = value.replace(/\D/g, '')
+                                        })</code
                                     >
                                     <input
                                         id="ex-raw"
@@ -681,7 +737,7 @@
                                 </div>
                                 <div class="example">
                                     <h3>Uppercase identifier</h3>
-                                    <code class="snippet">bind(input, 'UUU-999', { tokens: { U: { match: /[a-z]/i, transform: c =&gt; c.toUpperCase() } } })</code>
+                                    <code class="snippet">bind(input, 'UUU-999', { tokens: { U: uppercaseLetter } })</code>
                                     <input id="ex-upper" aria-label="Uppercase identifier" placeholder="ABC-123" />
                                     <span class="hint">Type abc123, then replace a letter in the middle.</span>
                                 </div>
@@ -704,11 +760,173 @@
                                     <span class="hint">One code point per slot; provisional IME text is preserved until commit.</span>
                                 </div>
                             </div>
-                            <p>Custom tokens retain segmented and eager behavior with static masks and arrays.
-                                Resolvers receive candidate data from the fallback alphabet and reformat a continuous stream,
-                                so previous separators cannot anchor a new layout. Transforms must return one code point.
-                                See the <a href="https://github.com/dan2dev/mother-mask#custom-tokens-and-transforms">README</a>
-                                for escaping, composition, and maxlength contracts.</p>
+                            <h3>Token and transform contracts</h3>
+                            <p>
+                                A token is a <code>RegExp</code>, a character predicate,
+                                or <code>{ match, transform? }</code>. Keys are single
+                                Unicode code points; backslash is reserved. Overrides
+                                of <code>9</code>, <code>Z</code>, and <code>A</code>
+                                apply only to that operation or binding. Definitions
+                                are snapshotted on bind; dispose and rebind to change them.
+                                Use pure matchers. RegExp <code>g</code>/<code>y</code>
+                                flags are ignored on a private copy without changing
+                                the caller's <code>lastIndex</code>.
+                            </p>
+                            <p>
+                                A transform must return exactly one code point; otherwise
+                                the engine throws a <code>RangeError</code>. Use an idempotent
+                                transform whose output still matches the token. Uppercasing
+                                <code>ß</code> to <code>SS</code> is not supported.
+                                Normalize with tokens instead of assigning to
+                                <code>input.value</code> in a callback so the engine can
+                                map the caret through the transformation.
+                            </p>
+                            <h3>Content-dependent masks</h3>
+                            <p>
+                                <code>resolveMask</code> runs once per masking application,
+                                before transforms. It receives candidate data accepted
+                                by the fallback pattern's slots (or any fallback array
+                                member), with complete fallback literal runs at their
+                                boundaries and nonmatching characters removed. Escaped
+                                runs remain formatting after a segment shrinks. Make
+                                the fallback alphabet cover every layout the resolver
+                                can return. Return a string or an ordered array; arrays
+                                still select by capacity. Resolution is not recursive.
+                            </p>
+                            <p>
+                                Resolvers always format one continuous identifier,
+                                removing old separators before applying the new layout,
+                                even with <code>segmented: true</code>. Use static masks
+                                or arrays when fields must remain independently editable.
+                                <code>eager</code> still applies, and the caret follows
+                                the logical data when a layout changes.
+                            </p>
+                            <h3>Unicode, composition, and length</h3>
+                            <p>
+                                Slots match Unicode code points, not grapheme clusters.
+                                Combining marks and joined emoji occupy separate slots
+                                if accepted; no normalization is performed. Built-in
+                                <code>Z</code> and <code>A</code> remain ASCII-only.
+                                Caret offsets use UTF-16, as DOM selections do.
+                            </p>
+                            <p>
+                                Custom-token bindings leave provisional IME text and
+                                selection untouched until composition commits, including
+                                when the matcher only accepts ASCII. Built-in-only masks
+                                keep live formatting during Android autocorrect composition.
+                                Bindings with custom tokens or a resolver do not add
+                                <code>maxlength</code>; the engine still caps slots.
+                                Author-supplied limits remain in place. Disposal removes
+                                only attributes added by the binding.
+                            </p>
+                        </section>
+
+                        <section id="editing">
+                            <h2>Segmented editing and eager literals</h2>
+                            <p class="section-sub">
+                                Static patterns and arrays use <code>segmented: true</code>
+                                and <code>eager: true</code> by default. Separators anchor
+                                independent fields while you edit.
+                            </p>
+                            <div class="examples-grid">
+                                <div class="example">
+                                    <h3>Empty an internal segment</h3>
+                                    <code class="snippet">bind(input, '(999) 999-9999')</code>
+                                    <input id="ex-phone-edit" aria-label="Segmented phone editing" inputmode="tel" value="(111) 222-3333" />
+                                    <span class="hint">Place the caret after 222 and press Backspace three times.</span>
+                                </div>
+                                <div class="example">
+                                    <h3>The same edit without eager literals</h3>
+                                    <code class="snippet">bind(input, '(999) 999-9999', { eager: false })</code>
+                                    <input id="ex-phone-edit-lazy" aria-label="Segmented phone editing without eager literals" inputmode="tel" value="(111) 222-3333" />
+                                    <span class="hint">Existing internal dividers remain even with eager disabled.</span>
+                                </div>
+                            </div>
+                            <pre><code class="language-ts">// | marks the caret after the edit.
+// Delete 222:          (111) |-3333
+// Backspace again:     (111|-3333
+// The caret stays before the untouched -3333 tail.
+
+// CPF: select 012.153.441 in 012.153.441-39, then type 015.
+// Result:              015.|-39</code></pre>
+                            <p>
+                                Existing internal dividers survive while later segments
+                                contain data. Backspace follows collapsed text to the
+                                left, including backward word and line deletion. Movement
+                                within a divider that stays visible is preserved. Selecting
+                                everything and deleting clears the field.
+                            </p>
+                            <p>
+                                Repeated separators can make an edited value ambiguous:
+                                <code>1/2025</code> with <code>99/99/9999</code> resolves
+                                to the earliest fields that fit. Distinct separators give
+                                more precise anchors. For a continuous value where all
+                                following characters should shift, set
+                                <code>segmented: false</code>.
+                            </p>
+                            <p>
+                                Eager mode reveals the next literal when a segment fills:
+                                typing <code>25</code> into a date shows <code>25/</code>.
+                                Set <code>eager: false</code> to wait for the next digit.
+                                <code>bind()</code> does not immediately restore an eager
+                                literal removed with Backspace/Delete. Pure helpers have
+                                no edit history and apply the configured eager option on
+                                every call. Arrow keys, Home/End, and selection shortcuts
+                                retain native behavior.
+                            </p>
+                        </section>
+
+                        <section id="decimals">
+                            <h2>Decimal formatting</h2>
+                            <p class="section-sub">
+                                The integer part grows freely by default. The fraction
+                                is optional and unlimited until <code>decimalPlaces</code>
+                                is set. Use text inputs with <code>inputmode="decimal"</code>.
+                            </p>
+                            <div class="examples-grid">
+                                <div class="example">
+                                    <h3>Optional fraction (default)</h3>
+                                    <code class="snippet">bindDecimal(input)</code>
+                                    <input id="ex-decimal-free" aria-label="Optional unlimited decimal fraction" inputmode="decimal" placeholder="1,234.56789" />
+                                    <span class="hint">Type 1234, then add .56789; no fixed precision is imposed.</span>
+                                </div>
+                                <div class="example">
+                                    <h3>Fixed integer and fraction widths</h3>
+                                    <code class="snippet">bindDecimal(input, { numberPlaces: 2, decimalPlaces: 2 })</code>
+                                    <input id="ex-decimal-width" aria-label="Fixed width decimal" inputmode="decimal" placeholder="07.30" />
+                                    <span class="hint">Paste 7.3 to see 07.30; each part is capped at two digits.</span>
+                                </div>
+                            </div>
+                            <p>
+                                Set <code>decimalPlaces: 2</code> for fixed, zero-padded
+                                currency decimals, or <code>0</code> for integers only.
+                                <code>numberPlaces</code> pads and caps the integer part.
+                                Here <code>segmented</code> controls thousands grouping;
+                                it does not mean independent pattern fields.
+                            </p>
+                            <p>
+                                Prefixes and suffixes are fixed display text, excluded
+                                from numeric parsing even when they contain digits or a
+                                decimal separator. Typing inside a prefix inserts at the
+                                start of the number; typing inside a suffix inserts at
+                                the end. Use the same locale and affix options when
+                                formatting and parsing.
+                            </p>
+                            <pre><code class="language-ts">import { bindDecimal, formatDecimalValue, unmaskDecimal } from 'mother-mask'
+
+const options = {
+  decimalPlaces: 2,
+  separator: '.',
+  decimalSeparator: ',',
+  suffix: ' €',
+}
+
+input.value = formatDecimalValue(1234.5, options) // '1.234,50 €'
+bindDecimal(input, {
+  ...options,
+  onChange: (value, numericValue) =&gt; console.log(value, numericValue),
+})
+unmaskDecimal('1.234,50 €', options) // 1234.5</code></pre>
                         </section>
 
                         <section id="regional">
@@ -767,7 +985,7 @@
                                 <div class="example">
                                     <h3>Canada — postal code</h3>
                                     <code class="snippet"
-                                        >bind(input, 'Z9Z 9Z9')</code
+                                        >bind(input, 'Z9Z 9Z9', { tokens: { Z: uppercaseLetter } })</code
                                     >
                                     <input
                                         id="ex-ca-postal"
@@ -797,7 +1015,7 @@
                                     <h3>Europe (DE) — IBAN</h3>
                                     <code class="snippet"
                                         >bind(input, 'ZZ99 9999 9999 9999 9999
-                                        99')</code
+                                        99', { tokens: { Z: uppercaseLetter } })</code
                                     >
                                     <input
                                         id="ex-eu-iban"
@@ -861,7 +1079,7 @@
                                         <tr>
                                             <td><code>Z</code></td>
                                             <td>
-                                                Letter
+                                                ASCII letter
                                                 (<code>a</code>–<code>z</code>,
                                                 <code>A</code>–<code>Z</code>)
                                             </td>
@@ -869,8 +1087,16 @@
                                         <tr>
                                             <td><code>A</code></td>
                                             <td>
-                                                Alphanumeric (digit or letter)
+                                                ASCII alphanumeric (digit or letter)
                                             </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Custom token</td>
+                                            <td>Its local matcher and optional transform</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>\</code></td>
+                                            <td>Escapes a token or another backslash</td>
                                         </tr>
                                         <tr>
                                             <td>Anything else</td>
@@ -884,9 +1110,33 @@
                             </div>
                             <p style="margin-top: 12px">
                                 Array masks: pass patterns
-                                <strong>shortest → longest</strong>; the active
+                                <strong>shortest → longest by data capacity</strong>; the active
                                 one is picked from how many data characters are
-                                typed (see phone and credit card above).
+                                accepted, not a prefix or card network. Use
+                                <a href="#advanced-patterns"><code>resolveMask</code></a>
+                                to choose a layout from content instead.
+                            </p>
+                            <h3>Escaped literals</h3>
+                            <pre><code class="language-ts">bind(input, '\\A-999999') // '123456' → 'A-123456'
+bind(input, '\\9-99')     // '12' → '9-12'
+bind(input, '\\Z-99')     // '12' → 'Z-12'
+bind(input, '\\\\99')      // a literal backslash, then two digits</code></pre>
+                            <p>
+                                Backslash escapes a built-in or custom token, or another
+                                backslash. Before any other character, or at the end of
+                                a pattern, it remains literal. JavaScript string literals
+                                need an extra backslash as shown above. Older patterns
+                                using backslash immediately before a token must double
+                                it to keep the backslash in the output.
+                            </p>
+                            <p>
+                                Complete literal runs are formatting at their boundaries;
+                                escaped runs remain formatting after a segment shrinks.
+                                If a literal also matches the data alphabet, raw and
+                                formatted values can be ambiguous. Use a distinct
+                                separator, such as <code>'\\9-99'</code>, and avoid
+                                resolver literals that look like data but are absent
+                                from the fallback pattern.
                             </p>
                         </section>
 
@@ -931,10 +1181,11 @@
                                                 <td>Third argument</td>
                                                 <td>
                                                     <code
-                                                        >{ onChange?: (value:
-                                                        string) =&gt; void
-                                                        }</code
-                                                    >, or a legacy
+                                                        >BindOptions</code
+                                                    >: <code>segmented</code>,
+                                                    <code>eager</code>, <code>tokens</code>,
+                                                    <code>resolveMask</code>, and
+                                                    <code>onChange</code>; or a
                                                     <code
                                                         >(value) =&gt;
                                                         void</code
@@ -968,20 +1219,22 @@
                                                 <td>
                                                     Build a
                                                     <code>Mask</code> instance
-                                                    (array mask resolved to one
-                                                    string first).
+                                                    with the supplied pattern and options.
+                                                    Call <code>.process()</code> for the
+                                                    value, then read <code>.caret</code>.
                                                 </td>
                                             </tr>
                                             <tr>
                                                 <td>
                                                     <code
-                                                        >getMaxLength(mask)</code
+                                                        >getMaxLength(mask, options?)</code
                                                     >
                                                 </td>
                                                 <td>
-                                                    Maximum string length for
-                                                    the mask (longest pattern
-                                                    for array masks).
+                                                    Formatted UTF-16 upper bound,
+                                                    including literals; up to two units
+                                                    per custom-token slot.
+                                                    <code>Infinity</code> with a resolver.
                                                 </td>
                                             </tr>
                                             <tr>
@@ -993,8 +1246,8 @@
                                                     >
                                                 </td>
                                                 <td>
-                                                    Low-level: apply a single
-                                                    mask string; returns
+                                                    Apply a pattern string or ordered
+                                                    array with all pattern options; returns
                                                     <code>{ value, caret }</code
                                                     >.
                                                 </td>
@@ -1012,9 +1265,30 @@
                                                     the masked string.
                                                 </td>
                                             </tr>
+                                            <tr>
+                                                <td><code>new Mask(value, mask, caret?, options?)</code></td>
+                                                <td>Low-level processor with <code>.process()</code> and <code>.caret</code>.</td>
+                                            </tr>
                                         </tbody>
                                     </table>
                                 </div>
+                            </div>
+
+                            <div class="api-block">
+                                <h3>Pure formatting</h3>
+                                <pre><code class="language-ts">import { applyMask, process, processDecimal } from 'mother-mask'
+
+process('12345678901', '999.999.999-99') // '123.456.789-01'
+applyMask('25122025', '99/99/9999', 8) // { value: '25/12/2025', caret: 10 }
+processDecimal('1234.567') // '1,234.567'
+processDecimal('7.3', { numberPlaces: 2, decimalPlaces: 2 }) // '07.30'</code></pre>
+                                <p>
+                                    Optional caret arguments default to <code>0</code>.
+                                    Input and output carets use UTF-16 offsets.
+                                    Pure helpers do not track edit history or DOM events;
+                                    binding-specific deletion and composition behavior
+                                    requires <code>bind()</code> or <code>bindDecimal()</code>.
+                                </p>
                             </div>
 
                             <div class="api-block">
@@ -1044,12 +1318,9 @@
                                                 <td>Second argument</td>
                                                 <td>
                                                     <code
-                                                        >DecimalMaskOptions
-                                                        &amp; { onChange?:
-                                                        (value: string,
-                                                        numericValue: number)
-                                                        =&gt; void }</code
-                                                    >, or a legacy
+                                                        >BindDecimalOptions</code
+                                                    > (decimal options plus
+                                                    <code>onChange</code>), or a
                                                     <code
                                                         >(value, numericValue)
                                                         =&gt; void</code
@@ -1097,8 +1368,8 @@
                                                     >
                                                 </td>
                                                 <td>
-                                                    Apply a decimal mask to a
-                                                    raw value, returning just
+                                                    Format a string in the configured
+                                                    locale, returning just
                                                     the masked string.
                                                 </td>
                                             </tr>
@@ -1145,7 +1416,7 @@
 
 interface MaskResult {
   readonly value: string
-  readonly caret: number
+  readonly caret: number // UTF-16 offset
 }
 
 type TokenMatcher = RegExp | ((char: string) =&gt; boolean)
@@ -1168,7 +1439,8 @@ interface BindOptions extends ApplyMaskOptions {
 }
 
 interface DecimalMaskOptions {
-  decimalPlaces?: number      // default 2
+  decimalPlaces?: number      // unset: optional, unlimited fraction
+  numberPlaces?: number       // unset: unlimited integer part
   segmented?: boolean         // group into thousands — default true
   separator?: string          // thousands separator — default ','
   decimalSeparator?: string   // default '.'
