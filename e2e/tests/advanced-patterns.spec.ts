@@ -155,7 +155,10 @@ for (const segmented of [true, false]) {
                 input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: kind, data: char }))
                 const m = buildMask(raw, cfg.mask, pos, { ...options, eager: kind.startsWith('delete') ? false : eager })
                 const value = m.process()
-                let caret = kind === 'deleteContentBackward' ? pos : kind === 'deleteContentForward' ? (value.length === cfg.full.length ? pos + 1 : pos) : m.caret
+                const suffix = cfg.full.slice(end)
+                const backwardLimit = !value.startsWith(cfg.full.slice(0, pos)) && value.endsWith(suffix)
+                  ? value.length - suffix.length : pos
+                let caret = kind === 'deleteContentBackward' ? Math.min(pos, backwardLimit) : kind === 'deleteContentForward' ? (value.length === cfg.full.length ? pos + 1 : pos) : m.caret
                 caret = Math.min(caret, value.length)
                 if (caret > 0 && /[\uDC00-\uDFFF]/.test(value[caret] ?? '') && /[\uD800-\uDBFF]/.test(value[caret - 1])) caret--
                 total++

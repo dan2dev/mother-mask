@@ -137,8 +137,11 @@ describe('bind() agrees with buildMask() at every edit position', () => {
 
             const m = buildMask(raw, mask, start, deleteOptions)
             const value = m.process()
+            const suffix = full.slice(end)
+            const backwardLimit = !value.startsWith(full.slice(0, start)) && value.endsWith(suffix)
+              ? value.length - suffix.length : start
             const rawCaret =
-              mode === 'backspace' ? start : full.length === value.length ? start + 1 : start
+              mode === 'backspace' ? Math.min(start, backwardLimit) : full.length === value.length ? start + 1 : start
             check(`${mode} [${start},${end})`, input, value, Math.min(rawCaret, value.length))
           }
         }
@@ -155,7 +158,10 @@ describe('bind() agrees with buildMask() at every edit position', () => {
 
         const m = buildMask(raw, mask, pos - 1, deleteOptions)
         const value = m.process()
-        check(`backspace pos=${pos}`, input, value, Math.min(pos - 1, value.length))
+        const suffix = full.slice(pos)
+        const backwardLimit = !value.startsWith(full.slice(0, pos - 1)) && value.endsWith(suffix)
+          ? value.length - suffix.length : pos - 1
+        check(`backspace pos=${pos}`, input, value, Math.min(pos - 1, backwardLimit, value.length))
       }
 
       // Plain Delete at every position.

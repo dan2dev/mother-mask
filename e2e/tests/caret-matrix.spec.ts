@@ -122,7 +122,10 @@ async function runMatrix(
           // expectation has to be computed the same way.
           const m = window.motherMask.buildMask(raw, mask, start, { ...options, eager: false })
           const expectedValue = m.process()
-          const rawCaret = mode === 'backspace' ? start : full.length === expectedValue.length ? start + 1 : start
+          const suffix = full.slice(end)
+          const backwardLimit = !expectedValue.startsWith(full.slice(0, start)) && expectedValue.endsWith(suffix)
+            ? expectedValue.length - suffix.length : start
+          const rawCaret = mode === 'backspace' ? Math.min(start, backwardLimit) : full.length === expectedValue.length ? start + 1 : start
           const expectedCaret = Math.min(rawCaret, expectedValue.length)
           if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
             failures.push(
@@ -145,7 +148,10 @@ async function runMatrix(
       // See the note on the selection-delete branch above.
       const m = window.motherMask.buildMask(raw, mask, pos - 1, { ...options, eager: false })
       const expectedValue = m.process()
-      const expectedCaret = Math.min(pos - 1, expectedValue.length)
+      const suffix = full.slice(pos)
+      const backwardLimit = !expectedValue.startsWith(full.slice(0, pos - 1)) && expectedValue.endsWith(suffix)
+        ? expectedValue.length - suffix.length : pos - 1
+      const expectedCaret = Math.min(pos - 1, backwardLimit, expectedValue.length)
       if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
         failures.push(
           `backspace pos=${pos}: got ${JSON.stringify(input.value)}@${input.selectionStart} want ${JSON.stringify(expectedValue)}@${expectedCaret}`,
@@ -188,7 +194,7 @@ for (const cfg of MASKS) {
   })
 }
 
-async function phoneField(page: Page, eager: boolean) {
+async function phoneField(page: Page, eager: boolean, digits = '1112223333') {
   await page.goto('/')
   await page.evaluate(eager => {
     const input = document.createElement('input')
@@ -198,7 +204,7 @@ async function phoneField(page: Page, eager: boolean) {
     input.focus()
   }, eager)
   const field = page.locator('#empty-segment-phone')
-  await page.keyboard.type('1112223333')
+  await page.keyboard.type(digits)
   return field
 }
 
@@ -270,5 +276,93 @@ for (const eager of [true, false]) {
     await page.keyboard.press('Delete')
     expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
       .toEqual(['(111) 222', 9, 9])
+  })
+
+  test('backward caret stays before the tail through repeated native Backspaces (eager=' + eager + ')', async ({ page }) => {
+    const field = await phoneField(page, eager, '1112224444')
+    await field.evaluate((input: HTMLInputElement) => input.setSelectionRange(9, 9))
+    const steps: [string, number][] = [
+      ['(111) 22-4444', 8], ['(111) 2-4444', 7], ['(111) -4444', 6],
+      ['(111-4444', 4], ['(11-4444', 3], ['(1-4444', 2], ['(-4444', 1], ['-4444', 0],
+    ]
+    for (const [value, caret] of steps) {
+      await page.keyboard.press('Backspace')
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual([value, caret, caret])
+    }
+    await page.keyboard.press('Backspace')
+    expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+      .toEqual(['-4444', 0, 0])
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.type('5556667777')
+    expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+      .toEqual(['(555) 666-7777', 14, 14])
+  })
+
+  test('backward caret maps native selections within a collapsed divider (eager=' + eager + ')', async ({ page }) => {
+    const field = await phoneField(page, eager)
+    for (const range of [[4, 5], [5, 6], [4, 6]]) {
+      await field.fill('(111) -4444')
+      await field.evaluate((input: HTMLInputElement, range) => input.setSelectionRange(range[0], range[1], 'backward'), range)
+      await page.keyboard.press('Backspace')
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['(111-4444', 4, 4])
+      await page.keyboard.press('Backspace')
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['(11-4444', 3, 3])
+    }
+  })
+
+  test('backward caret preserves native steps inside retained dividers and forward Delete (eager=' + eager + ')', async ({ page }) => {
+    const field = await phoneField(page, eager, '1112224444')
+    for (const pos of [6, 5]) {
+      await field.evaluate((input: HTMLInputElement, pos) => input.setSelectionRange(pos, pos), pos)
+      await page.keyboard.press('Backspace')
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['(111) 222-4444', pos - 1, pos - 1])
+      await page.keyboard.press('Delete')
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['(111) 222-4444', pos, pos])
+    }
+  })
+
+  test('backward caret stays before overlapping dividers at every boundary (eager=' + eager + ')', async ({ page }) => {
+    await page.goto('/')
+    await page.evaluate(eager => {
+      const input = document.createElement('input')
+      input.id = 'backward-overlap'
+      document.body.appendChild(input)
+      window.motherMask.bind(input, '99 :: 99:99', { eager })
+    }, eager)
+    const field = page.locator('#backward-overlap')
+    for (const pos of [3, 4, 5, 6]) {
+      await field.fill('11 :: :44')
+      await field.evaluate((input: HTMLInputElement, pos) => input.setSelectionRange(pos, pos), pos)
+      await page.keyboard.press('Backspace')
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['11:44', 2, 2])
+      await page.keyboard.press('Backspace')
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['1:44', 1, 1])
+    }
+  })
+
+  test('backward caret maps Unicode source offsets around long dividers (eager=' + eager + ')', async ({ page }) => {
+    await page.goto('/')
+    await page.evaluate(eager => {
+      const input = document.createElement('input')
+      input.id = 'backward-unicode'
+      input.value = '𐐀λ :: --Жé'
+      document.body.appendChild(input)
+      window.motherMask.bind(input, 'LL :: LL--LL', { eager, tokens: { L: /\p{L}/u } })
+      input.focus()
+      input.setSelectionRange(7, 7)
+    }, eager)
+    const field = page.locator('#backward-unicode')
+    for (const [value, caret] of [['𐐀λ--Жé', 3], ['𐐀--Жé', 2], ['--Жé', 0]] as const) {
+      await page.keyboard.press('Backspace')
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual([value, caret, caret])
+    }
   })
 }

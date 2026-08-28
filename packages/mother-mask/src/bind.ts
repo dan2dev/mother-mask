@@ -1,7 +1,7 @@
 import { applyWithCompiler } from './apply-mask'
 import { getMaxLength, PatternCompiler } from './pattern'
 import { isIos } from './platform'
-import type { BindOptions, MaskPattern } from './types'
+import type { BindOptions, MaskPattern, MaskResult } from './types'
 
 const MASKED_ATTR = 'data-masked'
 
@@ -46,9 +46,27 @@ function releaseOnce(cleanup: (() => void) | undefined): () => void {
 
 type InputEditKind = 'insert' | 'backspace' | 'delete' | 'unidentified'
 
+/**
+ * Keep native movement within a retained divider. If formatting changed the
+ * prefix, use its source-mapped caret instead of an offset into removed text.
+ * Backspace must not advance across an untouched divider or into the next field.
+ */
+function backwardCaret(rawValue: string, pos: number, masked: MaskResult): number {
+  if (masked.value.startsWith(rawValue.slice(0, pos))) return pos
+  // Overlapping divider text can make a surviving fragment look like the
+  // next divider. Stay before unchanged text on the right, even then.
+  let tailStart = masked.value.length
+  let rawEnd = rawValue.length
+  while (rawEnd > pos && tailStart > 0 && rawValue[rawEnd - 1] === masked.value[tailStart - 1]) {
+    rawEnd--
+    tailStart--
+  }
+  return Math.min(pos, masked.caret, tailStart)
+}
+
 /** Classify a native `InputEvent.inputType` the same way `onKey` classifies `KeyboardEvent.key`. */
 function classifyInputType(inputType: string | undefined): InputEditKind {
-  if (inputType === 'deleteContentBackward') return 'backspace'
+  if (inputType?.startsWith('delete') && inputType.endsWith('Backward')) return 'backspace'
   if (inputType === 'deleteContentForward') return 'delete'
   if (inputType && inputType.startsWith('insert')) return 'insert'
   return 'unidentified'
@@ -222,7 +240,7 @@ export function bind(
       const newPos = previousLength === target.value.length ? pos + 1 : pos
       setCaret(target, newPos)
     } else if (kind === 'backspace') {
-      setCaret(target, pos)
+      setCaret(target, backwardCaret(rawValue, pos, m))
     } else {
       setCaret(target, m.caret)
     }
@@ -353,7 +371,7 @@ export function bind(
         const newPos = oldValue.length === target.value.length ? pos + 1 : pos
         setCaret(target, newPos)
       } else if (isBackspace) {
-        setCaret(target, pos)
+        setCaret(target, backwardCaret(rawValue, pos, m))
       } else if (isCharInsert) {
         setCaret(target, m.caret)
       }

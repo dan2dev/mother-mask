@@ -617,6 +617,172 @@ for (const eager of [true, false]) {
   })
 }
 
+interface BackwardCaretCase {
+  name: string
+  mask: MaskPattern
+  value: string
+  caret: number
+  expected: string
+  expectedCaret: number
+  options?: ApplyMaskOptions
+}
+
+const BACKWARD_CARET_CASES: BackwardCaretCase[] = [
+  { name: 'US phone', mask: '(999) 999-9999', value: '(111) -4444', caret: 6, expected: '(111-4444', expectedCaret: 4 },
+  { name: 'partial area code', mask: '(999) 999-9999', value: '(11) -4444', caret: 5, expected: '(11-4444', expectedCaret: 3 },
+  { name: 'empty area code', mask: '(999) 999-9999', value: '() -4444', caret: 3, expected: '(-4444', expectedCaret: 1 },
+  { name: 'phone array', mask: ['(999) 999-9999', '(999) 9999-9999'], value: '(111) -4444', caret: 6, expected: '(111-4444', expectedCaret: 4 },
+  { name: 'long divider', mask: '99 / 99-99', value: '11 / -44', caret: 5, expected: '11-44', expectedCaret: 2 },
+  { name: 'overlapping divider text', mask: '99 :: 99:99', value: '11 :: :44', caret: 6, expected: '11:44', expectedCaret: 2 },
+  { name: 'Unicode divider', mask: '99🧭 99-99', value: '11🧭 -44', caret: 5, expected: '11-44', expectedCaret: 2 },
+  { name: 'Unicode data', mask: 'LL :: LL--LL', value: '𐐀λ :: --Жé', caret: 7, expected: '𐐀λ--Жé', expectedCaret: 3, options: { tokens: { L: /\p{L}/u } } },
+  { name: 'transformed data', mask: 'UU :: UU--UU', value: 'AB :: --CD', caret: 6, expected: 'AB--CD', expectedCaret: 2, options: { tokens: { U: { match: /[a-z]/i, transform: c => c.toUpperCase() } } } },
+  { name: 'escaped token literal', mask: '99\\A:: 99-99', value: '11A:: -44', caret: 6, expected: '11-44', expectedCaret: 2 },
+  { name: 'escaped divider overlaps the next one', mask: '99\\A- 99-99', value: '11A- -44', caret: 5, expected: '11-44', expectedCaret: 2 },
+  { name: 'consecutive empty segments', mask: '99] 99/99-99', value: '11] /-44', caret: 4, expected: '11/-44', expectedCaret: 2 },
+  { name: 'retained divider after a populated segment', mask: '(999) 999-9999', value: '(111) 222-4444', caret: 6, expected: '(111) 222-4444', expectedCaret: 5 },
+  { name: 'inside a retained divider', mask: '(999) 999-9999', value: '(111) 222-4444', caret: 5, expected: '(111) 222-4444', expectedCaret: 4 },
+  { name: 'trailing eager divider', mask: '999.999', value: '111.', caret: 4, expected: '111', expectedCaret: 3 },
+  { name: 'single-character retained divider', mask: '99-99', value: '11-44', caret: 3, expected: '11-44', expectedCaret: 2 },
+  { name: 'shorter array retains the left divider', mask: ['HH-HH', 'HH-HH-HH'], value: 'ab-c-ef', caret: 4, expected: 'ab-ef', expectedCaret: 3, options: { tokens: { H: /[a-f]/ } } },
+  { name: 'unchanged prefix with punctuation removed later', mask: '(999) 999-9999', value: '(111) 222-4444#!?', caret: 6, expected: '(111) 222-4444', expectedCaret: 5 },
+]
+
+for (const eager of [true, false]) {
+  describe('backward caret follows collapsed dividers (eager=' + eager + ')', () => {
+    it('exhausts every prefix caret position without crossing into the untouched tail', () => {
+      for (const cfg of BACKWARD_CARET_CASES) {
+        const suffix = cfg.expected.slice(cfg.expectedCaret)
+        let start = 0
+        for (const ch of cfg.value.slice(0, cfg.caret)) {
+          start += ch.length
+          const input = setupInput()
+          input.value = cfg.value
+          const dispose = bind(input, cfg.mask, { ...cfg.options, eager })
+          input.setSelectionRange(start, start)
+          try {
+            while (input.selectionStart! > 0) {
+              const before = input.selectionStart!
+              deleteWith(input, 'deleteContentBackward')
+              const caret = input.selectionStart!
+              expect(input.value.endsWith(suffix), JSON.stringify({ name: cfg.name, start, before, value: input.value, suffix })).toBe(true)
+              expect(input.selectionEnd).toBe(caret)
+              expect(caret).toBeLessThan(before)
+              expect(caret).toBeLessThanOrEqual(input.value.length - suffix.length)
+              expect(caret).toBeGreaterThanOrEqual(0)
+              expect(/[\uDC00-\uDFFF]/.test(input.value[caret] ?? '')).toBe(false)
+            }
+          } finally {
+            dispose()
+            input.remove()
+          }
+        }
+      }
+    })
+
+    for (const cfg of BACKWARD_CARET_CASES) {
+      it(cfg.name, () => {
+        const input = setupInput()
+        input.value = cfg.value
+        const dispose = bind(input, cfg.mask, { ...cfg.options, eager })
+        input.setSelectionRange(cfg.caret, cfg.caret)
+        try {
+          deleteWith(input, 'deleteContentBackward')
+          expect([input.value, input.selectionStart, input.selectionEnd]).toEqual([cfg.expected, cfg.expectedCaret, cfg.expectedCaret])
+          expect(input.selectionStart).toBeLessThan(cfg.caret)
+        } finally {
+          dispose()
+          input.remove()
+        }
+      })
+    }
+
+    for (const fallback of [false, true]) {
+      it('keeps moving left through the complete phone sequence (fallback=' + fallback + ')', async () => {
+        const input = setupInput()
+        input.value = '(111) 222-4444'
+        const dispose = bind(input, '(999) 999-9999', { eager })
+        input.setSelectionRange(9, 9)
+        const steps: [string, number][] = [
+          ['(111) 22-4444', 8], ['(111) 2-4444', 7], ['(111) -4444', 6],
+          ['(111-4444', 4], ['(11-4444', 3], ['(1-4444', 2], ['(-4444', 1], ['-4444', 0],
+        ]
+        try {
+          for (const [value, caret] of steps) {
+            if (fallback) {
+              const pos = input.selectionStart!
+              press(input, 'Backspace', input.value.slice(0, pos - 1) + input.value.slice(pos), pos - 1)
+              await flushRafs()
+            } else deleteWith(input, 'deleteContentBackward')
+            expect([input.value, input.selectionStart, input.selectionEnd]).toEqual([value, caret, caret])
+          }
+          deleteWith(input, 'deleteContentBackward')
+          expect([input.value, input.selectionStart, input.selectionEnd]).toEqual(['-4444', 0, 0])
+        } finally {
+          dispose()
+          input.remove()
+        }
+      })
+    }
+
+    it('maps backwards selections at every boundary inside the disappearing divider', () => {
+      for (const [start, end] of [[4, 5], [5, 6], [4, 6]]) {
+        const input = setupInput()
+        input.value = '(111) -4444'
+        const dispose = bind(input, '(999) 999-9999', { eager })
+        input.setSelectionRange(start, end, 'backward')
+        try {
+          deleteWith(input, 'deleteContentBackward')
+          expect([input.value, input.selectionStart, input.selectionEnd]).toEqual(['(111-4444', 4, 4])
+        } finally {
+          dispose()
+          input.remove()
+        }
+      }
+    })
+
+    it('handles backward word and line deletion input types without resurrecting dividers', () => {
+      for (const [inputType, raw, caret, value, expectedCaret] of [
+        ['deleteWordBackward', '(111 -4444', 5, '(111-4444', 4],
+        ['deleteSoftLineBackward', '-4444', 0, '-4444', 0],
+        ['deleteHardLineBackward', '-4444', 0, '-4444', 0],
+      ] as const) {
+        const input = setupInput()
+        input.value = '(111) -4444'
+        const dispose = bind(input, '(999) 999-9999', { eager })
+        try {
+          input.value = raw
+          input.setSelectionRange(caret, caret)
+          input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType }))
+          expect([input.value, input.selectionStart, input.selectionEnd]).toEqual([value, expectedCaret, expectedCaret])
+        } finally {
+          dispose()
+          input.remove()
+        }
+      }
+    })
+
+    it('uses the input event when Android key information is missing or unidentified', async () => {
+      for (const key of ['', 'Unidentified', 'Backspace']) {
+        const input = setupInput()
+        input.value = '(111) -4444'
+        const dispose = bind(input, '(999) 999-9999', { eager })
+        input.setSelectionRange(6, 6)
+        try {
+          input.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+          deleteWith(input, 'deleteContentBackward')
+          expect([input.value, input.selectionStart, input.selectionEnd]).toEqual(['(111-4444', 4, 4])
+          await flushRafs()
+          expect([input.value, input.selectionStart, input.selectionEnd]).toEqual(['(111-4444', 4, 4])
+        } finally {
+          dispose()
+          input.remove()
+        }
+      }
+    })
+  })
+}
+
 // Flat mode is deliberately untouched.
 describe('{ segmented: false } still repacks everything from the left', () => {
   it('drags the tail forward, which is the whole point of flat mode', () => {

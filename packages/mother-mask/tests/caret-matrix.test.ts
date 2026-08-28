@@ -225,14 +225,16 @@ describe('caret matrix — select + delete at every selection range', () => {
               // eager off, regardless of `options.eager`.
               const m = buildMask(raw, cfg.mask, start, { ...options, eager: false })
               const expectedValue = m.process()
-              // Backspace is a direct pass-through of the post-deletion caret
-              // (`start`). Delete additionally nudges past a reflowed literal
-              // when the masked length is unchanged by the edit — re-derived
-              // here from the two independently computed lengths. Either way,
-              // `setSelectionRange` clamps to the (possibly shorter, reflowed)
-              // value length, same as any real browser.
+              // Backspace cannot cross the untouched suffix: removing extra
+              // divider text on the left moves that boundary left as well.
+              // Derive it from the surviving suffix, not bind's caret helper.
+              // An unchanged prefix wins when shorter arrays merge identical dividers.
+              const suffix = cfg.full.slice(end)
+              const backwardLimit = !expectedValue.startsWith(cfg.full.slice(0, start)) && expectedValue.endsWith(suffix)
+                ? expectedValue.length - suffix.length : start
+              // Forward Delete retains its one-position nudge when restoring a literal.
               const rawCaret =
-                mode === 'backspace' ? start : cfg.full.length === expectedValue.length ? start + 1 : start
+                mode === 'backspace' ? Math.min(start, backwardLimit) : cfg.full.length === expectedValue.length ? start + 1 : start
               const expectedCaret = Math.min(rawCaret, expectedValue.length)
 
               if (input.value !== expectedValue || input.selectionStart !== expectedCaret || input.selectionEnd !== expectedCaret) {
@@ -273,8 +275,10 @@ describe('caret matrix — Backspace at every position (no selection)', () => {
           // eager off — see the comment in the "select + delete" matrix above.
           const m = buildMask(raw, cfg.mask, pos - 1, { ...options, eager: false })
           const expectedValue = m.process()
-          // `setSelectionRange` clamps to the (possibly shorter, reflowed) value length.
-          const expectedCaret = Math.min(pos - 1, expectedValue.length)
+          const suffix = cfg.full.slice(pos)
+          const backwardLimit = !expectedValue.startsWith(cfg.full.slice(0, pos - 1)) && expectedValue.endsWith(suffix)
+            ? expectedValue.length - suffix.length : pos - 1
+          const expectedCaret = Math.min(pos - 1, backwardLimit, expectedValue.length)
 
           if (input.value !== expectedValue || input.selectionStart !== expectedCaret || input.selectionEnd !== expectedCaret) {
             failures.push(

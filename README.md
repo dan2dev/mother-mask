@@ -221,6 +221,10 @@ while later segments still contain data. For example, three Backspaces over
 type a replacement. This also works with `eager: false`. Trailing separators
 still follow eager mode, and selecting everything and deleting clears the input.
 
+If another Backspace removes part of a divider, the caret follows any collapsed
+text to the left: `(111|-3333`, never `(111-|3333`. Backward word/line deletion
+uses the same caret rule; movement through a divider that stays visible is preserved.
+
 Separators left in the value also anchor the characters around them, so an edit that replaces whole fields leaves the rest where it was:
 
 ```ts
