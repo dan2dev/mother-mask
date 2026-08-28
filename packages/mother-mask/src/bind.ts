@@ -1,9 +1,17 @@
 import { applyWithCompiler } from './apply-mask'
+import {
+  createFrameScheduler,
+  editStillPending,
+  getCaret,
+  isAlreadyBound,
+  MASKED_ATTR,
+  releaseOnce,
+  setCaret,
+  trackAttrs,
+} from './bind-shared'
 import { getMaxLength, PatternCompiler } from './pattern'
 import { isIos } from './platform'
-import type { BindOptions, MaskPattern, MaskResult } from './types'
-
-const MASKED_ATTR = 'data-masked'
+import type { BindOptions, MaskPattern, MaskResolver, MaskResult } from './types'
 
 function toBindOptions(
   third: BindOptions | ((value: string) => void) | null | undefined,
@@ -11,37 +19,6 @@ function toBindOptions(
   if (third == null) return {}
   if (typeof third === 'function') return { onChange: third }
   return third
-}
-
-function getCaret(target: HTMLInputElement): number {
-  try {
-    return target.selectionStart ?? target.value.length
-  } catch {
-    return target.value.length
-  }
-}
-
-function setCaret(target: HTMLInputElement, caret: number): void {
-  try {
-    // DOM selections use UTF-16 offsets; never leave the caret inside a pair.
-    if (
-      caret > 0 && caret < target.value.length &&
-      target.value.charCodeAt(caret) >= 0xdc00 && target.value.charCodeAt(caret) <= 0xdfff &&
-      target.value.charCodeAt(caret - 1) >= 0xd800 && target.value.charCodeAt(caret - 1) <= 0xdbff
-    ) caret--
-    target.setSelectionRange(caret, caret)
-  } catch {
-    // Some input types (for example type="number") do not support text selection.
-  }
-}
-
-/** A retained dispose handle must not retain the binding after it has run. */
-function releaseOnce(cleanup: (() => void) | undefined): () => void {
-  return () => {
-    const release = cleanup
-    cleanup = undefined
-    release?.()
-  }
 }
 
 type InputEditKind = 'insert' | 'backspace' | 'delete' | 'unidentified'
@@ -96,6 +73,41 @@ function eagerForEdit(eager: boolean | undefined, isDeleteLike: boolean): boolea
 }
 
 /**
+ * Where the caret lands after a reformat, shared by the `input`-event path
+ * (`onInput`) and its `keydown`/`keyup` fallback (`onKey`) — both apply the
+ * same reasoning once the edit is classified into an {@link InputEditKind},
+ * just from differently-shaped signals (`InputEvent.inputType` vs.
+ * `KeyboardEvent.key`).
+ *
+ * - A resolver mask that actually changed the value takes its own
+ *   source-mapped caret, since the candidate stream it reflowed can't be
+ *   reasoned about positionally like a fixed pattern.
+ * - An unidentified edit (unreliable/missing `key`) only trusts the masked
+ *   caret once the value visibly grew — otherwise it's likely a no-op or a
+ *   delete misreported as unidentified, so the pre-edit position holds.
+ * - A forward Delete that didn't shrink the value (e.g. it landed on a
+ *   literal and consumed nothing) leaves the caret one past where the user
+ *   pressed it, matching native forward-delete-through-a-literal behavior.
+ * - Backspace defers to {@link backwardCaret}'s divider-aware logic.
+ * - A plain insert takes the masked caret outright.
+ */
+function resolveCaretAfterEdit(
+  kind: InputEditKind,
+  rawValue: string,
+  pos: number,
+  previousLength: number,
+  masked: MaskResult,
+  resolveMask: MaskResolver | undefined,
+  baselineValue: string,
+): number {
+  if (resolveMask && masked.value !== rawValue && masked.value !== baselineValue) return masked.caret
+  if (kind === 'unidentified') return masked.value.length > previousLength ? masked.caret : pos
+  if (kind === 'delete') return previousLength === masked.value.length ? pos + 1 : pos
+  if (kind === 'backspace') return backwardCaret(rawValue, pos, masked)
+  return masked.caret
+}
+
+/**
  * Bind a mask pattern to an input element.
  *
  * Idempotent — calling `bind()` on an already-bound element has no effect.
@@ -127,7 +139,7 @@ export function bind(
   mask: MaskPattern,
   third?: BindOptions | ((value: string) => void) | null,
 ): () => void {
-  if (input.getAttribute(MASKED_ATTR) !== null) return () => {}
+  if (isAlreadyBound(input)) return () => {}
 
   const { onChange, segmented, eager, tokens, resolveMask } = toBindOptions(third)
 
@@ -139,14 +151,8 @@ export function bind(
   // built-in-only masks. Provisional Pinyin/Kana may be much longer than output.
   const deferComposition = !!tokens && Object.keys(tokens).length > 0
 
-  /** Attribute names set by this bind call; removed on dispose so a later `bind()` can re-apply. */
-  const attrsSetHere: string[] = []
-  const setIfMissing = (name: string, value: string): void => {
-    if (!input.hasAttribute(name)) {
-      input.setAttribute(name, value)
-      attrsSetHere.push(name)
-    }
-  }
+  // Attributes set here are removed on dispose so a later `bind()` can re-apply them.
+  const { setIfMissing, removeTracked } = trackAttrs(input)
 
   // Resolver capacity is unknowable; custom-token IME drafts may exceed even
   // the two-UTF-16-unit-per-slot bound. Enforce those capacities in the engine.
@@ -169,32 +175,14 @@ export function bind(
   let lastMaskedValue = (input as HTMLInputElement).value ?? ''
 
   const keyEventName = isIos() ? 'keyup' : 'keydown'
-
-  // requestAnimationFrame callbacks scheduled below outlive a single keystroke
-  // handler and close over `target` (the input element). If `dispose()` runs
-  // before a frame fires — e.g. the field unmounts right after the user types
-  // — the uncancelled callback keeps that element (and this closure) alive
-  // until the next paint, which can be a very long time on a backgrounded
-  // tab. Track every scheduled frame so dispose can cancel what's pending.
-  const pendingFrames = new Set<number>()
-  const scheduleFrame = (callback: () => void): void => {
-    const id = requestAnimationFrame(() => {
-      pendingFrames.delete(id)
-      callback()
-    })
-    pendingFrames.add(id)
-  }
-  const cancelPendingFrames = (): void => {
-    for (const id of pendingFrames) cancelAnimationFrame(id)
-    pendingFrames.clear()
-  }
+  const { scheduleFrame, cancelPendingFrames } = createFrameScheduler()
 
   const onPaste = (e: Event): void => {
     const target = e.target as HTMLInputElement
     const oldValue = target.value
     scheduleFrame(() => {
       if (deferComposition && isComposing) return
-      if (target.value === oldValue && target.selectionStart !== target.selectionEnd) return
+      if (editStillPending(target, oldValue)) return
       const m = format(target.value, getCaret(target))
       target.value = m.value
       setCaret(target, m.caret)
@@ -222,7 +210,7 @@ export function bind(
     lockInput = false
     skipNextKeyup = true
     if (deferComposition && (isComposing || inputEvent.isComposing)) return
-    if (target.value === lastMaskedValue && target.selectionStart !== target.selectionEnd) return
+    if (editStillPending(target, lastMaskedValue)) return
 
     const pos = getCaret(target)
     const previousLength = lastMaskedValue.length
@@ -230,20 +218,7 @@ export function bind(
     const rawValue = target.value
     const m = format(rawValue, pos, eagerForEdit(eager, kind === 'backspace' || kind === 'delete'))
     target.value = m.value
-
-    if (resolveMask && m.value !== rawValue && m.value !== lastMaskedValue) {
-      setCaret(target, m.caret)
-    } else if (kind === 'unidentified') {
-      const newPos = target.value.length > previousLength ? m.caret : pos
-      setCaret(target, newPos)
-    } else if (kind === 'delete') {
-      const newPos = previousLength === target.value.length ? pos + 1 : pos
-      setCaret(target, newPos)
-    } else if (kind === 'backspace') {
-      setCaret(target, backwardCaret(rawValue, pos, m))
-    } else {
-      setCaret(target, m.caret)
-    }
+    setCaret(target, resolveCaretAfterEdit(kind, rawValue, pos, previousLength, m, resolveMask, lastMaskedValue))
 
     lastMaskedValue = target.value
     onChange?.(target.value)
@@ -287,9 +262,7 @@ export function bind(
     if (!(ke as { key?: string }).key) {
       lockInput = true
       scheduleFrame(() => {
-        // The browser hasn't applied this keystroke's default action yet —
-        // see the comment on the identical check below.
-        if (target.value === oldValue && target.selectionStart !== target.selectionEnd) {
+        if (editStillPending(target, oldValue)) {
           lockInput = false
           return
         }
@@ -342,39 +315,20 @@ export function bind(
     // selection.
     if (!isBackspace && !isDelete && !isCharInsert && !isUnidentified) return
 
+    // Bailing here (rather than reformatting) matters when the frame fires
+    // before the browser has applied this keystroke's default action — see
+    // `editStillPending`'s doc comment. The authoritative `input` handler
+    // takes over once the edit actually lands; a collapsed caret (every
+    // other test/path exercises) is unaffected by this check.
+    const kind: InputEditKind = isBackspace ? 'backspace' : isDelete ? 'delete' : isUnidentified ? 'unidentified' : 'insert'
     scheduleFrame(() => {
-      // The scheduled frame can fire before the browser has actually applied
-      // this keystroke's default action (confirmed via real-Firefox
-      // tracing: `target.value` is still unchanged here). If the selection
-      // is still a real range at that point, it's the range the user had
-      // *before* typing — not a post-edit collapsed caret — and the browser
-      // still intends to use it to replace-with-the-typed-character. Calling
-      // `setSelectionRange` below would collapse that range out from under
-      // the pending native edit, so the character gets inserted at the
-      // collapsed point instead of replacing the selection (or dropped
-      // entirely). Bail and let the authoritative `input` handler take over
-      // once the edit actually lands — a collapsed caret (the case every
-      // other test/path exercises) is unaffected by this check.
-      if (target.value === oldValue && target.selectionStart !== target.selectionEnd) return
+      if (editStillPending(target, oldValue)) return
 
       const pos = target.selectionStart ?? 999
       const rawValue = target.value
       const m = format(rawValue, pos, eagerForEdit(eager, isBackspace || isDelete))
       target.value = m.value
-
-      if (resolveMask && m.value !== rawValue && m.value !== oldValue) {
-        setCaret(target, m.caret)
-      } else if (isUnidentified) {
-        const newPos = target.value.length > oldValue.length ? m.caret : pos
-        setCaret(target, newPos)
-      } else if (isDelete) {
-        const newPos = oldValue.length === target.value.length ? pos + 1 : pos
-        setCaret(target, newPos)
-      } else if (isBackspace) {
-        setCaret(target, backwardCaret(rawValue, pos, m))
-      } else if (isCharInsert) {
-        setCaret(target, m.caret)
-      }
+      setCaret(target, resolveCaretAfterEdit(kind, rawValue, pos, oldValue.length, m, resolveMask, oldValue))
 
       lastMaskedValue = target.value
       onChange?.(target.value)
@@ -394,7 +348,7 @@ export function bind(
     input.removeEventListener('compositionend', onCompositionEnd)
     input.removeEventListener(keyEventName, onKey)
     input.removeAttribute(MASKED_ATTR)
-    for (const name of attrsSetHere) input.removeAttribute(name)
+    removeTracked()
     cancelPendingFrames()
   })
 }

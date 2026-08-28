@@ -1,6 +1,6 @@
 import type { ApplyMaskOptions, MaskPattern, MaskResult } from './types'
 import { PatternCompiler, defaultCompiler, transformChar } from './pattern'
-import type { CompiledMask } from './pattern'
+import type { CompiledMask, LiteralToken } from './pattern'
 
 // ---------------------------------------------------------------------------
 // Flat masking (opt-in) — treats the mask as one continuous character
@@ -138,7 +138,8 @@ function applyFlatMask(
  * run 0 — so the lookup is always defined.
  */
 function separatorBefore(plan: CompiledMask, run: number): string {
-  return (plan.tokens[plan.literalBeforeRun[run]] as { text: string }).text
+  // literalBeforeRun[run] always indexes a literal token by construction (see CompiledMask docs).
+  return (plan.tokens[plan.literalBeforeRun[run]] as LiteralToken).text
 }
 
 /** Count of remaining slot-matchable (digit/letter) characters in `value` from `fromIdx` onward. */
@@ -327,11 +328,13 @@ function resolveLiteralVisibility(
     if (runFilled[run] === 0) continue
     const litToken = literalBeforeRun[run]
     if (litToken >= 0) {
-      const text = (tokens[litToken] as { text: string }).text
+      // Both casts are literal tokens by construction — literalBeforeRun only ever
+      // points at the literal directly before a run (see CompiledMask docs).
+      const text = (tokens[litToken] as LiteralToken).text
       for (let skipped = previousFilledRun + 1; skipped < run; skipped++) {
         const skippedLit = literalBeforeRun[skipped]
         if (skippedLit < 0) continue
-        if ((tokens[skippedLit] as { text: string }).text === text) visible[skippedLit] = true
+        if ((tokens[skippedLit] as LiteralToken).text === text) visible[skippedLit] = true
       }
     }
     previousFilledRun = run

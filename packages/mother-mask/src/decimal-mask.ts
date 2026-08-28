@@ -1,12 +1,5 @@
 import type { DecimalMaskOptions, MaskResult } from './types'
-
-// ---------------------------------------------------------------------------
-// Character classification (no regex — mirrors apply-mask.ts)
-// ---------------------------------------------------------------------------
-
-function isDigitChar(ch: string): boolean {
-  return ch >= '0' && ch <= '9'
-}
+import { isDigitChar } from './chars'
 
 // ---------------------------------------------------------------------------
 // Option resolution
@@ -75,6 +68,24 @@ function groupThousands(s: string, sep: string): string {
   }
   parts.unshift(s.slice(0, i))
   return parts.join(sep)
+}
+
+/**
+ * Turn raw integer digits into their displayed form: zeros stripped, then
+ * left-padded to `numberPlaces` (if set), then thousands-grouped (if
+ * `segmented`). Shared by {@link applyDecimalMask} and
+ * {@link formatDecimalValue} — the caret math in the former also needs
+ * `intPart`/`paddedInt` individually to know how many synthetic zeros it
+ * inserted, so all three stages are returned rather than just the result.
+ */
+function formatIntegerPart(
+  intDigits: string,
+  opts: Pick<ResolvedDecimalOptions, 'numberPlaces' | 'segmented' | 'separator'>,
+): { intPart: string; paddedInt: string; groupedInt: string } {
+  const intPart = stripLeadingZeros(intDigits || '0')
+  const paddedInt = opts.numberPlaces != null ? intPart.padStart(opts.numberPlaces, '0') : intPart
+  const groupedInt = opts.segmented ? groupThousands(paddedInt, opts.separator) : paddedInt
+  return { intPart, paddedInt, groupedInt }
 }
 
 /**
@@ -255,9 +266,7 @@ export function applyDecimalMask(
   const { isNegative, intDigits, fracDigits, hasSeparator } = computeDecimalParts(value, opts)
   if (intDigits === '' && fracDigits === '' && !hasSeparator) return { value: '', caret: 0 }
 
-  const intPart = stripLeadingZeros(intDigits || '0')
-  const paddedInt = opts.numberPlaces != null ? intPart.padStart(opts.numberPlaces, '0') : intPart
-  const groupedInt = opts.segmented ? groupThousands(paddedInt, opts.separator) : paddedInt
+  const { intPart, paddedInt, groupedInt } = formatIntegerPart(intDigits, opts)
   const fracPadded =
     opts.decimalPlaces != null && opts.decimalPlaces > 0
       ? fracDigits.padEnd(opts.decimalPlaces, '0')
@@ -464,10 +473,7 @@ export function formatDecimalValue(value: number, options?: DecimalMaskOptions):
   const dotIdx = fixed.indexOf('.')
   const intRaw = dotIdx === -1 ? fixed : fixed.slice(0, dotIdx)
   const fracPart = dotIdx === -1 ? '' : fixed.slice(dotIdx + 1)
-  const intPart = stripLeadingZeros(intRaw || '0')
-  const paddedInt = opts.numberPlaces != null ? intPart.padStart(opts.numberPlaces, '0') : intPart
-
-  const groupedInt = opts.segmented ? groupThousands(paddedInt, opts.separator) : paddedInt
+  const { groupedInt } = formatIntegerPart(intRaw, opts)
   const showFraction = opts.decimalPlaces === 0 ? false : fracPart !== ''
   const numberStr = groupedInt + (showFraction ? opts.decimalSeparator + fracPart : '')
 

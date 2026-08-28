@@ -1,4 +1,14 @@
 import {
+  createFrameScheduler,
+  editStillPending,
+  getCaret,
+  isAlreadyBound,
+  MASKED_ATTR,
+  releaseOnce,
+  setCaret,
+  trackAttrs,
+} from './bind-shared'
+import {
   applyDecimalMask,
   applyDecimalMaskReplacingLoneZero,
   applyDecimalMaskUnmergingSeparator,
@@ -8,8 +18,6 @@ import {
 } from './decimal-mask'
 import { isIos } from './platform'
 import type { BindDecimalOptions, DecimalMaskOptions, MaskResult } from './types'
-
-const MASKED_ATTR = 'data-masked'
 
 function toBindDecimalOptions(
   second:
@@ -31,22 +39,6 @@ interface DecimalEdit {
   insertedText?: string | null
   insertedAt?: number
   inputType?: string
-}
-
-function getCaret(target: HTMLInputElement): number {
-  try {
-    return target.selectionStart ?? target.value.length
-  } catch {
-    return target.value.length
-  }
-}
-
-function setCaret(target: HTMLInputElement, caret: number): void {
-  try {
-    target.setSelectionRange(caret, caret)
-  } catch {
-    // Some input types (for example type="number") do not support text selection.
-  }
 }
 
 /**
@@ -73,19 +65,14 @@ export function bindDecimal(
   input: HTMLInputElement | Element,
   second?: BindDecimalOptions | ((value: string, numericValue: number) => void) | null,
 ): () => void {
-  if (input.getAttribute(MASKED_ATTR) !== null) return () => {}
+  if (isAlreadyBound(input)) return () => {}
 
   const { onChange, ...maskOptions } = toBindDecimalOptions(second)
   const decimalOptions: DecimalMaskOptions = maskOptions
   const { decimalSeparator, decimalPlaces } = resolveDecimalOptions(decimalOptions)
 
-  const attrsSetHere: string[] = []
-  const setIfMissing = (name: string, value: string): void => {
-    if (!input.hasAttribute(name)) {
-      input.setAttribute(name, value)
-      attrsSetHere.push(name)
-    }
-  }
+  // Attributes set here are removed on dispose so a later `bindDecimal()` can re-apply them.
+  const { setIfMissing, removeTracked } = trackAttrs(input)
 
   input.setAttribute(MASKED_ATTR, 'decimal')
   setIfMissing('autocomplete', 'off')
@@ -98,25 +85,7 @@ export function bindDecimal(
   let skipNextKeyup = false
   let pendingSeparatorEdit: { text: string; starts: number[] } | null = null
   const keyEventName = isIos() ? 'keyup' : 'keydown'
-
-  // requestAnimationFrame callbacks scheduled below outlive a single keystroke
-  // handler and close over `target` (the input element). If `dispose()` runs
-  // before a frame fires — e.g. the field unmounts right after the user types
-  // — the uncancelled callback keeps that element (and this closure) alive
-  // until the next paint, which can be a very long time on a backgrounded
-  // tab. Track every scheduled frame so dispose can cancel what's pending.
-  const pendingFrames = new Set<number>()
-  const scheduleFrame = (callback: () => void): void => {
-    const id = requestAnimationFrame(() => {
-      pendingFrames.delete(id)
-      callback()
-    })
-    pendingFrames.add(id)
-  }
-  const cancelPendingFrames = (): void => {
-    for (const id of pendingFrames) cancelAnimationFrame(id)
-    pendingFrames.clear()
-  }
+  const { scheduleFrame, cancelPendingFrames } = createFrameScheduler()
 
   const applyResult = (target: HTMLInputElement, m: MaskResult): void => {
     target.value = m.value
@@ -273,9 +242,7 @@ export function bindDecimal(
     if (!(ke as { key?: string }).key) {
       lockInput = true
       scheduleFrame(() => {
-        // The browser hasn't applied this keystroke's default action yet —
-        // see the comment on the identical check below.
-        if (target.value === oldValue && target.selectionStart !== target.selectionEnd) {
+        if (editStillPending(target, oldValue)) {
           lockInput = false
           return
         }
@@ -320,17 +287,11 @@ export function bindDecimal(
     // character insertion for this keystroke isn't guaranteed to have landed
     // yet at the point a keydown listener runs — only by the next frame.
     scheduleFrame(() => {
-      // The frame can fire before the browser has actually applied this
-      // keystroke's default action. If the selection is still a real range
-      // at that point, it's the range the user had *before* typing — not a
-      // post-edit collapsed caret — and the browser still intends to use it
-      // to replace-with-the-typed-character. Formatting now would collapse
-      // that range via `setCaret` inside `formatCurrentValue` before the
-      // pending native edit can use it, dropping or corrupting the
-      // keystroke instead of replacing the selection with it (the same
-      // Firefox race fixed in `bind.ts`). A collapsed caret (every other
-      // path/test) is unaffected by this check.
-      if (target.value === oldValue && target.selectionStart !== target.selectionEnd) return
+      // Formatting now would collapse a still-pending native selection via
+      // `setCaret` inside `formatCurrentValue` before the edit lands — see
+      // `editStillPending`'s doc comment (the same Firefox race fixed in
+      // `bind.ts`).
+      if (editStillPending(target, oldValue)) return
 
       formatCurrentValue(target, {
         insertedText: isCharInsert ? ke.key : null,
@@ -350,14 +311,14 @@ export function bindDecimal(
   input.addEventListener('compositionend', onCompositionEnd)
   input.addEventListener(keyEventName, onKey)
 
-  return () => {
+  return releaseOnce(() => {
     input.removeEventListener('paste', onPaste)
     input.removeEventListener('input', onInput)
     input.removeEventListener('compositionstart', onCompositionStart)
     input.removeEventListener('compositionend', onCompositionEnd)
     input.removeEventListener(keyEventName, onKey)
     input.removeAttribute(MASKED_ATTR)
-    for (const name of attrsSetHere) input.removeAttribute(name)
+    removeTracked()
     cancelPendingFrames()
-  }
+  })
 }

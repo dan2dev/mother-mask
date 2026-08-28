@@ -1,14 +1,11 @@
 import type { ApplyMaskOptions, MaskPattern, MaskResult, MaskTokens, TokenMatcher } from './types'
+import { isDigitChar } from './chars'
 
 /** A slot consumes one code point. Source/caret offsets remain UTF-16 DOM offsets. */
 export interface Slot {
   match: (char: string) => boolean
   transform?: (char: string) => string
   maxLength: number
-}
-
-function isDigitChar(ch: string): boolean {
-  return ch >= '0' && ch <= '9'
 }
 
 function isLetterChar(ch: string): boolean {
@@ -41,7 +38,12 @@ export function transformChar(char: string, slot: Slot): string {
   return output
 }
 
-export type MaskToken = { kind: 'literal'; text: string } | { kind: 'slots'; chars: Slot[] }
+export interface LiteralToken {
+  kind: 'literal'
+  text: string
+}
+
+export type MaskToken = LiteralToken | { kind: 'slots'; chars: Slot[] }
 
 /**
  * A mask string pre-chewed into the lookups both passes need.
@@ -52,7 +54,7 @@ export type MaskToken = { kind: 'literal'; text: string } | { kind: 'slots'; cha
  */
 export interface CompiledMask {
   maxLength: number
-  parts: Array<Slot | { kind: 'literal'; text: string }>
+  parts: Array<Slot | LiteralToken>
   dataSlots: Slot[]
   literals: Array<{ text: string; offset: number }>
   hasEscapes: boolean
@@ -190,8 +192,7 @@ export class PatternCompiler {
 
   constructor(tokens?: MaskTokens) {
     this.custom = !!tokens && Object.keys(tokens).length > 0
-    for (const key of Object.keys(tokens ?? {})) {
-      const definition = tokens![key]
+    for (const [key, definition] of Object.entries(tokens ?? {})) {
       if (key === '\\' || Array.from(key).length !== 1) {
         throw new RangeError('Mask token keys must be one Unicode code point other than backslash')
       }
