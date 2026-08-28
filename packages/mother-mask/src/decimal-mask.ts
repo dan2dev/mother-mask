@@ -119,14 +119,65 @@ interface DecimalParts {
   hasSeparator: boolean
 }
 
+/** A raw value split into its sign, its editable number text, and where that text starts. */
+interface AffixSplit {
+  /** `'-'` when a leading sign was stripped, `''` otherwise. */
+  sign: string
+  /** The value with sign, prefix and suffix removed — the part the user is really editing. */
+  body: string
+  /** Index in the original string where `body` begins. */
+  bodyStart: number
+}
+
+/**
+ * Peel the sign, prefix and suffix off a raw value.
+ *
+ * The prefix and suffix are chrome, not content, so they must not reach the
+ * digit parser at all: a prefix like `"Q1 "` would otherwise donate its `1`
+ * to the number on every keystroke, and one like `"No. "` would have its `.`
+ * read as the decimal separator and collapse the whole value. Everything
+ * downstream works on `body` so affix text simply cannot be misread.
+ *
+ * Matching is deliberately strict — an affix is only peeled when it is
+ * actually sitting at its edge. Mid-edit a value may have a partly deleted
+ * prefix, and then nothing is stripped and the old "drop unknown characters
+ * as noise" behavior still applies.
+ */
+function splitAffixes(raw: string, opts: ResolvedDecimalOptions): AffixSplit {
+  let start = 0
+  let sign = ''
+  // The prefix is tried at index 0 *before* a leading "-" is read as a sign,
+  // so a prefix that itself begins with "-" is not mistaken for one. Only
+  // when the prefix does not match there does a leading "-" become the sign,
+  // and the prefix is then looked for just after it — which is exactly how
+  // the formatter lays a negative value out ("-" + prefix + number).
+  if (opts.prefix && raw.startsWith(opts.prefix)) {
+    start = opts.prefix.length
+  } else {
+    if (opts.allowNegative && raw[0] === '-') {
+      sign = '-'
+      start = 1
+    }
+    if (opts.prefix && raw.startsWith(opts.prefix, start)) start += opts.prefix.length
+  }
+
+  let end = raw.length
+  if (opts.suffix && raw.endsWith(opts.suffix) && end - opts.suffix.length >= start) {
+    end -= opts.suffix.length
+  }
+
+  return { sign, body: raw.slice(start, end), bodyStart: start }
+}
+
 function computeDecimalParts(raw: string, opts: ResolvedDecimalOptions): DecimalParts {
+  const split = splitAffixes(raw, opts)
   let intDigits = ''
   let fracDigits = ''
-  let isNegative = false
+  let isNegative = split.sign === '-'
   let inFraction = false
   const canHaveFraction = opts.decimalPlaces !== 0
 
-  for (const ch of raw) {
+  for (const ch of split.body) {
     if (isDigitChar(ch)) {
       if (inFraction) {
         if (opts.decimalPlaces == null || fracDigits.length < opts.decimalPlaces) fracDigits += ch
@@ -216,8 +267,13 @@ export function applyDecimalMask(
   const signStr = isNegative ? '-' : ''
   const output = signStr + opts.prefix + numberStr + opts.suffix
 
-  const clampedCaret = Math.max(0, Math.min(inputCaret, value.length))
-  const { inFraction, digitsBefore } = locateCaretSegment(value, clampedCaret, opts)
+  // The caret is resolved inside the *body* for the same reason parsing is:
+  // affix characters must not be counted as digits, and a caret parked in the
+  // prefix (or out past the suffix) collapses to the nearest edge of the
+  // number rather than landing somewhere inside the chrome.
+  const split = splitAffixes(value, opts)
+  const bodyCaret = Math.max(0, Math.min(inputCaret - split.bodyStart, split.body.length))
+  const { inFraction, digitsBefore } = locateCaretSegment(split.body, bodyCaret, opts)
   const prefixLen = signStr.length + opts.prefix.length
   // Left-padding zeros are synthetic — prepended ahead of every real typed
   // digit — so they shift where the caret's `digitsBefore`-th real digit
@@ -286,6 +342,55 @@ export function applyDecimalMaskUnmergingSeparator(
   const signPart = isNegative ? '-' : ''
   const raw = signPart + remainingInt + opts.decimalSeparator + fracDigits
   return applyDecimalMask(raw, signPart.length + remainingInt.length, opts)
+}
+
+/**
+ * Move a character the browser just inserted outside the editable number — at
+ * or before the sign/prefix, at or after the suffix — to the nearest edge of
+ * the number instead.
+ *
+ * The affixes are chrome, not content. Clicking at the far left of `"$0.00"`
+ * and typing `"2"` means "make this two dollars", not "put a 2 to the left of
+ * the dollar sign". Left alone the keystroke lands outside the number, reads
+ * back as an extra leading digit (`"$20.00"`), and — worse — a caret one
+ * position further right, which looks identical to the user, behaves
+ * completely differently.
+ *
+ * Takes the inserted *length* rather than the text so it stays correct after
+ * an earlier pass has rewritten the character in place (a numeric keypad's
+ * `","` normalized to the configured decimal separator, say); whatever now
+ * occupies that span is what gets moved.
+ *
+ * `value`/`caret` are the state *after* the browser applied the insertion,
+ * the same post-insertion snapshot the rest of this module expects. Returns
+ * `null` when the character already landed inside the number, so the caller
+ * carries on with the value it has.
+ */
+export function relocateAffixInsertion(
+  value: string,
+  caret: number,
+  insertedLength: number,
+  options?: DecimalMaskOptions,
+): MaskResult | null {
+  if (insertedLength <= 0) return null
+  const insertIdx = caret - insertedLength
+  if (insertIdx < 0 || caret > value.length) return null
+
+  // The value as it stood before this keystroke — the only form in which the
+  // affixes are guaranteed to still be sitting at their own edges.
+  const before = value.slice(0, insertIdx) + value.slice(caret)
+  const opts = resolveDecimalOptions(options)
+  const { bodyStart, body } = splitAffixes(before, opts)
+  const editEnd = bodyStart + body.length
+
+  const moveTo = insertIdx < bodyStart ? bodyStart : insertIdx > editEnd ? editEnd : -1
+  if (moveTo < 0) return null
+
+  const inserted = value.slice(insertIdx, caret)
+  return {
+    value: before.slice(0, moveTo) + inserted + before.slice(moveTo),
+    caret: moveTo + insertedLength,
+  }
 }
 
 /**

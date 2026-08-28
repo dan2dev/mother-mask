@@ -2,6 +2,7 @@ import {
   applyDecimalMask,
   applyDecimalMaskReplacingLoneZero,
   applyDecimalMaskUnmergingSeparator,
+  relocateAffixInsertion,
   resolveDecimalOptions,
   unmaskDecimal,
 } from './decimal-mask'
@@ -180,6 +181,25 @@ export function bindDecimal(
     const insertedText = edit.insertedText
     if (insertedText != null) {
       normalizeSeparator(insertedText, [edit.insertedAt, pos - insertedText.length])
+    }
+
+    // The prefix and suffix are chrome, not content. A character the browser
+    // dropped into them — caret parked at the far left of "$0.00", or out past
+    // a suffix — is pulled to the nearest edge of the number, so every caret
+    // position that *looks* like "the start of the number" behaves like it.
+    // Runs after separator normalization so it moves whatever now occupies
+    // that span, not the key the user originally pressed.
+    if (insertedText != null && insertedText.length > 0) {
+      const relocated = relocateAffixInsertion(
+        target.value,
+        pos,
+        insertedText.length,
+        decimalOptions,
+      )
+      if (relocated) {
+        target.value = relocated.value
+        pos = relocated.caret
+      }
     }
 
     // Typing a digit into a field whose integer part isn't yet full of real

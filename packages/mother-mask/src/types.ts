@@ -105,9 +105,23 @@ export interface DecimalMaskOptions {
   separator?: string
   /** Separator between the integer and fractional parts. @default '.' */
   decimalSeparator?: string
-  /** Fixed text prepended to the formatted number (after the sign, if negative). @default '' */
+  /**
+   * Fixed text prepended to the formatted number (after the sign, if
+   * negative). Inert: it is chrome, not content. A character typed with the
+   * caret parked before or inside it is treated as typed at the start of the
+   * number — clicking the far left of `"$0.00"` and typing `"2"` gives
+   * `"$2.00"`, exactly as it would one position to the right — and its own
+   * text is never read back as part of the number, so a prefix carrying a
+   * digit or the decimal separator (`"Q1 "`, `"No. "`) stays out of the
+   * value. @default ''
+   */
   prefix?: string
-  /** Fixed text appended to the formatted number. @default '' */
+  /**
+   * Fixed text appended to the formatted number. Inert in the same way
+   * {@link DecimalMaskOptions.prefix} is: typing with the caret inside or
+   * past it lands the character at the end of the number, and its text never
+   * contributes digits. @default ''
+   */
   suffix?: string
   /** Allow a leading `-` to produce a negative value. @default false */
   allowNegative?: boolean

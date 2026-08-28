@@ -76,6 +76,21 @@ bindDecimal(input, {
 })
 ```
 
+`prefix` and `suffix` are chrome, not content. Typing with the caret parked inside them lands the character at the nearest edge of the number, so every spot that looks like the start of the number behaves like it:
+
+```ts
+bindDecimal(input, { prefix: '$', decimalPlaces: 2 })
+// "$0.00" — caret at the far left, type "2"
+// → "$2|.00"   same as typing just after the "$"
+```
+
+Their text is never read back as part of the number either, so an affix carrying a digit or the decimal separator stays out of the value:
+
+```ts
+bindDecimal(input, { prefix: 'Q1 ', decimalPlaces: 2 })
+// typing 1234 → "Q1 1,234.00", and unmaskDecimal() reports 1234
+```
+
 ## Pattern Syntax
 
 | Character | Matches |
