@@ -215,6 +215,12 @@ Masks are segmented by default. Separators behave like boundaries, which keeps f
 bind(input, '99/99/9999')
 ```
 
+Deleting all the data in an internal segment preserves its existing dividers
+while later segments still contain data. For example, three Backspaces over
+`222` in `(111) 222-3333` leave `(111) |-3333` (`|` marks the caret), ready to
+type a replacement. This also works with `eager: false`. Trailing separators
+still follow eager mode, and selecting everything and deleting clears the input.
+
 Separators left in the value also anchor the characters around them, so an edit that replaces whole fields leaves the rest where it was:
 
 ```ts

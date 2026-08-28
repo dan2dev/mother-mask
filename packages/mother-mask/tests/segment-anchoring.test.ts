@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { applyMask, bind } from '../src/index'
+import { applyMask, bind, buildMask, process } from '../src/index'
+import type { ApplyMaskOptions, MaskPattern } from '../src/index'
 
 // ---------------------------------------------------------------------------
 // The separators still present in an edited value pin the characters around
@@ -53,10 +54,12 @@ function deleteWith(input: HTMLInputElement, inputType: 'deleteContentBackward' 
     input.value = input.value.slice(0, start) + input.value.slice(end)
     input.setSelectionRange(start, start)
   } else if (inputType === 'deleteContentBackward') {
-    input.value = input.value.slice(0, Math.max(0, start - 1)) + input.value.slice(start)
-    input.setSelectionRange(Math.max(0, start - 1), Math.max(0, start - 1))
+    const width = Array.from(input.value.slice(0, start)).pop()?.length ?? 0
+    input.value = input.value.slice(0, start - width) + input.value.slice(start)
+    input.setSelectionRange(start - width, start - width)
   } else {
-    input.value = input.value.slice(0, start) + input.value.slice(start + 1)
+    const width = Array.from(input.value.slice(start))[0]?.length ?? 0
+    input.value = input.value.slice(0, start) + input.value.slice(start + width)
     input.setSelectionRange(start, start)
   }
   input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType }))
@@ -492,9 +495,129 @@ describe('bind() — editing around a pinned tail', () => {
 })
 
 // ---------------------------------------------------------------------------
-// Flat mode is deliberately untouched
+// Empty middle segments keep their surviving boundaries
 // ---------------------------------------------------------------------------
 
+interface EmptySegmentCase {
+  name: string
+  mask: MaskPattern
+  left: string
+  middle: string
+  right: string
+  refill: string
+  expectedRefill?: string
+  options?: ApplyMaskOptions
+}
+
+const EMPTY_SEGMENT_CASES: EmptySegmentCase[] = [
+  { name: 'US phone', mask: '(999) 999-9999', left: '(111) ', middle: '222', right: '-3333', refill: '456' },
+  { name: 'partial area code', mask: '(999) 999-9999', left: '(11) ', middle: '222', right: '-3333', refill: '456' },
+  { name: 'empty area code', mask: '(999) 999-9999', left: '() ', middle: '222', right: '-3333', refill: '456' },
+  { name: 'partial middle segment', mask: '(999) 999-9999', left: '(111) ', middle: '2', right: '-3333', refill: '456' },
+  { name: 'phone array shrinking capacity', mask: ['(999) 999-9999', '(999) 9999-9999'], left: '(111) ', middle: '2222', right: '-3333', refill: '456' },
+  { name: 'repeated dividers', mask: DATE, left: '25/', middle: '12', right: '/2025', refill: '07' },
+  { name: 'distinct dividers', mask: '99:99-99', left: '1:', middle: '22', right: '-33', refill: '45' },
+  { name: 'consecutive empty segments', mask: '99:99/99-99', left: '12:/', middle: '22', right: '-33', refill: '45' },
+  { name: 'escaped literal token', mask: '99\\A-99-99', left: '1A-', middle: '22', right: '-33', refill: '45' },
+  { name: 'transformed tokens', mask: 'UU::UU-UU', left: 'AB::', middle: 'CD', right: '-EF', refill: 'gh', expectedRefill: 'GH', options: { tokens: { U: { match: /[a-z]/i, transform: c => c.toUpperCase() } } } },
+  { name: 'Unicode tokens', mask: 'LL::LL--LL', left: '𐐀λ::', middle: '𐐀Ж', right: '--ñø', refill: 'Çü', options: { tokens: { L: /\p{L}/u } } },
+  { name: 'Unicode dividers', mask: '99🧭 99→99', left: '12🧭 ', middle: '34', right: '→56', refill: '78' },
+]
+
+for (const eager of [true, false]) {
+  describe('empty middle segments retain existing dividers (eager=' + eager + ')', () => {
+    for (const cfg of EMPTY_SEGMENT_CASES) {
+      it(cfg.name + ': pure APIs preserve the empty segment and caret', () => {
+        const value = cfg.left + cfg.right
+        const options = { ...cfg.options, eager }
+        const result = applyMask(value, cfg.mask, cfg.left.length, options)
+        expect(result).toEqual({ value, caret: cfg.left.length })
+        expect(process(value, cfg.mask, options)).toBe(value)
+        const built = buildMask(value, cfg.mask, cfg.left.length, options)
+        expect(built.process()).toBe(value)
+        expect(built.caret).toBe(cfg.left.length)
+        expect(applyMask(result.value, cfg.mask, result.caret, options)).toEqual(result)
+      })
+
+      for (const direction of ['deleteContentBackward', 'deleteContentForward'] as const) {
+        it(cfg.name + ': ' + direction + ' empties and refills only the middle segment', () => {
+          const input = setupInput()
+          input.value = cfg.left + cfg.middle + cfg.right
+          const dispose = bind(input, cfg.mask, { ...cfg.options, eager })
+          const at = cfg.left.length + (direction === 'deleteContentBackward' ? cfg.middle.length : 0)
+          input.setSelectionRange(at, at)
+          try {
+            const chars = Array.from(cfg.middle)
+            for (let n = 1; n <= chars.length; n++) {
+              deleteWith(input, direction)
+              const remaining = (direction === 'deleteContentBackward' ? chars.slice(0, -n) : chars.slice(n)).join('')
+              const caret = cfg.left.length + (direction === 'deleteContentBackward' ? remaining.length : 0)
+              expect([input.value, input.selectionStart, input.selectionEnd]).toEqual([cfg.left + remaining + cfg.right, caret, caret])
+            }
+            // Invalid input in the gap must not remove dividers or move the caret.
+            type(input, '#')
+            expect([input.value, input.selectionStart, input.selectionEnd]).toEqual([cfg.left + cfg.right, cfg.left.length, cfg.left.length])
+            for (const ch of cfg.refill) type(input, ch)
+            const filled = cfg.expectedRefill ?? cfg.refill
+            expect([input.value, input.selectionStart, input.selectionEnd]).toEqual([cfg.left + filled + cfg.right, cfg.left.length + filled.length, cfg.left.length + filled.length])
+          } finally {
+            dispose()
+            input.remove()
+          }
+        })
+      }
+    }
+
+    it('selection deletion/cut and invalid paste preserve the gap; select-all still clears it', () => {
+      for (const inputType of ['deleteContentBackward', 'deleteContentForward', 'deleteByCut', 'deleteWordBackward', 'deleteWordForward']) {
+        const input = setupInput()
+        input.value = '(111) 222-3333'
+        const dispose = bind(input, '(999) 999-9999', { eager })
+        try {
+          input.setSelectionRange(6, 9)
+          input.value = '(111) -3333'
+          input.setSelectionRange(6, 6)
+          input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType }))
+          expect([input.value, input.selectionStart, input.selectionEnd]).toEqual(['(111) -3333', 6, 6])
+          input.value = '(111) #!?-3333'
+          input.setSelectionRange(9, 9)
+          input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: '#!?' }))
+          expect([input.value, input.selectionStart, input.selectionEnd]).toEqual(['(111) -3333', 6, 6])
+          input.value = '(111) 45-3333'
+          input.setSelectionRange(8, 8)
+          input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: '45' }))
+          expect([input.value, input.selectionStart, input.selectionEnd]).toEqual(['(111) 45-3333', 8, 8])
+          input.setSelectionRange(0, input.value.length)
+          deleteWith(input, 'deleteContentBackward')
+          expect([input.value, input.selectionStart, input.selectionEnd]).toEqual(['', 0, 0])
+        } finally {
+          dispose()
+          input.remove()
+        }
+      }
+    })
+
+    it('the keydown/rAF fallback preserves both dividers through all three Backspaces', async () => {
+      const input = setupInput()
+      input.value = '(111) 222-3333'
+      const dispose = bind(input, '(999) 999-9999', { eager })
+      input.setSelectionRange(9, 9)
+      try {
+        for (const middle of ['22', '2', '']) {
+          const caret = 6 + middle.length
+          press(input, 'Backspace', '(111) ' + middle + '-3333', caret)
+          await flushRafs()
+          expect([input.value, input.selectionStart, input.selectionEnd]).toEqual(['(111) ' + middle + '-3333', caret, caret])
+        }
+      } finally {
+        dispose()
+        input.remove()
+      }
+    })
+  })
+}
+
+// Flat mode is deliberately untouched.
 describe('{ segmented: false } still repacks everything from the left', () => {
   it('drags the tail forward, which is the whole point of flat mode', () => {
     expect(applyMask('015-39', CPF, 3, { segmented: false }).value).toBe('015.39')

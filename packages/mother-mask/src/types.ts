@@ -56,8 +56,10 @@ export interface ApplyMaskOptions {
    * `"999.999.999-99"`, selecting `"012.153.441"` out of `"012.153.441-39"`
    * and typing `"015"` gives `"015.-39"` — the `-` keeps `"39"` in the last
    * field — rather than repacking every digit from the left into `"015.39"`.
-   * Separators around fields that end up empty are dropped, unless keeping
-   * one is what tells the *next* keystroke where the text after it belongs.
+   * Existing separators before later populated fields survive when a field
+   * becomes empty: deleting "222" from "(111) 222-3333" leaves "(111) -3333".
+   * Separators removed by an edit are not invented unless anchoring or eager
+   * rendering needs them; trailing separators still follow the eager option.
    *
    * Anchoring can only be as precise as the separators allow. A mask whose
    * separators are all the same character (`"99/99/9999"`) can leave a

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 
 /**
  * Exhaustive, real-browser combinatorial coverage: every caret position,
@@ -185,5 +185,90 @@ for (const cfg of MASKS) {
     await page.goto('/')
     const { failures, total } = await runMatrix(page, cfg)
     expect(failures, `${failures.length}/${total} cases failed:\n${failures.slice(0, 20).join('\n')}`).toEqual([])
+  })
+}
+
+async function phoneField(page: Page, eager: boolean) {
+  await page.goto('/')
+  await page.evaluate(eager => {
+    const input = document.createElement('input')
+    input.id = 'empty-segment-phone'
+    document.body.appendChild(input)
+    window.motherMask.bind(input, '(999) 999-9999', { eager })
+    input.focus()
+  }, eager)
+  const field = page.locator('#empty-segment-phone')
+  await page.keyboard.type('1112223333')
+  return field
+}
+
+for (const eager of [true, false]) {
+  for (const key of ['Backspace', 'Delete']) {
+    test('empty phone segment: native ' + key + ' preserves dividers (eager=' + eager + ')', async ({ page }) => {
+      const field = await phoneField(page, eager)
+      const backward = key === 'Backspace'
+      await field.evaluate((input: HTMLInputElement, pos) => input.setSelectionRange(pos, pos), backward ? 9 : 6)
+      for (const middle of ['22', '2', '']) {
+        await page.keyboard.press(key)
+        const caret = 6 + (backward ? middle.length : 0)
+        expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+          .toEqual(['(111) ' + middle + '-3333', caret, caret])
+      }
+      // In particular, the next input must still go into the emptied segment.
+      await page.keyboard.type('456')
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['(111) 456-3333', 9, 9])
+      await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => resolve())))
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['(111) 456-3333', 9, 9])
+    })
+  }
+
+  for (const key of ['Backspace', 'Delete', 'ControlOrMeta+x']) {
+    test('empty phone segment: native selection ' + key + ' and replacement (eager=' + eager + ')', async ({ page }) => {
+      const field = await phoneField(page, eager)
+      await field.evaluate((input: HTMLInputElement) => input.setSelectionRange(6, 9))
+      await page.keyboard.press(key)
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['(111) -3333', 6, 6])
+      await page.keyboard.insertText('#!?')
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['(111) -3333', 6, 6])
+      await page.keyboard.insertText('45')
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['(111) 45-3333', 8, 8])
+    })
+  }
+
+  test('empty phone segment: insertion at every left-divider boundary (eager=' + eager + ')', async ({ page }) => {
+    const field = await phoneField(page, eager)
+    for (const pos of [4, 5, 6]) {
+      await field.fill('(111) -3333')
+      await field.evaluate((input: HTMLInputElement, pos) => input.setSelectionRange(pos, pos), pos)
+      await page.keyboard.type('4')
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['(111) 4-3333', 7, 7])
+    }
+  })
+
+  test('empty phone segment: leading gaps, trailing deletion and select-all clearing (eager=' + eager + ')', async ({ page }) => {
+    const field = await phoneField(page, eager)
+    await field.evaluate((input: HTMLInputElement) => input.setSelectionRange(1, 4))
+    await page.keyboard.press('Backspace')
+    expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+      .toEqual(['() 222-3333', 1, 1])
+    await field.evaluate((input: HTMLInputElement) => input.setSelectionRange(3, 6))
+    await page.keyboard.press('Delete')
+    expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+      .toEqual(['() -3333', 3, 3])
+    await page.keyboard.press('ControlOrMeta+a')
+    await page.keyboard.press('Backspace')
+    expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+      .toEqual(['', 0, 0])
+    await page.keyboard.type('1112223333')
+    await field.evaluate((input: HTMLInputElement) => input.setSelectionRange(10, 14))
+    await page.keyboard.press('Delete')
+    expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+      .toEqual(['(111) 222', 9, 9])
   })
 }

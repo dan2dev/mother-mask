@@ -275,18 +275,22 @@ function assignToSlots(value: string, plan: CompiledMask, compiler: PatternCompi
 /**
  * Decide which literals the rendered value actually shows.
  *
- * A separator earns its place two ways:
+ * A separator earns its place three ways:
  *
  * - **anchor** — the segment right after it holds data, so the separator is
  *   what tells the reader (and the next parse) where that data belongs.
+ * - **retained boundary** — it was present in the input and there is data in
+ *   a later segment. Emptying a field must not remove its untouched dividers:
+ *   "(111) 222-3333" becomes "(111) -3333", not "(111-3333".
  * - **eager** — the segment right before it is completely filled, so the
  *   separator is revealed before the user types the character that would
  *   normally pull it in. A literal that opens the mask counts as eager too:
  *   there's no segment in front of it to fill. See `ApplyMaskOptions.eager`.
  *
- * Separators around segments that are simply empty are dropped, which is what
- * collapses "015" + skipped middle + "-39" down to `015.-39` rather than
- * padding the gap with every separator in between.
+ * Absent separators around skipped segments are not invented, which keeps
+ * "015" + skipped middle + "-39" compact instead of padding the gap. Existing
+ * separators after the last filled segment still follow eager mode, so tail
+ * deletion and clearing an input do not leave a trail of empty dividers.
  *
  * The second loop is a round-trip guard. `bind()` feeds the rendered value
  * straight back through this masking on the next keystroke, so a render that
@@ -296,8 +300,7 @@ function assignToSlots(value: string, plan: CompiledMask, compiler: PatternCompi
  * the first "/" would leave "1/2025", which re-parses as 1 / 20 / 25. So any
  * hidden separator between two filled segments that reads the same as the one
  * introducing the later segment is put back — `1//2025`, which re-parses to
- * exactly what it renders. Masks with distinct separators (dates aside, most
- * of them: CPF, CNPJ, phone numbers) never hit this and stay compact.
+ * exactly what it renders. Masks with distinct separators need no such guard.
  */
 function resolveLiteralVisibility(
   plan: CompiledMask,
@@ -305,15 +308,17 @@ function resolveLiteralVisibility(
   eager: boolean,
 ): boolean[] {
   const { tokens, runBeforeLiteral, runAfterLiteral, literalBeforeRun, runChars } = plan
-  const { runFilled } = assignment
+  const { runFilled, literalSource } = assignment
   const visible: boolean[] = new Array(tokens.length).fill(false)
+  let lastFilledRun = runFilled.length - 1
+  while (lastFilledRun >= 0 && runFilled[lastFilledRun] === 0) lastFilledRun--
 
   for (let t = 0; t < tokens.length; t++) {
     if (tokens[t].kind !== 'literal') continue
     const after = runAfterLiteral[t]
     const before = runBeforeLiteral[t]
     visible[t] =
-      (after >= 0 && runFilled[after] > 0) ||
+      (after >= 0 && (runFilled[after] > 0 || (literalSource[t] >= 0 && after < lastFilledRun))) ||
       (eager && (before < 0 || runFilled[before] === runChars[before].length))
   }
 
