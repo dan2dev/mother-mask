@@ -67,6 +67,16 @@ export interface ApplyMaskOptions {
    * `1 / 20 / 25` — and resolves it to the earliest field that fits. Masks
    * with distinct separators (CPF, CNPJ, phone numbers) have no such gap.
    *
+   * A selection Backspace/Delete/Cut can take a field's separator with it
+   * along with its data — selecting `"(11) "` out of `"(11) 98765-4321"`
+   * removes the area code, its closing paren, *and* the space. `bind()`
+   * restores that separator before masking, so the untouched `"98765-4321"`
+   * stays put instead of sliding into the emptied field. Like eager's
+   * Backspace/Delete handling above, this is necessarily `bind()`-only:
+   * `applyMask`/`buildMask`/`process` see only `(value, caret)` and can't
+   * tell a deletion from fresh input. Word/line deletes and ordered mask
+   * arrays are excluded — see the "Segmented Editing" section of the README.
+   *
    * Pass `segmented: false` to opt into the classic flat/reflow behavior
    * instead, where deleting or replacing characters anywhere shifts
    * everything after it to close the gap — useful when a mask really is one

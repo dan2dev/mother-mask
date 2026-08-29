@@ -42,24 +42,21 @@ bind($('ex-ca-sin'), '999 999 999', (v) => {
   setHint('ex-ca-sin-hint', n === 0 ? { text: '9 digits' } : n === 9 ? { text: '✓ complete', ok: true } : { text: `${n} / 9`, error: true })
 })
 
-// ── Europe (DE) — IBAN ────────────────────────────────────────────────────────
+// ── Germany — IBAN ───────────────────────────────────────────────────────────
 
-bind($('ex-eu-iban'), 'ZZ99 9999 9999 9999 9999 99', {
-  tokens: { Z: uppercaseLetter },
-  onChange: (v) => {
-    const n = v.replace(/[^a-zA-Z0-9]/g, '').length
-    setHint('ex-eu-iban-hint', n === 0 ? { text: '2 letters + 20 digits' } : n === 22 ? { text: '✓ complete', ok: true } : { text: `${n} / 22`, error: true })
-  },
+bind($('ex-eu-iban'), 'DE99 9999 9999 9999 9999 99', (v) => {
+  const n = v.replace(/\D/g, '').length
+  setHint('ex-eu-iban-hint', n === 0 ? { text: 'DE + 20 digits' } : n === 20 ? { text: '✓ complete', ok: true } : { text: `${n} / 20 digits`, error: true })
 })
 
-// ── Europe (DE) — VAT ID ─────────────────────────────────────────────────────
+// ── Germany — VAT ID ─────────────────────────────────────────────────────────
 
 bind($('ex-eu-vat'), 'DE999999999', (v) => {
   const n = v.replace(/\D/g, '').length
   setHint('ex-eu-vat-hint', n === 0 ? { text: '9 digits after the DE prefix' } : n === 9 ? { text: '✓ complete', ok: true } : { text: `${n} / 9`, error: true })
 })
 
-// ── Europe (PL) — postal code ────────────────────────────────────────────────
+// ── Poland — postal code ─────────────────────────────────────────────────────
 
 bind($('ex-pl-postal'), '99-999', (v) => {
   const n = v.replace(/\D/g, '').length

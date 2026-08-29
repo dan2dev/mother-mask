@@ -1,7 +1,7 @@
 ---
 import NavLinks from './NavLinks.astro'
 import { navHref } from '../data/nav'
-import pkg from '../../../packages/mother-mask/package.json'
+import { packageVersion } from '../data/package-meta'
 
 interface Props {
   current: string
@@ -14,11 +14,18 @@ const { current } = Astro.props
   <div class="bar">
     <div class="brand-group">
       <a class="brand" href={navHref('')}>
-        <svg class="icon" role="presentation"><use href="#logo-mark"></use></svg>
+        <span class="brand-mark" aria-hidden="true">
+          <img src={navHref('mother-mask-logo.svg')} alt="" width="40" height="40" />
+        </span>
         mother-mask
       </a>
-      <span class="version-pill">v{pkg.version}</span>
+      <span class="version-pill">v{packageVersion}</span>
     </div>
+    <nav class="header-nav" aria-label="Featured documentation">
+      <a href={navHref('quick-start.html')} aria-current={current === 'quick-start' ? 'page' : undefined}>Get started</a>
+      <a href={navHref('examples.html')} aria-current={current === 'examples' ? 'page' : undefined}>Examples</a>
+      <a href={navHref('api.html')} aria-current={current === 'api' ? 'page' : undefined}>API</a>
+    </nav>
     <details class="mobile-menu" id="mobile-menu">
       <summary>
         <svg class="icon" role="presentation"><use href="#menu-icon"></use></svg>

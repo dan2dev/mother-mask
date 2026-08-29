@@ -292,6 +292,30 @@ bind(input, '999.999.999-99')
 
 Anchoring is only as precise as the separators allow. A mask whose separators are all the same character can produce an ambiguous value — with `'99/99/9999'`, `"1/2025"` reads equally well as `1 / 20 / 25` — and resolves it to the earliest field that fits. Masks with distinct separators (CPF, CNPJ, phone numbers) have no such gap.
 
+Deleting a selection can take a whole field *and* the separator introducing
+the next one with it — selecting `"(11) "` out of `"(11) 98765-4321"` and
+pressing Backspace/Delete/Cut removes the area code, its closing paren, and
+the space in one stroke. `bind()` restores that separator before masking, so
+the untouched `"98765-4321"` stays exactly where it was instead of sliding
+into the emptied field:
+
+```ts
+bind(input, '(99) 99999-9999')
+// "(11) 98765-4321" — select "(11) ", press Backspace
+// → "(|) 98765-4321"     "98765" and "4321" never moved
+```
+
+This is bind-only, like eager's Backspace/Delete handling above: pure
+`applyMask`/`buildMask`/`process` see only the resulting `(value, caret)` and
+can't tell a deletion from fresh input, so `applyMask("98765-4321", mask, 0)`
+still packs from the left. A selection confined to separator text (no field
+data in it) is left alone, however wide — that is ordinary divider erosion,
+not a swallow, and keeps working exactly as above. Word/line deletes
+(`Cmd+Backspace`/`Cmd+Delete` and friends) are a deliberate bulk clear and are
+never rescued, and neither are ordered mask arrays or `resolveMask`, since
+which pattern or layout applies can itself change once the deletion shrinks
+the data.
+
 For classic reflow behavior, pass `segmented: false`:
 
 ```ts

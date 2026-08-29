@@ -18,6 +18,8 @@ bindDecimal(input, {
   onChange: (value, numericValue) => console.log(value, numericValue),
 })
 unmaskDecimal('1.234,50 €', options) // 1234.5`
+
+const callbackSnippet = "bindDecimal(input, { suffix: ' kg', onChange: (masked, numeric) => updateOutputs(masked, numeric) })"
 ---
 
 <Layout
@@ -39,6 +41,78 @@ unmaskDecimal('1.234,50 €', options) // 1234.5`
       </ExampleCard>
 
       <ExampleCard
+        snippet="bindDecimal(input, { decimalPlaces: 2, prefix: '$' })"
+        inputId="ex-decimal-usd"
+        ariaLabel="US dollar amount"
+        inputmode="decimal"
+        value="$1,234.50"
+        placeholder="$0.00"
+      >
+        <Fragment slot="title">US dollars</Fragment>
+        <span class="hint">Fixed cents, comma grouping, and an inert prefix.</span>
+      </ExampleCard>
+
+      <ExampleCard
+        snippet="bindDecimal(input, { decimalPlaces: 2, separator: '.', decimalSeparator: ',', prefix: 'R$ ' })"
+        inputId="ex-decimal-brl"
+        ariaLabel="Brazilian real amount"
+        inputmode="decimal"
+        value="R$ 1.234,50"
+        placeholder="R$ 0,00"
+      >
+        <Fragment slot="title">Brazilian real</Fragment>
+        <span class="hint">Period grouping and a comma decimal separator.</span>
+      </ExampleCard>
+
+      <ExampleCard
+        snippet="bindDecimal(input, { decimalPlaces: 2, separator: '.', decimalSeparator: ',', suffix: ' €' })"
+        inputId="ex-decimal-eur"
+        ariaLabel="Euro amount"
+        inputmode="decimal"
+        value="1.234,50 €"
+        placeholder="0,00 €"
+      >
+        <Fragment slot="title">Euros</Fragment>
+        <span class="hint">Type a comma to open the fraction; the suffix stays inert.</span>
+      </ExampleCard>
+
+      <ExampleCard
+        snippet="bindDecimal(input, { decimalPlaces: 0, suffix: ' units' })"
+        inputId="ex-decimal-units"
+        ariaLabel="Whole number quantity"
+        inputmode="numeric"
+        value="1,250 units"
+        placeholder="0 units"
+      >
+        <Fragment slot="title">Whole quantities</Fragment>
+        <span class="hint">No decimal segment; grouping grows with the integer.</span>
+      </ExampleCard>
+
+      <ExampleCard
+        snippet="bindDecimal(input, { decimalPlaces: 2, prefix: '$', allowNegative: true })"
+        inputId="ex-decimal-negative"
+        ariaLabel="Signed account balance"
+        inputmode="decimal"
+        value="-$1,234.50"
+        placeholder="$0.00"
+      >
+        <Fragment slot="title">Signed balances</Fragment>
+        <span class="hint">Type “-” anywhere to toggle the sign before the prefix.</span>
+      </ExampleCard>
+
+      <ExampleCard
+        snippet="bindDecimal(input, { decimalPlaces: 2, segmented: false })"
+        inputId="ex-decimal-plain"
+        ariaLabel="Ungrouped decimal value"
+        inputmode="decimal"
+        value="1234567.89"
+        placeholder="0.00"
+      >
+        <Fragment slot="title">No thousands grouping</Fragment>
+        <span class="hint">Useful when the display should stay close to a storage value.</span>
+      </ExampleCard>
+
+      <ExampleCard
         snippet="bindDecimal(input, { numberPlaces: 2, decimalPlaces: 2 })"
         inputId="ex-decimal-width"
         ariaLabel="Fixed width decimal"
@@ -47,6 +121,28 @@ unmaskDecimal('1.234,50 €', options) // 1234.5`
       >
         <Fragment slot="title">Fixed integer and fraction widths</Fragment>
         <span class="hint">Paste 7.3 to see 07.30; each part is capped at two digits.</span>
+      </ExampleCard>
+
+      <ExampleCard
+        snippet={callbackSnippet}
+        inputId="ex-decimal-callback"
+        ariaLabel="Weight with masked and numeric outputs"
+        inputmode="decimal"
+        value="2.5 kg"
+        placeholder="0 kg"
+        wide
+      >
+        <Fragment slot="title">Masked value and numeric callback</Fragment>
+        <div class="raw-outputs">
+          <div>
+            <span class="hint">masked string</span>
+            <output id="ex-decimal-masked">2.5 kg</output>
+          </div>
+          <div>
+            <span class="hint">numeric value</span>
+            <output id="ex-decimal-numeric">2.5</output>
+          </div>
+        </div>
       </ExampleCard>
     </div>
 
@@ -60,6 +156,10 @@ unmaskDecimal('1.234,50 €', options) // 1234.5`
       formatting and parsing.
     </p>
 
+    <h2>Formatting without an input</h2>
+    <p>
+      Use the pure helpers for initial values, server-rendered output, and programmatic updates. Pass the same options to formatting and parsing.
+    </p>
     <CodeBlock code={snippet} lang="ts" />
   </section>
 </Layout>

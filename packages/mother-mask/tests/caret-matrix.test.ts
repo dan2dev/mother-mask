@@ -1,6 +1,8 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { bind, buildMask } from '../src/index'
 import type { ApplyMaskOptions, MaskPattern } from '../src/index'
+import { restoreSwallowedSeparators } from '../src/bind-shared'
+import { PatternCompiler } from '../src/pattern'
 
 // ---------------------------------------------------------------------------
 // Exhaustive combinatorial coverage: every caret position, every caret
@@ -251,6 +253,12 @@ describe('caret matrix — select + delete at every selection range', () => {
         const failures: string[] = []
         let total = 0
         const len = cfg.full.length
+        const compiler = new PatternCompiler(cfg.options?.tokens)
+        const isData = (ch: string): boolean => compiler.isData(ch)
+        // Mirrors `isPlainContentDelete` in `bind.ts`: only a static
+        // single-pattern mask gets the swallowed-separator rescue, since an
+        // array's resolved member can change with the new data count.
+        const isPlainContentDelete = !Array.isArray(cfg.mask) && !cfg.options?.resolveMask
 
         for (let start = 0; start <= len; start++) {
           for (let end = start + 1; end <= len; end++) {
@@ -267,8 +275,16 @@ describe('caret matrix — select + delete at every selection range', () => {
               // Oracle mirrors `bind()`'s own delete-vs-insert tie-break: eager
               // never resurrects a literal the edit just deleted (see
               // `eagerForEdit` in bind.ts), so this is always computed with
-              // eager off, regardless of `options.eager`.
-              const m = buildMask(raw, cfg.mask, start, { ...options, eager: false })
+              // eager off, regardless of `options.eager`. It also mirrors the
+              // swallowed-separator rescue itself (`restoreSwallowedSeparators`
+              // in bind-shared.ts): a plain content delete/backspace gets the
+              // same pre-restoration `bind()` applies before masking, so the
+              // oracle stays independent of `bind()`'s wiring while still
+              // reflecting its documented, intentional behavior.
+              const formatValue = isPlainContentDelete
+                ? restoreSwallowedSeparators(raw, start, end - start, cfg.full, isData)
+                : raw
+              const m = buildMask(formatValue, cfg.mask, start, { ...options, eager: false })
               const expectedValue = m.process()
               // Backspace cannot cross the untouched suffix: removing extra
               // divider text on the left moves that boundary left as well.

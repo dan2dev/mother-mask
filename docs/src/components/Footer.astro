@@ -4,7 +4,9 @@ import { navHref } from '../data/nav'
 
 <footer>
   <div class="footer-brand">
-    <svg role="presentation"><use href="#logo-mark"></use></svg>
+    <span class="brand-mark footer-brand-mark" aria-hidden="true">
+      <img src={navHref('mother-mask-logo.svg')} alt="" width="40" height="40" loading="lazy" />
+    </span>
     <p>mother-mask is crafted with care by <a href="https://github.com/dan2dev" target="_blank" rel="noreferrer">dan2dev</a>.</p>
   </div>
 
@@ -19,7 +21,7 @@ import { navHref } from '../data/nav'
     <div class="footer-column">
       <span class="footer-column-label">Community</span>
       <a href="https://github.com/dan2dev/mother-mask" target="_blank" rel="noreferrer">GitHub</a>
-      <a href="https://github.com/dan2dev/mother-mask/discussions" target="_blank" rel="noreferrer">Discussions</a>
+      <a href="https://github.com/dan2dev/mother-mask/releases" target="_blank" rel="noreferrer">Releases</a>
       <a href="https://github.com/dan2dev/mother-mask/issues" target="_blank" rel="noreferrer">Issues</a>
     </div>
 

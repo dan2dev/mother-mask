@@ -51,9 +51,11 @@ bun run preview
 
 The build runs `astro check` and writes the static site to `dist/`. Preview
 serves that build locally; it is not a production server. `astro.config.mjs`
-sets `site`/`base` for GitHub Pages' project path and reads the library's
-package version directly in `Layout.astro` for the page and its structured
-data — no build-time string replacement needed.
+sets `site`/`base` for GitHub Pages' project path. `src/data/package-meta.ts`
+reads the library version and its declared, minified ESM artifact directly from
+the package build, then computes the level-9 gzip size used on the homepage.
+Build the package first; the deployment workflow already does this before
+building Astro. No build-time string replacement is needed.
 
 ## Updating documentation
 
@@ -74,10 +76,9 @@ data — no build-time string replacement needed.
   `page-title` class if it needs to render at section-heading size rather than
   hero size; don't reach for `<h2>` just to get a smaller heading.
 - `public/og-image.png` (1200×630) is the shared social preview image for
-  every page; `public/favicon.svg` is the tab icon. Regenerate `og-image.png`
-  by rendering an HTML mockup with headless Chrome
-  (`--headless --window-size=1200,630 --screenshot=out.png`) rather than
-  hand-editing the PNG.
+  every page and is rendered from `public/og-image-source.svg`. Keep the
+  SVG/ICO/16px/32px favicon set, Apple touch icon, and 192px/512px manifest icons
+  in sync with `public/mother-mask-logo.svg`.
 - Formatting is not validation. Demo hints report completeness, not valid dates,
   checksums, card networks, or identifiers.
 - Use custom-token transforms for case conversion instead of rewriting the

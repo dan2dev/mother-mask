@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { bind, buildMask } from '../src/index'
 import type { ApplyMaskOptions, MaskPattern } from '../src/index'
+import { restoreSwallowedSeparators } from '../src/bind-shared'
+import { PatternCompiler } from '../src/pattern'
 
 // ---------------------------------------------------------------------------
 // bind() must land on exactly what the pure masking functions say, for every
@@ -134,6 +136,19 @@ describe('bind() agrees with buildMask() at every edit position', () => {
       // be computed the same way.
       const deleteOptions: ApplyMaskOptions = { ...options, eager: false }
 
+      // Mirrors `bind()`'s swallowed-separator rescue (`restoreSwallowedSeparators`
+      // in bind-shared.ts): a plain content delete/backspace on a static
+      // single-pattern mask gets the same pre-restoration `bind()` applies
+      // before masking, so the oracle stays independent of `bind()`'s wiring
+      // while still reflecting its documented, intentional behavior. Array
+      // masks are excluded, same as `bind()`: which member resolves can
+      // change with the new, shorter data count.
+      const compiler = new PatternCompiler(options?.tokens)
+      const isData = (ch: string): boolean => compiler.isData(ch)
+      const isPlainContentDelete = !Array.isArray(mask) && !options?.resolveMask
+      const rescue = (raw: string, pos: number, removedLength: number): string =>
+        isPlainContentDelete ? restoreSwallowedSeparators(raw, pos, removedLength, full, isData) : raw
+
       // Insert at every position.
       for (let pos = 0; pos <= full.length; pos++) {
         for (const ch of chars) {
@@ -180,7 +195,7 @@ describe('bind() agrees with buildMask() at every edit position', () => {
               mode === 'backspace' ? 'deleteContentBackward' : 'deleteContentForward',
             )
 
-            const m = buildMask(raw, mask, start, deleteOptions)
+            const m = buildMask(rescue(raw, start, end - start), mask, start, deleteOptions)
             const value = m.process()
             const suffix = full.slice(end)
             const backwardLimit = !value.startsWith(full.slice(0, start)) && value.endsWith(suffix)
@@ -203,7 +218,7 @@ describe('bind() agrees with buildMask() at every edit position', () => {
         input.setSelectionRange(pos - 1, pos - 1)
         dispatchInput(input, null, 'deleteContentBackward')
 
-        const m = buildMask(raw, mask, pos - 1, deleteOptions)
+        const m = buildMask(rescue(raw, pos - 1, 1), mask, pos - 1, deleteOptions)
         const value = m.process()
         const suffix = full.slice(pos)
         const backwardLimit = !value.startsWith(full.slice(0, pos - 1)) && value.endsWith(suffix)
@@ -220,7 +235,7 @@ describe('bind() agrees with buildMask() at every edit position', () => {
         input.setSelectionRange(pos, pos)
         dispatchInput(input, null, 'deleteContentForward')
 
-        const m = buildMask(raw, mask, pos, deleteOptions)
+        const m = buildMask(rescue(raw, pos, 1), mask, pos, deleteOptions)
         const value = m.process()
         const rawCaret = full.length === value.length ? pos + 1 : pos
         check(`delete pos=${pos}`, input, value, Math.min(rawCaret, value.length))

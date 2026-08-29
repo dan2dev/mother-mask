@@ -84,6 +84,86 @@ export function createFrameScheduler(): { scheduleFrame: (callback: () => void) 
   return { scheduleFrame, cancelPendingFrames }
 }
 
+/**
+ * A selection-delete can take a whole field *and* the separator introducing
+ * the next one with it, leaving nothing positional behind for the mask to
+ * anchor to: selecting "(11) " (digits, closing paren, and the space) out of
+ * "(11) 98765-4321" and deleting hands the engine "98765-4321", which reads
+ * exactly like fresh digits for the area code — the untouched "98765" has
+ * no way to say it was never touched. A shorter selection stopping at "(11)"
+ * leaves the space behind, and the existing anchoring in `assignToSlots`
+ * already gets that case right; this only fills the gap where the deletion
+ * swallowed one or more separators whole. Widening the selection further —
+ * through the "98765" too, out to "(11) 98765-" — swallows both the ") "
+ * and the "-": every field the deletion fully crossed reappears empty with
+ * its own boundary intact, e.g. "(11) -4321", the same shape three plain
+ * Backspaces (never touching the dividers themselves) would have left.
+ *
+ * `bind()` is the one layer that knows a deletion happened at all — pure
+ * `applyMask` sees only the resulting `(value, caret)` and can't tell "the
+ * user just deleted through here" from "these are the first digits the user
+ * ever typed", which is exactly the ambiguity `eagerForEdit` exists for on
+ * the eager side. So this restores, verbatim, every separator span an edit
+ * deleted — but only when real data still follows the deletion untouched.
+ * Restoring separators when nothing follows would resurrect ones `bind()`
+ * is documented to drop for good, like backspacing the eager "." off "012.".
+ *
+ * A deletion that never touched any data at all is left alone too, whatever
+ * its length — that's plain divider erosion, one keystroke (or a selection
+ * confined to the divider) peeling back separator text the user is clearly
+ * choosing to remove, exactly as backspacing through "(111) " down to
+ * "(111-4444" and on to "-4444" is documented to work. Only a deletion that
+ * destroys *some* field data is treated as having swallowed a separator by
+ * accident rather than on purpose.
+ *
+ * Restoring a separator only ever reproduces text that was standing exactly
+ * there a moment ago, at the exact position it stood — it never invents
+ * structure. That is also why it stays safe when the same separator repeats
+ * elsewhere in the mask (`"HH:HH:HH"`'s two colons, say): the restored one
+ * lands precisely where the deleted one did, so the engine's own capacity
+ * check (`assignToSlots`/`findAnchorRun` in apply-mask.ts) still resolves it
+ * to the one field it can — the surviving data plus everything after the
+ * restored separator has to fit what follows, which pins the split uniquely
+ * even with an identical separator later in the string.
+ *
+ * `removedLength` and `pos` must describe a *pure* deletion — `previousValue`
+ * with `[pos, pos + removedLength)` cut out and nothing else changed. Any
+ * other shape (a mixed insert+delete, IME weirdness) is left untouched.
+ */
+export function restoreSwallowedSeparators(
+  rawValue: string,
+  pos: number,
+  removedLength: number,
+  previousValue: string,
+  isData: (char: string) => boolean,
+): string {
+  if (removedLength <= 0) return rawValue
+  const deletedEnd = pos + removedLength
+  if (deletedEnd > previousValue.length) return rawValue
+  if (
+    previousValue.slice(0, pos) !== rawValue.slice(0, pos) ||
+    previousValue.slice(deletedEnd) !== rawValue.slice(pos)
+  ) return rawValue
+
+  // Nothing left past the cut means every field beyond it was cleared too —
+  // that deletion is final, not a swallow (matches backspacing the eager "."
+  // off "012." for good, where the cut sits at the very end).
+  const tail = previousValue.slice(deletedEnd)
+  if (!Array.from(tail).some(isData)) return rawValue
+
+  // `previousValue` is a rendered mask output, so every non-data code point
+  // inside the deleted span is a genuine separator the deletion swallowed —
+  // never a coincidence. Keep them, in order, and drop the data alongside
+  // them that this edit did mean to delete.
+  const removed = previousValue.slice(pos, deletedEnd)
+  if (!Array.from(removed).some(isData)) return rawValue
+  let literals = ''
+  for (const ch of removed) if (!isData(ch)) literals += ch
+  if (!literals) return rawValue
+
+  return rawValue.slice(0, pos) + literals + rawValue.slice(pos)
+}
+
 /** Attributes a binder sets only if absent, so it never clobbers the caller's own and disposal only ever removes what it added. */
 export function trackAttrs(input: Element): { setIfMissing: (name: string, value: string) => void; removeTracked: () => void } {
   const attrsSetHere: string[] = []

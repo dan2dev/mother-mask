@@ -6,11 +6,14 @@ import ExampleCard from '../components/ExampleCard.astro'
 <Layout
   current="regional"
   title="Regional formats — mother-mask docs"
-  description="US, Canada, and Europe input mask examples with mother-mask: phone, SSN, ZIP+4, postal code, SIN, IBAN, and VAT ID."
+  description="US, Canada, Germany, and Poland input mask examples with mother-mask: phone, SSN, ZIP+4, postal code, SIN, IBAN, and VAT ID."
 >
   <section id="regional">
     <h1 class="page-title">Regional formats</h1>
-    <p class="section-sub">A few common US, Canada, and Europe patterns — all just <code>bind()</code> calls.</p>
+    <p class="section-sub">
+      Common regional formats built with <code>bind()</code>. These masks format input; “complete” means the expected character count is present,
+      not that a checksum or identifier is valid.
+    </p>
 
     <div class="examples-grid">
       <ExampleCard snippet="bind(input, '(999) 999-9999')" inputId="ex-us-phone" placeholder="(000) 000-0000" inputmode="tel">
@@ -28,7 +31,11 @@ import ExampleCard from '../components/ExampleCard.astro'
         <span class="hint" id="ex-us-zip-hint">5, or 9 with the +4 suffix</span>
       </ExampleCard>
 
-      <ExampleCard snippet="bind(input, 'Z9Z 9Z9', { tokens: { Z: uppercaseLetter } })" inputId="ex-ca-postal" placeholder="A0A 0A0">
+      <ExampleCard
+        snippet="bind(input, 'Z9Z 9Z9', { tokens: { Z: { match: /[a-z]/i, transform: char => char.toUpperCase() } } })"
+        inputId="ex-ca-postal"
+        placeholder="A0A 0A0"
+      >
         <Fragment slot="title">Canada — postal code</Fragment>
         <span class="hint" id="ex-ca-postal-hint">6 alphanumeric characters</span>
       </ExampleCard>
@@ -39,21 +46,21 @@ import ExampleCard from '../components/ExampleCard.astro'
       </ExampleCard>
 
       <ExampleCard
-        snippet="bind(input, 'ZZ99 9999 9999 9999 9999 99', { tokens: { Z: uppercaseLetter } })"
+        snippet="bind(input, 'DE99 9999 9999 9999 9999 99')"
         inputId="ex-eu-iban"
         placeholder="DE00 0000 0000 0000 0000 00"
       >
-        <Fragment slot="title">Europe (DE) — IBAN</Fragment>
-        <span class="hint" id="ex-eu-iban-hint">2 letters + 20 digits</span>
+        <Fragment slot="title">Germany — IBAN</Fragment>
+        <span class="hint" id="ex-eu-iban-hint">DE + 20 digits</span>
       </ExampleCard>
 
       <ExampleCard snippet="bind(input, 'DE999999999')" inputId="ex-eu-vat" placeholder="DE000000000" inputmode="numeric">
-        <Fragment slot="title">Europe (DE) — VAT ID</Fragment>
+        <Fragment slot="title">Germany — VAT ID</Fragment>
         <span class="hint" id="ex-eu-vat-hint">9 digits after the DE prefix</span>
       </ExampleCard>
 
       <ExampleCard snippet="bind(input, '99-999')" inputId="ex-pl-postal" placeholder="00-000" inputmode="numeric">
-        <Fragment slot="title">Europe (PL) — postal code</Fragment>
+        <Fragment slot="title">Poland — postal code</Fragment>
         <span class="hint" id="ex-pl-postal-hint">5 digits</span>
       </ExampleCard>
     </div>

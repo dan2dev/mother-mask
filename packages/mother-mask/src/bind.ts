@@ -6,6 +6,7 @@ import {
   isAlreadyBound,
   MASKED_ATTR,
   releaseOnce,
+  restoreSwallowedSeparators,
   setCaret,
   trackAttrs,
 } from './bind-shared'
@@ -170,6 +171,7 @@ export function bind(
   const compiler = new PatternCompiler(tokens)
   const format = (value: string, caret: number, editEager = eager) =>
     applyWithCompiler(value, mask, caret, { tokens, resolveMask, segmented, eager: editEager }, compiler)
+  const isData = (ch: string): boolean => compiler.isData(ch)
   // Arbitrary custom predicates cannot be inspected for their alphabet. Defer
   // *all custom-token* compositions, but retain live Android formatting for
   // built-in-only masks. Provisional Pinyin/Kana may be much longer than output.
@@ -240,7 +242,27 @@ export function bind(
     const previousLength = lastMaskedValue.length
     const kind = classifyInputType(inputEvent.inputType)
     const rawValue = target.value
-    const m = format(rawValue, pos, eagerForEdit(eager, kind === 'backspace' || kind === 'delete'))
+    const isDeleteLike = kind === 'backspace' || kind === 'delete'
+    // Only a plain content delete — a selection Backspace/Delete/Cut, or a
+    // single collapsed Backspace/Delete — gets the swallowed-separator
+    // rescue below. Word/line deletes (`deleteWordBackward`,
+    // `deleteSoftLineBackward`, ...) are a deliberate bulk clear —
+    // resurrecting structure they removed would contradict `bind()`'s own
+    // documented "never resurrect a divider the user just removed" rule, so
+    // those are left to reformat the raw value exactly as struck.
+    // Array/resolver masks are excluded too: which pattern applies can
+    // change with the new, shorter data count, and a literal restored from
+    // the old pattern's layout can land at a position the newly-resolved
+    // one never had.
+    const isPlainContentDelete =
+      !Array.isArray(mask) && !resolveMask &&
+      (inputEvent.inputType === 'deleteContentBackward' ||
+        inputEvent.inputType === 'deleteContentForward' ||
+        inputEvent.inputType === 'deleteByCut')
+    const formatValue = isPlainContentDelete
+      ? restoreSwallowedSeparators(rawValue, pos, previousLength - rawValue.length, lastMaskedValue, isData)
+      : rawValue
+    const m = format(formatValue, pos, eagerForEdit(eager, isDeleteLike))
     target.value = m.value
     setCaret(target, resolveCaretAfterEdit(kind, rawValue, pos, previousLength, m, resolveMask, lastMaskedValue))
 

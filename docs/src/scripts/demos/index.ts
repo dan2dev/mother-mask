@@ -1,9 +1,18 @@
-import { bind } from 'mother-mask'
+import { bind, bindDecimal } from 'mother-mask'
 import { $, setHint } from '../hint'
 
 // ── Hero preview ─────────────────────────────────────────────────────────────
 
-bind($('hero-phone'), '(999) 999-9999', (v) => {
+bind($('hero-phone'), '(99) 99999-9999', (v) => {
   const n = v.replace(/\D/g, '').length
-  setHint('hero-phone-hint', n === 0 ? { text: '10 digits' } : n === 10 ? { text: '10 digits', ok: true } : { text: `${n} / 10`, error: true })
+  setHint('hero-phone-hint', n === 0 ? { text: '11 digits' } : n === 11 ? { text: '✓ complete', ok: true } : { text: `${n} / 11`, error: true })
+})
+
+bind($('hero-card'), '9999 9999 9999 9999')
+bind($('hero-date'), '99/99/9999')
+bindDecimal($('hero-currency'), {
+  prefix: 'R$ ',
+  separator: '.',
+  decimalSeparator: ',',
+  decimalPlaces: 2,
 })

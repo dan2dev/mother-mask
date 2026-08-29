@@ -18,7 +18,12 @@ import ExampleCard from '../components/ExampleCard.astro'
         <span class="hint">Try a1b2c3d4e5f6; g is rejected.</span>
       </ExampleCard>
 
-      <ExampleCard snippet="bind(input, 'UUU-999', { tokens: { U: uppercaseLetter } })" inputId="ex-upper" ariaLabel="Uppercase identifier" placeholder="ABC-123">
+      <ExampleCard
+        snippet="bind(input, 'UUU-999', { tokens: { U: { match: /[a-z]/i, transform: char => char.toUpperCase() } } })"
+        inputId="ex-upper"
+        ariaLabel="Uppercase identifier"
+        placeholder="ABC-123"
+      >
         <Fragment slot="title">Uppercase identifier</Fragment>
         <span class="hint">Type abc123, then replace a letter in the middle.</span>
       </ExampleCard>

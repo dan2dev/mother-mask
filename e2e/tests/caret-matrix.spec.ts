@@ -299,16 +299,22 @@ for (const eager of [true, false]) {
 
   for (const key of ['Backspace', 'Delete', 'ControlOrMeta+x']) {
     test('selecting the area code and its divider, then ' + key + ' (eager=' + eager + ')', async ({ page }) => {
-      // Nothing positional survives here, and an empty first field leaves the
-      // caret with nothing to sit behind, so the digits pack from the left.
-      // Pinned as the boundary of the rule: typing over this same selection
-      // does hold the tail in place (see the test below), deleting it cannot.
+      // The pure algorithm has nothing positional to go on here — the caret
+      // lands at 0, indistinguishable from the pure API's own "no edit
+      // happened yet" default — but `bind()` knows a deletion just occurred,
+      // and restores the swallowed ") " (the only thing this edit actually
+      // destroyed besides the area code itself) before masking. "222-3333"
+      // never moved, so it stays exactly where it was instead of packing
+      // into the emptied area code.
       const field = await phoneField(page, eager)
       await field.evaluate((input: HTMLInputElement) => input.setSelectionRange(0, 6))
       await page.keyboard.press(key)
-      const after = await field.evaluate((input: HTMLInputElement) => input.value)
-      expect(after.replace(/\D/g, ''), 'no digit is lost').toBe('2223333')
-      expect(after.startsWith('(22'), after).toBe(true)
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['() 222-3333', 1, 1])
+      // Retyping an area code refills exactly the field that was emptied.
+      await page.keyboard.type('999')
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['(999) 222-3333', 4, 4])
     })
   }
 

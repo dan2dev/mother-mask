@@ -14,8 +14,8 @@ const dispose = bind(input, mask, {
   onChange: value => console.log(value),
 })
 
-// Call during cleanup, before rebinding or removing the input.
-dispose()`
+// Later, during cleanup, before rebinding or removing the input:
+// dispose()`
 ---
 
 <Layout

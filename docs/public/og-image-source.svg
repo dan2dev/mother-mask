@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fbfafc" />
+      <stop offset="1" stop-color="#f4f0fb" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ff745f" />
+      <stop offset=".5" stop-color="#d94ed7" />
+      <stop offset="1" stop-color="#7257f5" />
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#7257f5" stop-opacity=".2" />
+      <stop offset="1" stop-color="#7257f5" stop-opacity="0" />
+    </radialGradient>
+    <filter id="shadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="26" stdDeviation="24" flood-color="#17132e" flood-opacity=".18" />
+    </filter>
+    <symbol id="logo" viewBox="0 0 1254 1254">
+      <g transform="matrix(1.224609,0,0,1.224609,-0.053255,24.765719)">
+        <g transform="matrix(0.816587,0,0,0.816587,-7.305795,-13.690667)">
+          <circle cx="636" cy="619" r="410" fill="#1e1f20" />
+        </g>
+        <path d="M650.978,719.442C727.916,575.09 613.944,468.275 498.599,505.787C435.118,526.431 412.981,582.811 373.464,577.777C342.874,573.88 357.983,542.764 357.914,536.503C357.714,518.608 339.681,520.991 347.509,508.506C350.185,504.239 359.099,502.871 350.594,499.274C349.475,498.801 338.232,495.556 339.169,487.458C340.114,479.294 358.107,468.891 335.327,457.87C298.215,439.916 341.141,430.798 357.109,388.337C371.345,350.484 337.278,313.96 390.854,250.879C397.874,242.613 380.193,294.084 469.831,367.086C565.978,445.389 711.105,492.583 688.024,635.405C682.437,669.979 663.265,703.413 658.398,710.424C654.125,716.578 655.378,718.677 650.978,719.442Z" fill="#f6ece3" />
+        <path d="M396.31,623.492C397.443,612.017 395.364,601.368 412.547,598.917C441.708,594.758 481.075,610.647 482.608,611.169C545.8,632.712 562.104,601.86 606.534,598.913C635.381,597 643.273,598.6 643.174,627.501C642.838,725.788 577.73,790.017 529.524,798.641C486.547,806.33 396.643,750.955 396.31,623.492Z" fill="#f6ece3" />
+        <path d="M703.194,502.639C654.695,392.361 534.69,363.47 462.891,303.066C426.635,272.564 407.973,234.973 415.677,244.068C425.621,255.809 425.637,255.637 437.038,265.985C534.075,354.059 698.969,375.435 726.12,538.573C731.646,571.778 723.497,624.434 722.213,613.682C720.829,602.098 732.828,571.569 703.194,502.639Z" fill="#f6ece3" />
+        <path d="M482.559,232.21C602.702,258.485 647.937,335.286 668.646,372.481C681.133,394.909 664.288,366.904 647.053,347.915C607.031,303.822 538.089,252.885 457.75,229.055C452.192,227.406 458.282,227.173 458.438,227.199C466.121,228.48 480.637,231.774 482.559,232.21Z" fill="#f6ece3" />
+        <path d="M586.493,663.934C595.324,664.92 613.57,665.153 610.091,673.329C607.944,678.375 593.132,713.18 546.601,699.181C544.354,698.505 539.738,696.687 550.606,680.572C555.749,672.946 564.274,668.59 565.678,667.873C572.193,664.543 584.799,664.006 586.493,663.934Z" fill="#1e1f20" />
+        <path d="M445.375,694.677C440.863,690.965 438.505,690.301 431.893,679.265C424.953,667.682 431.556,667.496 433.613,666.93C460.076,659.653 474.236,668.136 477.237,669.934C486.916,675.732 501.821,696.748 492.41,699.172C461.961,707.016 448.417,696.629 445.375,694.677Z" fill="#1e1f20" />
+        <path d="M410.498,413.724C383.75,410.99 380.4,395.671 380.412,395.494C381.119,385.622 391.988,397.975 406.486,399.585C425.787,401.729 437.277,392.093 439.643,390.792C441.241,389.914 449.087,390.518 441.065,400.125C428.581,415.076 413.413,413.622 410.498,413.724Z" fill="#1e1f20" />
+      </g>
+    </symbol>
+    <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="2.4" fill="#ff745f" opacity=".65" />
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <circle cx="970" cy="210" r="310" fill="url(#glow)" />
+  <circle cx="104" cy="34" r="120" fill="#7257f5" opacity=".06" />
+  <rect x="1070" y="84" width="92" height="92" fill="url(#dots)" />
+
+  <g font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <g transform="translate(72 55)">
+      <circle cx="25" cy="25" r="25" fill="#17132e" />
+      <use href="#logo" x="-7" y="-7" width="64" height="64" />
+      <text x="66" y="34" fill="#17132e" font-size="27" font-weight="750" letter-spacing="-1">mother-mask</text>
+    </g>
+
+    <g transform="translate(72 139)">
+      <rect width="234" height="35" rx="17.5" fill="#eee9ff" stroke="#ded6ff" />
+      <text x="18" y="23" fill="#7257f5" font-size="13" font-weight="700" letter-spacing=".3">✦ ZERO DEPENDENCIES</text>
+    </g>
+
+    <text x="72" y="252" fill="#17132e" font-size="66" font-weight="780" letter-spacing="-3.4">Input masks,</text>
+    <text x="72" y="326" fill="url(#accent)" font-size="66" font-weight="780" letter-spacing="-3.4">without the rough edges.</text>
+    <text x="72" y="382" fill="#5d5970" font-size="22" font-weight="450">A tiny, fully typed library for inputs that feel natural</text>
+    <text x="72" y="413" fill="#5d5970" font-size="22" font-weight="450">to type, paste, edit, and build.</text>
+
+    <g transform="translate(72 470)">
+      <rect width="495" height="82" rx="16" fill="#17132e" />
+      <circle cx="27" cy="20" r="5" fill="#ff745f" />
+      <circle cx="44" cy="20" r="5" fill="#f5b728" />
+      <circle cx="61" cy="20" r="5" fill="#22b95f" />
+      <text x="26" y="58" fill="#f7f4fb" font-family="'SFMono-Regular', Consolas, monospace" font-size="20">npm install <tspan fill="#ff92ca">mother-mask</tspan></text>
+    </g>
+  </g>
+
+  <g filter="url(#shadow)">
+    <circle cx="923" cy="318" r="221" fill="#ffffff" stroke="#e7e1f1" stroke-width="2" />
+    <circle cx="923" cy="318" r="192" fill="none" stroke="#7257f5" stroke-opacity=".2" stroke-dasharray="5 8" />
+    <use href="#logo" x="690" y="85" width="466" height="466" />
+  </g>
+
+  <g transform="translate(799 508)" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+    <rect width="249" height="48" rx="13" fill="#ffffff" stroke="#e7e1f1" />
+    <circle cx="25" cy="24" r="6" fill="#17a673" />
+    <circle cx="25" cy="24" r="11" fill="none" stroke="#17a673" stroke-opacity=".18" stroke-width="5" />
+    <text x="45" y="30" fill="#17132e" font-size="15" font-weight="700">paste-safe · framework-agnostic</text>
+  </g>
+</svg>

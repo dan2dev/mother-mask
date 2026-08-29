@@ -2,9 +2,12 @@
 import Layout from '../layouts/Layout.astro'
 import CodeBlock from '../components/CodeBlock.astro'
 
-const snippet = `<script src="https://unpkg.com/mother-mask/dist/mother-mask.umd.js"></script>
+const snippet = `<input id="cpf" inputmode="numeric" aria-label="CPF" />
+
+<script src="https://unpkg.com/mother-mask/dist/mother-mask.umd.js"></script>
 <script>
-  const dispose = MotherMask.bind(document.getElementById('cpf'), '999.999.999-99')
+  const input = document.getElementById('cpf')
+  const dispose = MotherMask.bind(input, '999.999.999-99')
 </script>`
 ---
 

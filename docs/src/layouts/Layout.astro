@@ -5,7 +5,7 @@ import Sidebar from '../components/Sidebar.astro'
 import Footer from '../components/Footer.astro'
 import PageNav from '../components/PageNav.astro'
 import { NAV, canonicalFor, navHref } from '../data/nav'
-import pkg from '../../../packages/mother-mask/package.json'
+import { packageVersion } from '../data/package-meta'
 import '../styles/global.css'
 
 interface Props {
@@ -23,7 +23,9 @@ if (!item) throw new Error(`Unknown nav slug: ${current}`)
 
 const canonical = canonicalFor(item.path)
 const isHome = current === 'index'
-const version = pkg.version
+const version = packageVersion
+const socialImage = 'https://dan2dev.github.io/mother-mask/og-image.png'
+const socialImageAlt = 'mother-mask — TypeScript input masks without the rough edges'
 
 const webPage = {
   '@type': 'WebPage',
@@ -82,6 +84,12 @@ const breadcrumb = {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href={navHref('favicon.svg')} />
+    <link rel="icon" type="image/png" sizes="32x32" href={navHref('favicon-32x32.png')} />
+    <link rel="icon" type="image/png" sizes="16x16" href={navHref('favicon-16x16.png')} />
+    <link rel="shortcut icon" href={navHref('favicon.ico')} />
+    <link rel="apple-touch-icon" sizes="180x180" href={navHref('apple-touch-icon.png')} />
+    <link rel="manifest" href={navHref('site.webmanifest')} />
+    <meta name="apple-mobile-web-app-title" content="mother-mask" />
     <meta name="description" content={description} />
     {keywords && <meta name="keywords" content={keywords} />}
     <meta name="author" content="Danilo Celestino de Castro" />
@@ -93,14 +101,17 @@ const breadcrumb = {
     <meta property="og:url" content={canonical} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
-    <meta property="og:image" content="https://dan2dev.github.io/mother-mask/og-image.png" />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:secure_url" content={socialImage} />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="mother-mask — TypeScript input masks for browser forms" />
+    <meta property="og:image:alt" content={socialImageAlt} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content="https://dan2dev.github.io/mother-mask/og-image.png" />
+    <meta name="twitter:image" content={socialImage} />
+    <meta name="twitter:image:alt" content={socialImageAlt} />
     <meta name="theme-color" content="#18152a" />
     <title>{title}</title>
     {
@@ -123,20 +134,20 @@ const breadcrumb = {
     </script>
     {!isHome && <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumb)} />}
   </head>
-  <body>
+  <body class:list={{ 'home-page': isHome }}>
     <Icons />
 
     <div id="app">
       <Header current={current} />
 
-      <div class="layout">
-        <Sidebar current={current} />
+      <div class:list={['layout', { 'layout-home': isHome }]}>
+        {!isHome && <Sidebar current={current} />}
 
         <div class="content">
           <main>
             <slot />
 
-            <PageNav current={current} />
+            {!isHome && <PageNav current={current} />}
           </main>
 
           <Footer />
