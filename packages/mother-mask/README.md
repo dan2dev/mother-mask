@@ -391,10 +391,20 @@ equivalent Delete would, so it gets the same rescue — but only when it has to.
 Selecting the `"3/12"` of `"3/12/1986"` on `'9{1,2}/9{1,2}/9{4}'` and typing
 `"4"` leaves `"4/1986"`, where the lone surviving `"/"` reads equally well as
 the day's; without the rescue the untouched year breaks apart into
-`"4/19/86"`. Restoring the divider gives `"4/|/1986"` instead, with the caret
-in the emptied month. Where the tail was never in danger — retyping a CPF over
-`"012.153.441"`, whose `"-"` is distinct — nothing is restored and the digits
-keep filling from the left exactly as before.
+`"4/19/86"`. Restoring the divider gives `"4|//1986"` instead, with the year
+untouched. The caret stays in the day: it is only one of the two digits that
+field accepts, so the next keystroke widens it to `"42"` rather than starting
+the month — the mask has no way to know the day was finished, and eager hands
+the caret across on its own once it is. Where the tail was never in danger —
+retyping a CPF over `"012.153.441"`, whose `"-"` is distinct — nothing is
+restored and the digits keep filling from the left exactly as before.
+
+A divider whose removal would re-segment untouched text is not erodible:
+Backspacing the second `"/"` out of `"13//1986"` would leave `"13/1986"`,
+which re-reads as `13 / 19 / 86`, so it is put back and the keystroke erodes
+the day instead. Where dropping a divider costs nothing — a CPF's `"-"` still
+pins its last field however much of `"."` survives — Backspace peels it away
+exactly as documented above.
 
 This is bind-only, like eager's Backspace/Delete handling above: pure
 `applyMask`/`buildMask`/`process` see only the resulting `(value, caret)` and

@@ -128,7 +128,10 @@ export function createFrameScheduler(): { scheduleFrame: (callback: () => void) 
  * choosing to remove, exactly as backspacing through "(111) " down to
  * "(111-4444" and on to "-4444" is documented to work. Only a deletion that
  * destroys *some* field data is treated as having swallowed a separator by
- * accident rather than on purpose.
+ * accident rather than on purpose. `allowDividerOnly` lifts that rule for a
+ * caller that has separately established the erosion would corrupt something
+ * — see `bind()`, where a divider whose removal would re-segment untouched
+ * text is put back instead.
  *
  * Restoring a separator only ever reproduces text that was standing exactly
  * there a moment ago, at the exact position it stood — it never invents
@@ -163,6 +166,7 @@ export function restoreSwallowedSeparators(
   previousValue: string,
   isData: (char: string) => boolean,
   insertedLength = 0,
+  allowDividerOnly = false,
 ): string {
   if (removedLength <= 0 || insertedLength < 0 || insertedLength > pos) return rawValue
   const cutStart = pos - insertedLength
@@ -184,7 +188,7 @@ export function restoreSwallowedSeparators(
   // never a coincidence. Keep them, in order, and drop the data alongside
   // them that this edit did mean to delete.
   const removed = previousValue.slice(cutStart, deletedEnd)
-  if (!Array.from(removed).some(isData)) return rawValue
+  if (!allowDividerOnly && !Array.from(removed).some(isData)) return rawValue
   let literals = ''
   for (const ch of removed) if (!isData(ch)) literals += ch
   if (!literals) return rawValue

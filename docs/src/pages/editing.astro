@@ -63,10 +63,18 @@ const caretSnippet = `// | marks the caret after the edit.
       Typing a character straight over a selection destroys the same dividers the equivalent Delete would, so <code>bind()</code> gives it the same
       rescue — but only when it has to. Selecting the <code>3/12</code> of <code>3/12/1986</code> and typing <code>4</code> leaves
       <code>4/1986</code>, where the one surviving <code>/</code> reads equally well as the day's, and the untouched year would otherwise break
-      apart into <code>4/19/86</code>. Restoring the divider gives <code>4/|/1986</code>, caret in the emptied month. Where the tail was never in
-      danger — retyping a CPF over <code>012.153.441</code>, whose <code>-</code> is distinct — nothing is restored. Like the Backspace/Delete
+      apart into <code>4/19/86</code>. Restoring the divider gives <code>4|//1986</code>, year intact. The caret stays in the day — that field takes
+      two digits and has only one, so the next keystroke widens it to <code>42</code> rather than starting the month; eager hands the caret across
+      by itself once the field is full. Where the tail was never in danger — retyping a CPF over <code>012.153.441</code>, whose <code>-</code> is
+      distinct — nothing is restored. Like the Backspace/Delete
       handling, this is <code>bind()</code>-only: the pure helpers see just <code>(value, caret)</code> and cannot tell a replacement from fresh
       input.
+    </p>
+    <p>
+      A divider whose removal would re-segment untouched text is not erodible either. Backspacing the second <code>/</code> out of
+      <code>13//1986</code> would leave <code>13/1986</code>, which re-reads as <code>13 / 19 / 86</code>, so it is put back and the keystroke
+      erodes the day instead. Where dropping a divider costs nothing — a CPF's <code>-</code> still pins its last field — Backspace peels it away
+      as described above.
     </p>
     <p>
       Eager mode reveals the next literal when a segment fills: typing <code>25</code> into a date shows <code>25/</code>. Set <code>eager: false</code> to

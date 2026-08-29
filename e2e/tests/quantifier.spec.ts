@@ -229,21 +229,39 @@ test.describe('bounded quantifiers — replacing a selection keeps later fields 
     await field.evaluate((el) => (el as HTMLInputElement).setSelectionRange(0, 4))
     await page.keyboard.type('4')
 
-    expect(await withCaret(page, '#flexdate')).toBe('4/|/1986')
+    expect(await withCaret(page, '#flexdate')).toBe('4|//1986')
   })
 
-  test('the month can then be typed straight into the gap', async ({ page }) => {
+  test('the day stays open for its second digit, then the caret moves on', async ({ page }) => {
+    await page.goto('/')
+    const field = page.locator('#flexdate')
+    await field.click()
+    await field.pressSequentially('3/1/1998', { delay: 0 })
+
+    await field.evaluate((el) => (el as HTMLInputElement).setSelectionRange(0, 3))
+    await page.keyboard.type('2')
+    expect(await withCaret(page, '#flexdate')).toBe('2|//1998')
+
+    // The day still has a free slot, so this widens it rather than starting
+    // the month; only at its maximum does eager hand the caret across.
+    await page.keyboard.type('2')
+    expect(await withCaret(page, '#flexdate')).toBe('22/|/1998')
+
+    await page.keyboard.type('2')
+    expect(await withCaret(page, '#flexdate')).toBe('22/2|/1998')
+    await expect(field).toHaveValue('22/2/1998')
+  })
+
+  test('a replacement that already fills the day moves the caret on', async ({ page }) => {
     await page.goto('/')
     const field = page.locator('#flexdate')
     await field.click()
     await field.pressSequentially('3/12/1986', { delay: 0 })
 
     await field.evaluate((el) => (el as HTMLInputElement).setSelectionRange(0, 4))
-    await page.keyboard.type('4')
-    await page.keyboard.type('7')
+    await page.keyboard.type('25')
 
-    expect(await withCaret(page, '#flexdate')).toBe('4/7|/1986')
-    await expect(field).toHaveValue('4/7/1986')
+    expect(await withCaret(page, '#flexdate')).toBe('25/|/1986')
   })
 
   test('the same edit on the fixed 99/99/9999 field behaves identically', async ({ page }) => {
@@ -256,7 +274,7 @@ test.describe('bounded quantifiers — replacing a selection keeps later fields 
     await field.evaluate((el) => (el as HTMLInputElement).setSelectionRange(0, 5))
     await page.keyboard.type('4')
 
-    expect(await withCaret(page, '#date')).toBe('4/|/2025')
+    expect(await withCaret(page, '#date')).toBe('4|//2025')
   })
 
   test('replacing only the month keeps the day and year exactly where they are', async ({ page }) => {
@@ -282,5 +300,56 @@ test.describe('bounded quantifiers — replacing a selection keeps later fields 
     await page.keyboard.type('015153441')
 
     expect(await withCaret(page, '#cpf')).toBe('015.153.441|-39')
+  })
+})
+
+test.describe('bounded quantifiers — a divider that pins untouched text resists Backspace', () => {
+  /** Reach "13//1986" the way a user does: fill the date, then clear the month. */
+  async function withEmptyMonth(page: Page, selector: string, digits: string): Promise<void> {
+    const field = page.locator(selector)
+    await field.click()
+    await field.pressSequentially(digits, { delay: 0 })
+    await field.evaluate((el) => (el as HTMLInputElement).setSelectionRange(3, 5))
+    await page.keyboard.press('Delete')
+    expect(await withCaret(page, selector)).toBe('13/|/1986')
+  }
+
+  test('erasing the empty month\'s "/" keeps the year together', async ({ page }) => {
+    await page.goto('/')
+    await withEmptyMonth(page, '#flexdate', '13121986')
+
+    await page.keyboard.press('Backspace')
+    // Dropping it would leave "13/1986", which re-reads as 13 / 19 / 86.
+    expect(await withCaret(page, '#flexdate')).toBe('13|//1986')
+  })
+
+  test('the same edit on the fixed 99/99/9999 field behaves identically', async ({ page }) => {
+    await page.goto('/')
+    await withEmptyMonth(page, '#date', '13121986')
+
+    await page.keyboard.press('Backspace')
+    expect(await withCaret(page, '#date')).toBe('13|//1986')
+  })
+
+  test('holding Backspace erodes the day rather than the structure', async ({ page }) => {
+    await page.goto('/')
+    await withEmptyMonth(page, '#flexdate', '13121986')
+
+    const seen: string[] = []
+    for (let i = 0; i < 3; i++) {
+      await page.keyboard.press('Backspace')
+      seen.push(await withCaret(page, '#flexdate'))
+    }
+    expect(seen).toEqual(['13|//1986', '1|//1986', '|//1986'])
+  })
+
+  test('the emptied month can then be refilled', async ({ page }) => {
+    await page.goto('/')
+    await withEmptyMonth(page, '#flexdate', '13121986')
+
+    await page.keyboard.press('Backspace')
+    await page.locator('#flexdate').evaluate((el) => (el as HTMLInputElement).setSelectionRange(3, 3))
+    await page.keyboard.type('7')
+    expect(await withCaret(page, '#flexdate')).toBe('13/7|/1986')
   })
 })

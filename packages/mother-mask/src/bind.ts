@@ -277,29 +277,47 @@ export function bind(
         ? inputEvent.data : ''
     const editEager = eagerForEdit(eager, isDeleteLike)
 
+    const cutStart = pos - insertedText.length
+    const removedLength = previousLength - rawValue.length + insertedText.length
+
     let formatValue = rawValue
-    if (isPlainContentDelete) {
-      formatValue = restoreSwallowedSeparators(
-        rawValue, pos, previousLength - rawValue.length, lastMaskedValue, isData,
-      )
-    } else if (insertedText) {
-      const removedLength = previousLength - rawValue.length + insertedText.length
+    if (isPlainContentDelete || insertedText) {
       const rescued = restoreSwallowedSeparators(
-        rawValue, pos, removedLength, lastMaskedValue, isData, insertedText.length,
+        rawValue, pos, removedLength, lastMaskedValue, isData, insertedText.length, true,
       )
-      // Unlike a deletion — where the divider is unambiguously gone and gets
-      // restored outright — replacing a selection still leaves the user
-      // typing forward, so the divider only goes back when it has to. What
-      // survives past the cut is text this edit never touched and the mask
-      // already formatted, so it has to come back out unchanged and at the
-      // end. Retyping a CPF over "012.153.441" keeps its "-39" either way,
-      // and a restored dot would only sit in the user's way. Replacing the
-      // "3/12" of "3/12/1986" is the other case: every separator in that mask
-      // reads alike, the lone surviving "/" gets taken for the day's, and the
-      // untouched year breaks apart into "4/19/86". There it goes back.
-      const untouchedTail = lastMaskedValue.slice(pos - insertedText.length + removedLength)
-      if (rescued !== rawValue && !format(rawValue, pos, editEager).value.endsWith(untouchedTail)) {
-        formatValue = rescued
+      if (rescued !== rawValue) {
+        // A deletion that destroyed field data puts its dividers back
+        // outright: every field it crossed reappears empty with its own
+        // boundary intact, which is what keeps "98765-4321" from sliding
+        // into an emptied area code.
+        const destroyedFieldData = isPlainContentDelete &&
+          Array.from(lastMaskedValue.slice(cutStart, cutStart + removedLength)).some(isData)
+        // Everything else is the user editing forward — typing over a
+        // selection, or peeling a divider off with Backspace — so the divider
+        // only goes back when erasing it would re-segment text this edit never
+        // touched. That text sits past the cut and the mask already formatted
+        // it, so it has to come back out unchanged and at the end. Retyping a
+        // CPF over "012.153.441" keeps its "-39" either way, and backspacing
+        // the ") " out of "(111) -3333" still erodes down to "(111-3333"; but
+        // erasing the second "/" of "13//1986" would read the year as
+        // "13/19/86", so that one is put back.
+        // Measured from the surviving text's first *data* character: the mask
+        // owns how dividers render, and a cut that stopped mid-divider leaves
+        // a fragment it may legitimately absorb — deleting the ")" out of
+        // "(111) -4444" is still the documented erosion down to "(111-4444",
+        // even though the stranded space goes with it. Field characters are
+        // the thing that must not move.
+        const suffix = lastMaskedValue.slice(cutStart + removedLength)
+        let dataStart = 0
+        while (dataStart < suffix.length) {
+          const ch = String.fromCodePoint(suffix.codePointAt(dataStart)!)
+          if (isData(ch)) break
+          dataStart += ch.length
+        }
+        const untouchedTail = suffix.slice(dataStart)
+        if (destroyedFieldData || !format(rawValue, pos, editEager).value.endsWith(untouchedTail)) {
+          formatValue = rescued
+        }
       }
     }
     const m = format(formatValue, pos, editEager)

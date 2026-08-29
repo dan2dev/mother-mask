@@ -505,17 +505,13 @@ function resolveLiteralVisibility(
  * puts the caret at `015.|-39` — past the separator the just-completed "015"
  * revealed, but not past the "-" that anchors the untouched "39".
  *
- * A divider standing directly behind the caret carries it too, even with
- * eager off and even when the field it closes is not full, as long as that
- * field holds data whose last character ends *at* the caret. The user's own
- * text stops exactly there, so the boundary is behind them and the empty
- * field it opens is where they are typing next: replacing the "3/12" of
- * "3/12/1986" with "4" lands at `4/|/1986`, in the emptied month, rather
- * than at `4|//1986` outside the day just finished. Requiring the field to
- * end at the caret is what keeps a divider standing in front of text the
- * edit never reached from dragging the caret over it, and requiring data
- * further along keeps it to genuinely *emptied middle* fields — a divider
- * with nothing behind it is the tail of the value, which eager alone owns.
+ * Only a *full* field hands the caret across its divider, which is what
+ * leaves a bounded-quantifier field open for the rest of what the user is
+ * typing. Replacing the "3/1" of "3/1/1998" with "2" renders "2//1998" and
+ * stays at `2|//1998`, so a second "2" makes the day "22" — the mask has no
+ * way to know the day was finished, and guessing it was would cost the
+ * keystroke. Once the day does reach its maximum the ordinary eager reveal
+ * moves on by itself, landing at `22/|/1998`.
  */
 function renderAssignment(
   plan: CompiledMask,
@@ -527,11 +523,6 @@ function renderAssignment(
 ): MaskResult {
   const { tokens, runChars, runOffset, runBeforeLiteral, runAfterLiteral, runOfToken } = plan
   const { slotChar, slotSource, runFilled } = assignment
-  let lastFilledRun = runFilled.length - 1
-  while (lastFilledRun >= 0 && runFilled[lastFilledRun] === 0) lastFilledRun--
-  /** Whether run `r` holds data whose last character ends exactly at the caret. */
-  const editEndsAt = (r: number): boolean =>
-    r >= 0 && runFilled[r] > 0 && slotSource[runOffset[r] + runFilled[r] - 1] === inputCaret
 
   let output = ''
   let outputCaret = 0
@@ -562,9 +553,7 @@ function renderAssignment(
       output += token.text
       if (
         atFrontier &&
-        (caretAfterLiteral ||
-          ((revealed || (editEndsAt(before) && lastFilledRun > after)) && opensEmptySegment) ||
-          (source >= 0 && source < inputCaret))
+        (caretAfterLiteral || (revealed && opensEmptySegment) || (source >= 0 && source < inputCaret))
       ) {
         outputCaret = output.length
       }

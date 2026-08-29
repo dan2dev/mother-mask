@@ -100,14 +100,14 @@ describe('the reported regression — replacing a selection that spans a divider
   it('keeps "1986" in the year instead of re-segmenting it', () => {
     input = bound('3/12/1986', FLEX_DATE)
     typeOver(input, 0, 4, '4') // select "3/12"
-    expect(withCaret(input)).toBe('4/|/1986')
+    expect(withCaret(input)).toBe('4|//1986')
   })
 
   it('fails the same way, and is fixed the same way, on a fixed-width mask', () => {
     // Never a quantifier problem: `99/99/9999` re-segmented the year too.
     input = bound('3/12/1986', DATE)
     typeOver(input, 0, 4, '4')
-    expect(withCaret(input)).toBe('4/|/1986')
+    expect(withCaret(input)).toBe('4|//1986')
   })
 
   it('holds through the keystrokes that follow the replacement', () => {
@@ -118,7 +118,9 @@ describe('the reported regression — replacing a selection that spans a divider
       type(input, ch)
       seen.push(withCaret(input))
     }
-    expect(seen).toEqual(['4/|/1986', '4/7|/1986', '4/78|/1986'])
+    // The day still has a free slot, so the first "7" widens it to "47";
+    // only then does eager hand the caret across into the month.
+    expect(seen).toEqual(['4|//1986', '47/|/1986', '47/8|/1986'])
   })
 
   it('reaches the same place through the keydown/rAF fallback', async () => {
@@ -150,8 +152,8 @@ describe('replacing each field of a date, with and without its divider', () => {
   const cases: [string, number, number, string, string][] = [
     ['the day alone', 0, 1, '4', '4|/12/1986'],
     ['the day and its divider', 0, 2, '4', '4|/12/1986'],
-    ['the day, divider and month', 0, 4, '4', '4/|/1986'],
-    ['the day through the second divider', 0, 5, '4', '4/|/1986'],
+    ['the day, divider and month', 0, 4, '4', '4|//1986'],
+    ['the day through the second divider', 0, 5, '4', '4|//1986'],
     ['the month alone', 2, 4, '7', '3/7|/1986'],
     ['the month and its divider', 2, 5, '7', '3/7|/1986'],
     ['the year alone', 5, 9, '2', '3/12/2|'],
@@ -175,7 +177,7 @@ describe('replacing each field of a date, with and without its divider', () => {
   it('handles a two-digit day being replaced by one', () => {
     input = bound('12/12/1986', FLEX_DATE)
     typeOver(input, 0, 5, '4')
-    expect(withCaret(input)).toBe('4/|/1986')
+    expect(withCaret(input)).toBe('4|//1986')
   })
 
   it('keeps the year when the month and its divider go mid-value', () => {
@@ -306,7 +308,7 @@ describe('the rescue is scoped to edits that report what they inserted', () => {
     }
     input = bound('AB::CD::EF', 'U{1,2}::U{1,2}::U{2}', options)
     typeOver(input, 0, 6, 'x')
-    expect(withCaret(input)).toBe('X::|::EF')
+    expect(withCaret(input)).toBe('X|::::EF')
   })
 
   it('works with an escaped literal in the pattern', () => {
@@ -392,5 +394,224 @@ describe('re-masking a render at its own caret stays a no-op', () => {
         mask, value, caret, eager, out: first.value, at: first.caret,
       })
     }
+  })
+})
+
+// ---------------------------------------------------------------------------
+// The caret stays in the field being typed
+//
+// A replacement that leaves a bounded-quantifier field below its maximum has
+// not finished that field — the mask cannot know whether the user meant "2" or
+// is on their way to "22". Handing the caret across the divider would spend
+// the next keystroke on the wrong field, so it stays put until the field is
+// genuinely full and the ordinary eager reveal moves it on.
+// ---------------------------------------------------------------------------
+
+describe('a replacement leaves a partly filled field open', () => {
+  let input: HTMLInputElement
+
+  afterEach(() => {
+    input.remove()
+  })
+
+  it('lets a one-digit day grow to two after replacing "3/1" with "2"', () => {
+    input = bound('3/1/1998', FLEX_DATE)
+    typeOver(input, 0, 3, '2')
+    expect(withCaret(input)).toBe('2|//1998')
+
+    type(input, '2')
+    expect(withCaret(input)).toBe('22/|/1998')
+
+    type(input, '2')
+    expect(withCaret(input)).toBe('22/2|/1998')
+  })
+
+  it('moves on by itself when the replacement already fills the field', () => {
+    input = bound('3/12/1986', FLEX_DATE)
+    typeOver(input, 0, 4, '25')
+    expect(withCaret(input)).toBe('25/|/1986')
+    type(input, '7')
+    expect(withCaret(input)).toBe('25/7|/1986')
+  })
+
+  it('holds the caret in a fixed-width field the same way', () => {
+    input = bound('25/12/2025', DATE)
+    typeOver(input, 0, 5, '4')
+    expect(withCaret(input)).toBe('4|//2025')
+    type(input, '7')
+    expect(withCaret(input)).toBe('47/|/2025')
+  })
+
+  it('keeps a replaced month open for its second digit', () => {
+    input = bound('3/12/1986', FLEX_DATE)
+    typeOver(input, 2, 4, '4')
+    expect(withCaret(input)).toBe('3/4|/1986')
+    type(input, '5')
+    expect(withCaret(input)).toBe('3/45|/1986')
+  })
+
+  it('keeps a replaced day open when only the day was selected', () => {
+    input = bound('3/1/1998', FLEX_DATE)
+    typeOver(input, 0, 1, '2')
+    expect(withCaret(input)).toBe('2|/1/1998')
+    type(input, '5')
+    expect(withCaret(input)).toBe('25|/1/1998')
+  })
+
+  it('never jumps a divider that stands in front of untouched text', () => {
+    // The month is not empty here, so nothing about this edit is a frontier.
+    input = bound('12/12/1986', FLEX_DATE)
+    typeOver(input, 0, 2, '3')
+    expect(withCaret(input)).toBe('3|/12/1986')
+  })
+
+  it('leaves plain forward typing exactly as it was', () => {
+    input = bound('', FLEX_DATE)
+    const seen: string[] = []
+    for (const ch of '3/4/1986') {
+      type(input, ch)
+      seen.push(withCaret(input))
+    }
+    expect(seen).toEqual([
+      '3|', '3/|', '3/4|', '3/4/|', '3/4/1|', '3/4/19|', '3/4/198|', '3/4/1986|',
+    ])
+  })
+
+  it('leaves the CPF retype flow exactly as it was', () => {
+    input = bound('012.153.441-39', CPF)
+    typeOver(input, 0, 11, '0')
+    const seen = [withCaret(input)]
+    for (const ch of '15') {
+      type(input, ch)
+      seen.push(withCaret(input))
+    }
+    expect(seen).toEqual(['0|-39', '01|-39', '015.|-39'])
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Backspacing a divider
+//
+// Peeling a separator off with Backspace is ordinary erosion and stays that
+// way — but a divider whose removal would re-segment untouched text is not
+// erodible, because there is no value the mask can render that both drops it
+// and keeps the fields where they are. With `99/99/9999` holding "13//1986",
+// erasing the second "/" leaves "13/1986", which re-reads as 13 / 19 / 86.
+// ---------------------------------------------------------------------------
+
+describe('backspacing a divider that pins untouched text', () => {
+  let input: HTMLInputElement
+
+  afterEach(() => {
+    input.remove()
+  })
+
+  /** Backspace once at the current caret. */
+  function backspace(target: HTMLInputElement): void {
+    const at = target.selectionStart ?? 0
+    if (at === 0) return
+    target.value = target.value.slice(0, at - 1) + target.value.slice(at)
+    target.setSelectionRange(at - 1, at - 1)
+    target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward' }))
+  }
+
+  function caretAt(target: HTMLInputElement, at: number): HTMLInputElement {
+    target.setSelectionRange(at, at)
+    return target
+  }
+
+  it('keeps the year together when the empty month\'s divider is erased', () => {
+    input = bound('13//1986', DATE)
+    backspace(caretAt(input, 3))
+    expect(withCaret(input)).toBe('13|//1986')
+  })
+
+  it('does the same on a quantified mask', () => {
+    input = bound('13//1986', FLEX_DATE)
+    backspace(caretAt(input, 3))
+    expect(withCaret(input)).toBe('13|//1986')
+  })
+
+  it('protects the first divider too', () => {
+    // Dropping it would leave "1/2025", which re-reads as 1 / 20 / 25.
+    input = bound('1//2025', DATE)
+    backspace(caretAt(input, 2))
+    expect(withCaret(input)).toBe('1|//2025')
+  })
+
+  it('erodes the day instead, when Backspace is held', () => {
+    input = bound('13//1986', DATE)
+    caretAt(input, 3)
+    const seen: string[] = []
+    for (let i = 0; i < 3; i++) {
+      backspace(input)
+      seen.push(withCaret(input))
+    }
+    expect(seen).toEqual(['13|//1986', '1|//1986', '|//1986'])
+  })
+
+  it('still erodes a divider whose removal costs nothing', () => {
+    // "-" is distinct, so "4444" is pinned either way and the ") " can go.
+    input = bound('(111) -4444', '(999) 999-9999')
+    caretAt(input, 6)
+    const seen: string[] = []
+    for (let i = 0; i < 3; i++) {
+      backspace(input)
+      seen.push(withCaret(input))
+    }
+    expect(seen).toEqual(['(111|-4444', '(11|-4444', '(1|-4444'])
+  })
+
+  it('still drops an eager divider the user just backspaced', () => {
+    input = bound('012.', CPF)
+    backspace(caretAt(input, 4))
+    expect(withCaret(input)).toBe('012|')
+  })
+
+  it('leaves a divider selected mid-way alone, fragment and all', () => {
+    // The cut stops inside ") ", stranding the space. That fragment is
+    // divider text the mask may absorb — only field data must not move.
+    for (const [start, end] of [[4, 5], [5, 6], [4, 6]] as [number, number][]) {
+      const field = bound('(111) -4444', '(999) 999-9999')
+      field.setSelectionRange(start, end)
+      field.value = field.value.slice(0, start) + field.value.slice(end)
+      field.setSelectionRange(start, start)
+      field.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward' }))
+      expect({ start, end, out: `${field.value}@${field.selectionStart}` })
+        .toEqual({ start, end, out: '(111-4444@4' })
+      field.remove()
+    }
+    input = bound('', DATE)
+  })
+
+  it('drains a full value one character at a time, unchanged', () => {
+    input = bound('13/12/1986', DATE)
+    caretAt(input, 10)
+    const seen: string[] = []
+    for (let i = 0; i < 8; i++) {
+      backspace(input)
+      seen.push(withCaret(input))
+    }
+    expect(seen).toEqual([
+      '13/12/198|', '13/12/19|', '13/12/1|', '13/12|', '13/1|', '13|', '1|', '|',
+    ])
+  })
+
+  it('forward Delete on the same divider is protected too', () => {
+    input = bound('13//1986', DATE)
+    input.setSelectionRange(2, 2)
+    input.value = '13/1986'
+    input.setSelectionRange(2, 2)
+    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentForward' }))
+    expect(input.value).toBe('13//1986')
+  })
+
+  it('refills the emptied month after the divider survived', () => {
+    input = bound('13//1986', DATE)
+    backspace(caretAt(input, 3))
+    expect(withCaret(input)).toBe('13|//1986')
+    input.setSelectionRange(3, 3)
+    type(input, '7')
+    expect(withCaret(input)).toBe('13/7|/1986')
   })
 })
