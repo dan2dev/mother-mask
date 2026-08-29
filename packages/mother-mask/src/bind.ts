@@ -24,12 +24,30 @@ function toBindOptions(
 type InputEditKind = 'insert' | 'backspace' | 'delete' | 'unidentified'
 
 /**
+ * A deletion can take the mask's opening structure with it, leaving the caret
+ * at 0 with nothing in front of it to anchor to — selecting the "(555)" out
+ * of "(555) 123-4567" and deleting renders "() 123-4567", where that "(" is
+ * structure the mask restored rather than text the user is behind. Only at
+ * position 0 is the whole rendered prefix known to be restored like this, so
+ * only there does the render's own caret win: the user is editing the emptied
+ * field at "(|) 123-4567", not sitting outside it at "|() 123-4567".
+ *
+ * An edit the mask *fully* undid is the exception. Backspacing the "(" of
+ * "(|) 123-4567" deletes nothing the render doesn't put straight back, so
+ * holding the caret in place would wedge it there forever. The keystroke
+ * still gets to move it, exactly as it does over any other fixed character.
+ */
+function restoredPrefixCaret(pos: number, masked: MaskResult, baselineValue: string): number {
+  return pos === 0 && masked.value !== baselineValue ? masked.caret : pos
+}
+
+/**
  * Keep native movement within a retained divider. If formatting changed the
  * prefix, use its source-mapped caret instead of an offset into removed text.
  * Backspace must not advance across an untouched divider or into the next field.
  */
-function backwardCaret(rawValue: string, pos: number, masked: MaskResult): number {
-  if (masked.value.startsWith(rawValue.slice(0, pos))) return pos
+function backwardCaret(rawValue: string, pos: number, masked: MaskResult, baselineValue: string): number {
+  if (masked.value.startsWith(rawValue.slice(0, pos))) return restoredPrefixCaret(pos, masked, baselineValue)
   // Overlapping divider text can make a surviving fragment look like the
   // next divider. Stay before unchanged text on the right, even then.
   let tailStart = masked.value.length
@@ -82,9 +100,11 @@ function eagerForEdit(eager: boolean | undefined, isDeleteLike: boolean): boolea
  * - A resolver mask that actually changed the value takes its own
  *   source-mapped caret, since the candidate stream it reflowed can't be
  *   reasoned about positionally like a fixed pattern.
- * - An unidentified edit (unreliable/missing `key`) only trusts the masked
- *   caret once the value visibly grew — otherwise it's likely a no-op or a
- *   delete misreported as unidentified, so the pre-edit position holds.
+ * - An unidentified edit (unreliable/missing `key`, or a directionless
+ *   `inputType` like `deleteByCut`) only trusts the masked caret once the
+ *   value visibly grew — otherwise it's likely a no-op or a delete
+ *   misreported as unidentified, so the pre-edit position holds, adjusted
+ *   for any structure the mask restored in front of it.
  * - A forward Delete that didn't shrink the value (e.g. it landed on a
  *   literal and consumed nothing) leaves the caret one past where the user
  *   pressed it, matching native forward-delete-through-a-literal behavior.
@@ -101,9 +121,13 @@ function resolveCaretAfterEdit(
   baselineValue: string,
 ): number {
   if (resolveMask && masked.value !== rawValue && masked.value !== baselineValue) return masked.caret
-  if (kind === 'unidentified') return masked.value.length > previousLength ? masked.caret : pos
-  if (kind === 'delete') return previousLength === masked.value.length ? pos + 1 : pos
-  if (kind === 'backspace') return backwardCaret(rawValue, pos, masked)
+  if (kind === 'unidentified') {
+    return masked.value.length > previousLength ? masked.caret : restoredPrefixCaret(pos, masked, baselineValue)
+  }
+  if (kind === 'delete') {
+    return previousLength === masked.value.length ? pos + 1 : restoredPrefixCaret(pos, masked, baselineValue)
+  }
+  if (kind === 'backspace') return backwardCaret(rawValue, pos, masked, baselineValue)
   return masked.caret
 }
 

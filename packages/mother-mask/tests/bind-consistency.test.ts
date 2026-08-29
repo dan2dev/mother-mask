@@ -51,6 +51,51 @@ const MASKS: MaskConfig[] = [
 
 ]
 
+/**
+ * The literal text a mask renders before its first slot, and the literal that
+ * closes that first field — `["(", ") "]` for `(999) 999-9999`. Parsed
+ * straight from the pattern so the oracle below stays independent of the
+ * masking implementation it is checking.
+ */
+function frameLiterals(mask: MaskPattern, options?: ApplyMaskOptions): [string, string] {
+  const pattern = Array.isArray(mask) ? mask[0] : mask
+  const slotKeys = new Set(['9', 'Z', 'A', ...Object.keys(options?.tokens ?? {})])
+  const groups: { slots: boolean; text: string }[] = []
+  const points = Array.from(pattern)
+  for (let i = 0; i < points.length; i++) {
+    let ch = points[i]
+    let slots = slotKeys.has(ch)
+    if (ch === '\\' && i + 1 < points.length) {
+      ch = points[++i]
+      slots = false
+    }
+    const last = groups[groups.length - 1]
+    if (last?.slots === slots) last.text += ch
+    else groups.push({ slots, text: ch })
+  }
+  if (!groups.length || groups[0].slots) return ['', '']
+  return [groups[0].text, groups[2]?.slots === false ? groups[2].text : '']
+}
+
+/**
+ * Caret for a deletion that started at position 0 and took the mask's opening
+ * literal with it. The render puts that frame back around the now-empty first
+ * field, so the caret belongs inside the field rather than outside the mask —
+ * deleting "(555)" out of "(555) 123-4567" lands at "(|) 123-4567". Returns
+ * `-1` when this edit restored no frame and the plain rules apply.
+ */
+function restoredFrameCaret(
+  cfg: MaskConfig,
+  start: number,
+  raw: string,
+  value: string,
+): number {
+  if (start !== 0 || value === cfg.full) return -1
+  const [lead, divider] = frameLiterals(cfg.mask, cfg.options)
+  if (!lead || raw.startsWith(lead) || !value.startsWith(lead + divider)) return -1
+  return lead.length
+}
+
 /** Fire the post-mutation `input` event the browser would, with a real `inputType`. */
 function dispatchInput(input: HTMLInputElement, data: string | null, inputType: string): void {
   const event = new Event('input', { bubbles: true, cancelable: false })
@@ -140,8 +185,10 @@ describe('bind() agrees with buildMask() at every edit position', () => {
             const suffix = full.slice(end)
             const backwardLimit = !value.startsWith(full.slice(0, start)) && value.endsWith(suffix)
               ? value.length - suffix.length : start
+            const framed = restoredFrameCaret(cfg, start, raw, value)
             const rawCaret =
-              mode === 'backspace' ? Math.min(start, backwardLimit) : full.length === value.length ? start + 1 : start
+              mode === 'backspace' ? (framed >= 0 ? framed : Math.min(start, backwardLimit))
+                : full.length === value.length ? start + 1 : framed >= 0 ? framed : start
             check(`${mode} [${start},${end})`, input, value, Math.min(rawCaret, value.length))
           }
         }

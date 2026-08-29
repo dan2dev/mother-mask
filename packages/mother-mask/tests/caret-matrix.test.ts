@@ -90,6 +90,51 @@ function dispatchInput(input: HTMLInputElement, opts: { data?: string | null; in
   input.dispatchEvent(event)
 }
 
+/**
+ * The literal text a mask renders before its first slot, and the literal that
+ * closes that first field — `["(", ") "]` for `(999) 999-9999`. Parsed
+ * straight from the pattern so the oracle below stays independent of the
+ * masking implementation it is checking.
+ */
+function frameLiterals(mask: MaskPattern, options?: ApplyMaskOptions): [string, string] {
+  const pattern = Array.isArray(mask) ? mask[0] : mask
+  const slotKeys = new Set(['9', 'Z', 'A', ...Object.keys(options?.tokens ?? {})])
+  const groups: { slots: boolean; text: string }[] = []
+  const points = Array.from(pattern)
+  for (let i = 0; i < points.length; i++) {
+    let ch = points[i]
+    let slots = slotKeys.has(ch)
+    if (ch === '\\' && i + 1 < points.length) {
+      ch = points[++i]
+      slots = false
+    }
+    const last = groups[groups.length - 1]
+    if (last?.slots === slots) last.text += ch
+    else groups.push({ slots, text: ch })
+  }
+  if (!groups.length || groups[0].slots) return ['', '']
+  return [groups[0].text, groups[2]?.slots === false ? groups[2].text : '']
+}
+
+/**
+ * Caret for a deletion that started at position 0 and took the mask's opening
+ * literal with it. The render puts that frame back around the now-empty first
+ * field, so the caret belongs inside the field rather than outside the mask —
+ * deleting "(555)" out of "(555) 123-4567" lands at "(|) 123-4567". Returns
+ * `-1` when this edit restored no frame and the plain rules apply.
+ */
+function restoredFrameCaret(
+  cfg: MaskConfig,
+  start: number,
+  raw: string,
+  value: string,
+): number {
+  if (start !== 0 || value === cfg.full) return -1
+  const [lead, divider] = frameLiterals(cfg.mask, cfg.options)
+  if (!lead || raw.startsWith(lead) || !value.startsWith(lead + divider)) return -1
+  return lead.length
+}
+
 /** Fail loudly but compactly: report the count and the first N mismatches. */
 function assertNoFailures(failures: string[], total: number): void {
   const preview = failures.slice(0, 20).join('\n')
@@ -233,8 +278,10 @@ describe('caret matrix — select + delete at every selection range', () => {
               const backwardLimit = !expectedValue.startsWith(cfg.full.slice(0, start)) && expectedValue.endsWith(suffix)
                 ? expectedValue.length - suffix.length : start
               // Forward Delete retains its one-position nudge when restoring a literal.
+              const framed = restoredFrameCaret(cfg, start, raw, expectedValue)
               const rawCaret =
-                mode === 'backspace' ? Math.min(start, backwardLimit) : cfg.full.length === expectedValue.length ? start + 1 : start
+                mode === 'backspace' ? (framed >= 0 ? framed : Math.min(start, backwardLimit))
+                  : cfg.full.length === expectedValue.length ? start + 1 : framed >= 0 ? framed : start
               const expectedCaret = Math.min(rawCaret, expectedValue.length)
 
               if (input.value !== expectedValue || input.selectionStart !== expectedCaret || input.selectionEnd !== expectedCaret) {

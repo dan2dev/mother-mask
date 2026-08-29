@@ -56,7 +56,8 @@ structured data during development and builds.
 
 ## Deployment
 
-[Deploy docs](../.github/workflows/deploy-docs.yml) builds the library and website,
-uploads `docs/dist`, and deploys to GitHub Pages on pushes to `main` or manual
-workflow dispatch. Do not commit generated `dist/` files. Website-only edits do
-not require an npm release.
+[Publish to NPM](../.github/workflows/publish.yml) passes its newly published tag
+to [Deploy docs](../.github/workflows/deploy-docs.yml), which builds the library
+and website from that exact tag, uploads `docs/dist`, and deploys it to GitHub
+Pages. The docs workflow can also be run manually for a selected ref. Do not
+commit generated `dist/` files.

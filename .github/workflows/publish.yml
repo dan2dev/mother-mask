@@ -5,13 +5,14 @@ on:
     branches:
       - main
 
-permissions:
-  contents: write
-
 jobs:
   publish:
     if: ${{ !contains(github.event.head_commit.message, 'chore(release):') }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      release_ref: ${{ steps.version.outputs.tag }}
     defaults:
       run:
         working-directory: packages/mother-mask
@@ -87,6 +88,14 @@ jobs:
           git tag "v${version}"
           echo "tag=v${version}" >> "$GITHUB_OUTPUT"
 
+      - name: Install docs dependencies
+        working-directory: docs
+        run: bun install --frozen-lockfile
+
+      - name: Build matching docs
+        working-directory: docs
+        run: bun run build
+
       - name: Publish
         run: bun publish --access public
         env:
@@ -95,3 +104,14 @@ jobs:
       - name: Push release commit and tag
         run: |
           git push --atomic origin HEAD:${{ github.ref_name }} "refs/tags/${{ steps.version.outputs.tag }}"
+
+  deploy-docs:
+    name: Deploy matching docs
+    needs: publish
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy-docs.yml
+    with:
+      ref: ${{ needs.publish.outputs.release_ref }}

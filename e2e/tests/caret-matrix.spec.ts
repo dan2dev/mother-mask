@@ -45,6 +45,53 @@ async function runMatrix(
     let total = 0
     const { mask, full, options, chars } = cfg
 
+    /**
+     * The literal text a mask renders before its first slot, and the literal
+     * that closes that first field — `["(", ") "]` for `(999) 999-9999`.
+     * Parsed straight from the pattern so the oracle stays independent of the
+     * masking implementation it is checking.
+     */
+    function frameLiterals(pattern: string | string[], tokenKeys: string[] = []): [string, string] {
+      const text = Array.isArray(pattern) ? pattern[0] : pattern
+      const slotKeys = new Set(['9', 'Z', 'A', ...tokenKeys])
+      const groups: { slots: boolean; text: string }[] = []
+      const points = Array.from(text)
+      for (let i = 0; i < points.length; i++) {
+        let ch = points[i]
+        let slots = slotKeys.has(ch)
+        if (ch === '\\' && i + 1 < points.length) {
+          ch = points[++i]
+          slots = false
+        }
+        const last = groups[groups.length - 1]
+        if (last && last.slots === slots) last.text += ch
+        else groups.push({ slots, text: ch })
+      }
+      if (!groups.length || groups[0].slots) return ['', '']
+      return [groups[0].text, groups[2] && !groups[2].slots ? groups[2].text : '']
+    }
+
+    /**
+     * Caret for a deletion that started at position 0 and took the mask's
+     * opening literal with it. The render puts that frame back around the
+     * now-empty first field, so the caret belongs inside the field rather than
+     * outside the mask — deleting "(555)" out of "(555) 123-4567" lands at
+     * "(|) 123-4567". Returns `-1` when no frame was restored.
+     */
+    function restoredFrameCaret(
+      pattern: string | string[],
+      fullValue: string,
+      start: number,
+      raw: string,
+      value: string,
+      tokenKeys: string[] = [],
+    ): number {
+      if (start !== 0 || value === fullValue) return -1
+      const [lead, divider] = frameLiterals(pattern, tokenKeys)
+      if (!lead || raw.startsWith(lead) || !value.startsWith(lead + divider)) return -1
+      return lead.length
+    }
+
     function dispatchInput(input: HTMLInputElement, data: string | null, inputType: string): void {
       const event = new Event('input', { bubbles: true, cancelable: false })
       Object.defineProperty(event, 'data', { value: data, configurable: true })
@@ -125,7 +172,9 @@ async function runMatrix(
           const suffix = full.slice(end)
           const backwardLimit = !expectedValue.startsWith(full.slice(0, start)) && expectedValue.endsWith(suffix)
             ? expectedValue.length - suffix.length : start
-          const rawCaret = mode === 'backspace' ? Math.min(start, backwardLimit) : full.length === expectedValue.length ? start + 1 : start
+          const framed = restoredFrameCaret(mask, full, start, raw, expectedValue)
+          const rawCaret = mode === 'backspace' ? (framed >= 0 ? framed : Math.min(start, backwardLimit))
+            : full.length === expectedValue.length ? start + 1 : framed >= 0 ? framed : start
           const expectedCaret = Math.min(rawCaret, expectedValue.length)
           if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {
             failures.push(
@@ -229,6 +278,74 @@ for (const eager of [true, false]) {
         .toEqual(['(111) 456-3333', 9, 9])
     })
   }
+
+  for (const key of ['Backspace', 'Delete', 'ControlOrMeta+x']) {
+    test('area code deleted with its closing paren via ' + key + ' keeps the frame (eager=' + eager + ')', async ({ page }) => {
+      // The reported case: select "(111)" — the space after it stays out of
+      // the selection — and delete. The surviving " " is the tail of ") ",
+      // which has to hold "222" in its own segment while the mask restores
+      // the frame around the emptied area code.
+      const field = await phoneField(page, eager)
+      await field.evaluate((input: HTMLInputElement) => input.setSelectionRange(0, 5))
+      await page.keyboard.press(key)
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['() 222-3333', 1, 1])
+      // Retyping an area code refills exactly the field that was emptied.
+      await page.keyboard.type('999')
+      expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+        .toEqual(['(999) 222-3333', 4, 4])
+    })
+  }
+
+  for (const key of ['Backspace', 'Delete', 'ControlOrMeta+x']) {
+    test('selecting the area code and its divider, then ' + key + ' (eager=' + eager + ')', async ({ page }) => {
+      // Nothing positional survives here, and an empty first field leaves the
+      // caret with nothing to sit behind, so the digits pack from the left.
+      // Pinned as the boundary of the rule: typing over this same selection
+      // does hold the tail in place (see the test below), deleting it cannot.
+      const field = await phoneField(page, eager)
+      await field.evaluate((input: HTMLInputElement) => input.setSelectionRange(0, 6))
+      await page.keyboard.press(key)
+      const after = await field.evaluate((input: HTMLInputElement) => input.value)
+      expect(after.replace(/\D/g, ''), 'no digit is lost').toBe('2223333')
+      expect(after.startsWith('(22'), after).toBe(true)
+    })
+  }
+
+  test('multi-character dividers of other shapes behave the same (eager=' + eager + ')', async ({ page }) => {
+    await page.goto('/')
+    const shapes = [
+      { mask: '99 - 99', full: '12 - 34', select: 5, expected: '9 - 34' },
+      { mask: '99--99', full: '12--34', select: 4, expected: '9--34' },
+      { mask: '(999) 999-9999', full: '(555) 123-4567', select: 6, expected: '(9) 123-4567' },
+    ]
+    for (const [index, shape] of shapes.entries()) {
+      const id = `shape-${index}`
+      await page.evaluate(({ id, mask, full, eager }) => {
+        const input = document.createElement('input')
+        input.id = id
+        input.value = full
+        document.body.appendChild(input)
+        window.motherMask.bind(input, mask, { eager })
+        input.focus()
+      }, { id, mask: shape.mask, full: shape.full, eager })
+      const field = page.locator('#' + id)
+      await field.evaluate((input: HTMLInputElement, end) => input.setSelectionRange(0, end), shape.select)
+      await page.keyboard.type('9')
+      expect(await field.evaluate((input: HTMLInputElement) => input.value), shape.mask).toBe(shape.expected)
+    }
+  })
+
+  test('typing over the selected area code keeps the frame (eager=' + eager + ')', async ({ page }) => {
+    const field = await phoneField(page, eager)
+    await field.evaluate((input: HTMLInputElement) => input.setSelectionRange(0, 5))
+    await page.keyboard.type('9')
+    expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+      .toEqual(['(9) 222-3333', 2, 2])
+    await page.keyboard.type('87')
+    expect(await field.evaluate((input: HTMLInputElement) => [input.value, input.selectionStart, input.selectionEnd]))
+      .toEqual(['(987) 222-3333', 4, 4])
+  })
 
   for (const key of ['Backspace', 'Delete', 'ControlOrMeta+x']) {
     test('empty phone segment: native selection ' + key + ' and replacement (eager=' + eager + ')', async ({ page }) => {

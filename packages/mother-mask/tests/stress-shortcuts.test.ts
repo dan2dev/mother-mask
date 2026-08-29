@@ -226,7 +226,12 @@ describe('stress — keyboard-shortcut selection', () => {
     press(input, 'Delete', '1456', 1)
     await flushRafs()
     expect(input.value.replace(/\D/g, '')).toBe('1456')
-    expect(input.value).toBe(process('1456', '999-999'))
+    // Deleting "23-" takes the divider with it, so "456" is held in the second
+    // block by the caret alone. `process()` masks at caret 0 and cannot see
+    // that, which is why the expectation is spelled out rather than delegated.
+    expect(input.value).toBe('1-456')
+    expect(applyMask('1456', '999-999', 1).value).toBe('1-456')
+    expect(process('1456', '999-999')).toBe('145-6')
   })
 
   it('Shift+End selects from caret to the end, typing replaces the tail', async () => {

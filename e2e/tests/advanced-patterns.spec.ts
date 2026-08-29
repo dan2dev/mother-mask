@@ -135,6 +135,45 @@ for (const segmented of [true, false]) {
           { mask: 'LL-LL', full: '𐐀λ-Жé', chars: ['𐐀', '#', 'Жλ'] },
           { mask: ['HH-HH', 'HH-HH-HH'], full: 'ab-cd-ef', chars: ['f', '#', '10'] },
         ]
+        /**
+         * The literal text a mask renders before its first slot, and the
+         * literal that closes that first field — `["A-", "."]` for
+         * `\\A-99.99`. Parsed straight from the pattern so the oracle stays
+         * independent of the masking implementation it is checking.
+         */
+        const frameLiterals = (pattern: string | string[], tokenKeys: string[]): [string, string] => {
+          const text = Array.isArray(pattern) ? pattern[0] : pattern
+          const slotKeys = new Set(['9', 'Z', 'A', ...tokenKeys])
+          const groups: { slots: boolean; text: string }[] = []
+          const points = Array.from(text)
+          for (let i = 0; i < points.length; i++) {
+            let ch = points[i]
+            let slots = slotKeys.has(ch)
+            if (ch === '\\' && i + 1 < points.length) {
+              ch = points[++i]
+              slots = false
+            }
+            const last = groups[groups.length - 1]
+            if (last && last.slots === slots) last.text += ch
+            else groups.push({ slots, text: ch })
+          }
+          if (!groups.length || groups[0].slots) return ['', '']
+          return [groups[0].text, groups[2] && !groups[2].slots ? groups[2].text : '']
+        }
+        /**
+         * Caret for a deletion that started at position 0 and took the mask's
+         * opening literal with it: the render puts that frame back around the
+         * now-empty first field, so the caret belongs inside it. `-1` when no
+         * frame was restored and the plain rules apply.
+         */
+        const restoredFrameCaret = (
+          pattern: string | string[], fullValue: string, start: number, raw: string, value: string,
+        ): number => {
+          if (start !== 0 || value === fullValue) return -1
+          const [lead, divider] = frameLiterals(pattern, Object.keys(tokens))
+          if (!lead || raw.startsWith(lead) || !value.startsWith(lead + divider)) return -1
+          return lead.length
+        }
         const failures: string[] = []
         let total = 0
         for (const cfg of cases) {
@@ -158,7 +197,8 @@ for (const segmented of [true, false]) {
                 const suffix = cfg.full.slice(end)
                 const backwardLimit = !value.startsWith(cfg.full.slice(0, pos)) && value.endsWith(suffix)
                   ? value.length - suffix.length : pos
-                let caret = kind === 'deleteContentBackward' ? Math.min(pos, backwardLimit) : kind === 'deleteContentForward' ? (value.length === cfg.full.length ? pos + 1 : pos) : m.caret
+                const framed = kind.startsWith('delete') ? restoredFrameCaret(cfg.mask, cfg.full, pos, raw, value) : -1
+                let caret = kind === 'deleteContentBackward' ? (framed >= 0 ? framed : Math.min(pos, backwardLimit)) : kind === 'deleteContentForward' ? (value.length === cfg.full.length ? pos + 1 : framed >= 0 ? framed : pos) : m.caret
                 caret = Math.min(caret, value.length)
                 if (caret > 0 && /[\uDC00-\uDFFF]/.test(value[caret] ?? '') && /[\uD800-\uDBFF]/.test(value[caret - 1])) caret--
                 total++

@@ -166,6 +166,30 @@ interface Assignment {
 }
 
 /**
+ * Length of the longest *proper* suffix of `text` sitting at `valueIdx`, or `0`.
+ *
+ * A selection that ends inside a multi-character separator leaves its tail
+ * behind: deleting the "(555)" out of "(555) 123-4567" hands back
+ * " 123-4567", where that lone space is all that survives of ") ". Single
+ * character separators can never fragment, so this is always `0` for them.
+ */
+function separatorTailLength(value: string, valueIdx: number, text: string): number {
+  // Walk whole code points so a tail can never begin on a lone surrogate.
+  for (let start = 0; start < text.length;) {
+    start += String.fromCodePoint(text.codePointAt(start)!).length
+    if (start < text.length && value.startsWith(text.slice(start), valueIdx)) {
+      return text.length - start
+    }
+  }
+  return 0
+}
+
+/** How much of `text` sits at `valueIdx` — the whole separator, or its surviving tail. */
+function separatorMatchLength(value: string, valueIdx: number, text: string): number {
+  return value.startsWith(text, valueIdx) ? text.length : separatorTailLength(value, valueIdx, text)
+}
+
+/**
  * Find the segment that a separator sitting at `valueIdx` anchors the rest of
  * the value to, or `-1` when the character is just noise.
  *
@@ -177,6 +201,14 @@ interface Assignment {
  * takes the slot it needs. Because capacity only shrinks as you move right
  * through the mask, a nearer candidate that can't fit rules out every farther
  * one too — so the search stops at the first literal that matches by text.
+ *
+ * Intact separators are matched first, everywhere, before any fragment is
+ * considered: a surviving tail (see {@link separatorTailLength}) is weaker
+ * evidence than a whole separator, so it must never shadow one further along.
+ * But it is still evidence — the fragment sits exactly where its separator
+ * did, right in front of the segment it introduces, so it anchors the same
+ * way. Without that, deleting an area code repacks the segment behind it:
+ * " 123-4567" would render as "(123) -4567" instead of "() 123-4567".
  */
 function findAnchorRun(
   value: string,
@@ -185,11 +217,17 @@ function findAnchorRun(
   fromRun: number,
   compiler: PatternCompiler,
 ): number {
-  for (let run = fromRun + 1; run < plan.runChars.length; run++) {
-    const text = separatorBefore(plan, run)
-    if (!value.startsWith(text, valueIdx)) continue
-    const remaining = remainingDataChars(value, valueIdx + text.length, compiler, plan)
-    return remaining <= plan.capacityFromRun[run] ? run : -1
+  const runCount = plan.runChars.length
+  for (let pass = 0; pass < 2; pass++) {
+    for (let run = fromRun + 1; run < runCount; run++) {
+      const text = separatorBefore(plan, run)
+      const length = pass === 0
+        ? (value.startsWith(text, valueIdx) ? text.length : 0)
+        : separatorTailLength(value, valueIdx, text)
+      if (!length) continue
+      const remaining = remainingDataChars(value, valueIdx + length, compiler, plan)
+      return remaining <= plan.capacityFromRun[run] ? run : -1
+    }
   }
   return -1
 }
@@ -207,7 +245,13 @@ function findAnchorRun(
  * Within a run, filled slots are always a prefix — the walk never goes
  * backwards, so a run can be partially filled but never has holes.
  */
-function assignToSlots(value: string, plan: CompiledMask, compiler: PatternCompiler, readLiterals: boolean): Assignment {
+function assignToSlots(
+  value: string,
+  plan: CompiledMask,
+  compiler: PatternCompiler,
+  readLiterals: boolean,
+  inputCaret: number,
+): Assignment {
   const runCount = plan.runChars.length
   const slotChar: string[] = new Array(plan.totalSlots).fill('')
   const slotSource: number[] = new Array(plan.totalSlots).fill(-1)
@@ -217,6 +261,7 @@ function assignToSlots(value: string, plan: CompiledMask, compiler: PatternCompi
   let runIdx = 0
   let slotIdx = 0
   let valueIdx = 0
+  let caretBoundaryUsed = false
   const leading = plan.tokens[0]
   if (readLiterals && leading?.kind === 'literal' && value.startsWith(leading.text)) {
     literalSource[0] = 0
@@ -237,8 +282,39 @@ function assignToSlots(value: string, plan: CompiledMask, compiler: PatternCompi
       ? findAnchorRun(value, valueIdx, plan, runIdx, compiler) : -1
     if (anchor >= 0) {
       literalSource[plan.literalBeforeRun[anchor]] = valueIdx
-      valueIdx += separatorBefore(plan, anchor).length
+      valueIdx += separatorMatchLength(value, valueIdx, separatorBefore(plan, anchor))
       runIdx = anchor
+      slotIdx = 0
+      continue
+    }
+
+    // An edit can take a whole divider with it, leaving nothing positional
+    // behind: selecting "(555) " out of "(555) 123-4567" and typing "9" hands
+    // back "9123-4567", where "123" reads exactly like the rest of the area
+    // code. The caret is the one thing that still says where the edit ended,
+    // and capacity turns it into proof: everything from the caret on fits the
+    // following segments *exactly*, so it can only belong there — packing it
+    // from the left would have to overflow the last segment. Anything less
+    // than an exact fit is left to the ordinary left-to-right packing, which
+    // is why this can never cascade (each further run has strictly less
+    // capacity) and never fires mid-field, where the tail still needs the
+    // slots of the run being typed into. It also takes a partly filled run
+    // to fire at all — the caret has to sit behind something this edit put
+    // here, or it carries no information at all: a caret left at 0 (the pure
+    // API's default) would otherwise shift whole values rightwards.
+    //
+    // The divider has to be genuinely *gone* for any of this to apply. While
+    // a copy of it survives further along, the anchoring above already knows
+    // where everything belongs and the caret must not overrule it — that is
+    // also what keeps rendering idempotent, since re-masking "82--2" at the
+    // same caret has to give "82--2" back rather than "8--22".
+    if (
+      !caretBoundaryUsed && slotIdx > 0 && valueIdx === inputCaret && runIdx + 1 < runCount &&
+      value.indexOf(separatorBefore(plan, runIdx + 1), valueIdx) < 0 &&
+      remainingDataChars(value, valueIdx, compiler, plan) === plan.capacityFromRun[runIdx + 1]
+    ) {
+      caretBoundaryUsed = true
+      runIdx++
       slotIdx = 0
       continue
     }
@@ -283,10 +359,19 @@ function assignToSlots(value: string, plan: CompiledMask, compiler: PatternCompi
  * - **retained boundary** — it was present in the input and there is data in
  *   a later segment. Emptying a field must not remove its untouched dividers:
  *   "(111) 222-3333" becomes "(111) -3333", not "(111-3333".
+ * - **intact frame** — it opens the mask, the value holds data, and the
+ *   divider closing the field it opens is still in the value. An opening
+ *   literal can only disappear by being deleted, and a deletion that cut
+ *   into the first field is not the same as one aimed at the frame itself;
+ *   the closing divider is what tells them apart. Deleting the "(555)" out
+ *   of "(555) 123-4567" leaves ") " behind, so the frame comes back as
+ *   "() 123-4567" — while backspacing the "(" of "(-4444", where nothing of
+ *   ") " survives, removes it for real instead of resurrecting it forever.
+ *   This holds with eager off, which is how `bind()` masks every deletion
+ *   (see `eagerForEdit`).
  * - **eager** — the segment right before it is completely filled, so the
  *   separator is revealed before the user types the character that would
- *   normally pull it in. A literal that opens the mask counts as eager too:
- *   there's no segment in front of it to fill. See `ApplyMaskOptions.eager`.
+ *   normally pull it in. See `ApplyMaskOptions.eager`.
  *
  * Absent separators around skipped segments are not invented, which keeps
  * "015" + skipped middle + "-39" compact instead of padding the gap. Existing
@@ -318,8 +403,17 @@ function resolveLiteralVisibility(
     if (tokens[t].kind !== 'literal') continue
     const after = runAfterLiteral[t]
     const before = runBeforeLiteral[t]
+    // Tokens alternate, so `t + 2` is the divider closing the field this
+    // literal opens (when the mask has one at all), and `after + 1` is the
+    // field that divider introduces. Either one still standing means the
+    // frame survived the edit: the divider itself is direct evidence, and
+    // data sitting in the field behind it is evidence just as good once the
+    // divider was swallowed whole.
+    const frameIntact = before < 0 && lastFilledRun >= 0 &&
+      (literalSource[t + 2] >= 0 || runFilled[after + 1] > 0)
     visible[t] =
       (after >= 0 && (runFilled[after] > 0 || (literalSource[t] >= 0 && after < lastFilledRun))) ||
+      frameIntact ||
       (eager && (before < 0 || runFilled[before] === runChars[before].length))
   }
 
@@ -386,14 +480,18 @@ function renderAssignment(
       // text is not a frontier: the caret stays exactly where the browser
       // put it instead of jumping over content the user didn't touch.
       const opensEmptySegment = after < 0 || runFilled[after] === 0
-      const revealedEagerly =
-        eager && (before < 0 || runFilled[before] === runChars[before].length)
+      // A literal that opens the mask is framing rather than a reveal (see
+      // `resolveLiteralVisibility`), so it carries the caret into the field
+      // it opens whether or not eager is on — the caret belongs at "(|)",
+      // inside the emptied area code, not outside the field at "|()".
+      const revealed =
+        before < 0 || (eager && runFilled[before] === runChars[before].length)
       const source = assignment.literalSource[t]
       const atFrontier = !caretResolved && outputCaret === output.length
       output += token.text
       if (
         atFrontier &&
-        (caretAfterLiteral || (revealedEagerly && opensEmptySegment) || (source >= 0 && source < inputCaret))
+        (caretAfterLiteral || (revealed && opensEmptySegment) || (source >= 0 && source < inputCaret))
       ) {
         outputCaret = output.length
       }
@@ -426,7 +524,7 @@ function applySegmentedMask(
   readLiterals: boolean,
   caretAfterLiteral: boolean,
 ): MaskResult {
-  const assignment = assignToSlots(value, plan, compiler, readLiterals)
+  const assignment = assignToSlots(value, plan, compiler, readLiterals, inputCaret)
   const visible = resolveLiteralVisibility(plan, assignment, eager)
   return renderAssignment(plan, assignment, visible, inputCaret, eager, caretAfterLiteral)
 }

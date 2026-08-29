@@ -125,16 +125,19 @@ describe('bind() — Android-style fast typing via input events', () => {
     expect(input.selectionStart).toBe(6)
   })
 
-  it('input-driven Delete that reflows to the same length nudges caret past the literal', async () => {
+  it('input-driven Delete on a divider nudges the caret past it without moving digits', async () => {
     const { bind } = await import('../src/index')
     input.value = '12-345'
     bind(input, '999-999')
-    // Delete-forward at pos 2 removes the "-"; the mask immediately re-inserts
-    // one elsewhere during reflow, so the masked length is unchanged (6 → 6).
+    // Delete-forward at pos 2 removes the "-", but the caret still sits behind
+    // "12" with "345" exactly filling the rest of the mask, so both blocks keep
+    // what they held and the masked length is unchanged (6 → 6). A divider is
+    // fixed text: forward-deleting it steps over it rather than dragging a
+    // digit back across the boundary.
     input.value = '12345'
     input.setSelectionRange(2, 2)
     dispatchInput(input, { inputType: 'deleteContentForward' })
-    expect(input.value).toBe('123-45')
+    expect(input.value).toBe('12-345')
     expect(input.selectionStart).toBe(3)
   })
 
