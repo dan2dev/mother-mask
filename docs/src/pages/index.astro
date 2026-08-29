@@ -16,6 +16,10 @@ bindDecimal(amount, {
   decimalSeparator: ',',
   decimalPlaces: 2,
 })`
+
+const heroCode = `import { bind } from 'mother-mask'
+
+bind(phone, '(99) 99999-9999')`
 ---
 
 <Layout
@@ -29,16 +33,16 @@ bindDecimal(amount, {
 
     <div class="hero-copy">
       <span class="pill">
-        <svg class="icon" role="presentation"><use href="#sparkle-icon"></use></svg>
-        Zero dependencies. Fully typed.
+        <span class="hero-status-dot" aria-hidden="true"></span>
+        Zero dependencies · fully typed
       </span>
-      <h1>Input masks,<br /><span class="grad-text">without the rough edges.</span></h1>
+      <h1>Make every keystroke feel <span class="hero-highlight">effortless.</span></h1>
       <p>
-        A tiny, framework-agnostic TypeScript library that makes formatted inputs feel natural—to type, paste, edit, and build.
+        Thoughtful input masks for TypeScript. Natural to type, paste, edit, and ship in any framework.
       </p>
       <div class="hero-actions">
         <a class="button-link" href={navHref('quick-start.html')}>
-          Get started
+          Start building
           <svg class="icon" role="presentation"><use href="#arrow-right-icon"></use></svg>
         </a>
         <a class="text-link" href="https://github.com/dan2dev/mother-mask" target="_blank" rel="noreferrer">
@@ -49,11 +53,40 @@ bindDecimal(amount, {
       <InstallBox />
     </div>
 
-    <div class="hero-visual" aria-label="mother-mask logo illustration">
-      <div class="hero-mark-wrap">
-        <img src={navHref('mother-mask-logo.svg')} alt="" width="520" height="520" fetchpriority="high" />
+    <div class="hero-demo" aria-label="Live phone mask example">
+      <div class="demo-toolbar">
+        <span class="demo-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span class="demo-file">phone-mask.ts</span>
+        <span class="demo-live"><span aria-hidden="true"></span>Live</span>
       </div>
-      <span class="spark-grid" aria-hidden="true"></span>
+
+      <div class="hero-demo-stage">
+        <span class="demo-kicker">Try it now</span>
+        <label class="hero-field" for="hero-live-phone">Phone number</label>
+        <div class="hero-input-wrap">
+          <svg class="icon" role="presentation"><use href="#phone-icon"></use></svg>
+          <input
+            id="hero-live-phone"
+            aria-describedby="hero-live-phone-hint"
+            inputmode="tel"
+            autocomplete="tel"
+            value="(11) 98765-4321"
+          />
+          <svg class="hero-input-check icon" role="presentation"><use href="#sparkle-icon"></use></svg>
+        </div>
+        <div class="hero-demo-note">
+          <span id="hero-live-phone-hint">✓ ready to edit</span>
+          <span>Type, paste, or replace a selection.</span>
+        </div>
+      </div>
+
+      <div class="hero-code-panel">
+        <div class="hero-code-meta">
+          <span>Two lines. No adapter.</span>
+          <span>TypeScript</span>
+        </div>
+        <CodeBlock code={heroCode} lang="ts" />
+      </div>
     </div>
   </section>
 
