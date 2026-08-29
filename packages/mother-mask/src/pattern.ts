@@ -29,6 +29,36 @@ function matcher(match: TokenMatcher): (char: string) => boolean {
   return (char) => regex.test(char)
 }
 
+/**
+ * One representative code point per script whose IME holds a provisional
+ * draft that reads nothing like what it commits — Pinyin/Zhuyin or Cangjie
+ * romanizations resolving to a Han character, Kana toggling into Kanji,
+ * jamo assembling into a Hangul syllable. `bind()` must leave composition
+ * alone there, or a live reformat mid-draft overwrites text the IME still
+ * expects to revise (see `android-fast-typing.test.ts`'s "nihao" → "你" case).
+ *
+ * A custom token whose alphabet provably never matches any of these can't
+ * ever receive that kind of draft: whatever such an IME assembles, this
+ * mask's own data check would filter it out exactly the same way once
+ * composition ends, so reformatting one instant early changes nothing.
+ * Plain ASCII/Latin alphabets (e.g. an uppercase-transforming alphanumeric
+ * token) fall in this safe case — see `hasComposingRisk` below.
+ */
+const COMPOSING_SCRIPT_PROBES = ['中', 'あ', 'ア', '가']
+
+/** Whether a token's alphabet could ever accept one of {@link COMPOSING_SCRIPT_PROBES}. */
+function mayAcceptComposedScript(match: TokenMatcher): boolean {
+  const test = matcher(match)
+  return COMPOSING_SCRIPT_PROBES.some((ch) => {
+    try {
+      return test(ch)
+    } catch {
+      // A predicate that throws on ordinary input isn't provably safe either way.
+      return true
+    }
+  })
+}
+
 export function transformChar(char: string, slot: Slot): string {
   if (!slot.transform) return char
   const output = slot.transform(char)
@@ -189,19 +219,34 @@ export class PatternCompiler {
   private readonly definitions = new Map(builtins)
   private readonly cache = new Map<string, CompiledMask>()
   private readonly custom: boolean
+  /**
+   * Whether some custom token's alphabet could ever accept a genuine
+   * candidate-IME script (see {@link mayAcceptComposedScript}). `bind()`
+   * uses this — not merely "are there custom tokens at all" — to decide
+   * whether composition must be deferred: an ASCII-only custom alphabet
+   * (an uppercase-transforming alphanumeric token, say) can safely reformat
+   * live during composition exactly like the built-ins do, since Android's
+   * autocorrect otherwise wraps plain Latin typing in a composition session
+   * that may never fire `compositionend` while the field has no word
+   * boundaries to type through.
+   */
+  readonly hasComposingRisk: boolean
 
   constructor(tokens?: MaskTokens) {
     this.custom = !!tokens && Object.keys(tokens).length > 0
+    let composingRisk = false
     for (const [key, definition] of Object.entries(tokens ?? {})) {
       if (key === '\\' || Array.from(key).length !== 1) {
         throw new RangeError('Mask token keys must be one Unicode code point other than backslash')
       }
       const object = typeof definition === 'object' && 'match' in definition
         ? definition : { match: definition }
+      if (mayAcceptComposedScript(object.match)) composingRisk = true
       this.definitions.set(key, {
         match: matcher(object.match), transform: object.transform, maxLength: 2,
       })
     }
+    this.hasComposingRisk = composingRisk
   }
 
   compile(mask: string): CompiledMask {

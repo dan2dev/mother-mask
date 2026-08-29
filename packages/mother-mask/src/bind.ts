@@ -183,10 +183,17 @@ export function bind(
   const format = (value: string, caret: number, editEager = eager) =>
     applyWithCompiler(value, mask, caret, { tokens, resolveMask, segmented, eager: editEager }, compiler)
   const isData = (ch: string): boolean => compiler.isData(ch)
-  // Arbitrary custom predicates cannot be inspected for their alphabet. Defer
-  // *all custom-token* compositions, but retain live Android formatting for
-  // built-in-only masks. Provisional Pinyin/Kana may be much longer than output.
-  const deferComposition = !!tokens && Object.keys(tokens).length > 0
+  // Defer composition only when some custom token's alphabet could plausibly
+  // accept a genuine candidate-IME script (Pinyin/Kana/Hangul) — where the
+  // provisional draft reads nothing like what it commits, so a live reformat
+  // would clobber text the IME still expects to revise. A custom token whose
+  // alphabet is ASCII/Latin-only (an uppercase-transforming alphanumeric
+  // token, say) gets the same live-formatting treatment as the built-ins:
+  // Android's autocorrect otherwise wraps plain Latin typing in a
+  // composition session that may never fire `compositionend` while the
+  // field has no word boundaries to type through, leaving the mask looking
+  // completely inert. See `PatternCompiler.hasComposingRisk`.
+  const deferComposition = compiler.hasComposingRisk
 
   // Attributes set here are removed on dispose so a later `bind()` can re-apply them.
   const { setIfMissing, removeTracked } = trackAttrs(input)
@@ -194,7 +201,11 @@ export function bind(
   // Resolver capacity is unknowable; custom-token IME drafts may exceed even
   // the two-UTF-16-unit-per-slot bound. Enforce those capacities in the engine.
   // Author-supplied maxlength remains an intentional application constraint.
-  const maxLength = resolveMask || deferComposition ? Infinity : getMaxLength(mask)
+  // Pass `tokens` through even when composition isn't deferred: an ASCII-safe
+  // custom token still needs its own definition (not the built-in one a
+  // reused key like "A" would otherwise fall back to, or the literal a
+  // non-built-in key would otherwise be mistaken for) to size correctly.
+  const maxLength = resolveMask || deferComposition ? Infinity : getMaxLength(mask, { tokens })
 
   input.setAttribute(MASKED_ATTR, Array.isArray(mask) ? mask.join('|') : mask)
   setBindInputAttributes(setIfMissing, { autocomplete, autocorrect, autocapitalize, spellcheck })

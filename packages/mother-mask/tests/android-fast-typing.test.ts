@@ -197,6 +197,39 @@ describe('bind() — Android-style fast typing via input events', () => {
     expect(input.selectionStart).toBe(6)
   })
 
+  it('formats live during composition for an ASCII-only custom token too (e.g. an uppercase-transforming alphanumeric)', async () => {
+    const { bind } = await import('../src/index')
+    // Same real-world bug as above, but for a mask that needs a *custom*
+    // token — e.g. a CNPJ-style field mixing letters and digits, uppercased
+    // via a transform. A custom token's alphabet is opaque in general, but
+    // one that provably never matches a candidate-IME script (Han/Kana/
+    // Hangul) can't ever receive that kind of draft, so it gets the same
+    // live-during-composition treatment as the built-ins instead of being
+    // deferred until `compositionend` (which, exactly as above, may never
+    // fire while the user keeps typing letters/digits with no word boundary).
+    const uppercaseAlphanumeric = { match: /[a-z0-9]/i, transform: (c: string) => c.toUpperCase() }
+    bind(input, 'AA.AAA.AAA/AAAA-99', { tokens: { A: uppercaseAlphanumeric } })
+
+    input.dispatchEvent(new Event('compositionstart', { bubbles: true }))
+    input.value = 'ab'
+    input.setSelectionRange(2, 2)
+    dispatchInput(input, { data: 'ab', inputType: 'insertCompositionText', isComposing: true })
+    // Formatted immediately, uppercased, with the eager "." already revealed
+    // — not deferred, even though composition hasn't ended.
+    expect(input.value).toBe('AB.')
+    expect(input.selectionStart).toBe(3)
+
+    input.value = 'AB.c'
+    input.setSelectionRange(4, 4)
+    dispatchInput(input, { data: 'c', inputType: 'insertCompositionText', isComposing: true })
+    expect(input.value).toBe('AB.C')
+    expect(input.selectionStart).toBe(4)
+
+    input.dispatchEvent(new Event('compositionend', { bubbles: true }))
+    expect(input.value).toBe('AB.C')
+    expect(input.selectionStart).toBe(4)
+  })
+
   it('does not re-process on a trailing iOS keyup after input already handled the edit', async () => {
     vi.stubGlobal('navigator', { userAgent: 'iPhone OS 17_0 like Mac OS X' })
     const { bind } = await import('../src/index')
