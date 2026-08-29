@@ -138,7 +138,7 @@ export function createFrameScheduler(): { scheduleFrame: (callback: () => void) 
  * structure. That is also why it stays safe when the same separator repeats
  * elsewhere in the mask (`"HH:HH:HH"`'s two colons, say): the restored one
  * lands precisely where the deleted one did, so the engine's own capacity
- * check (`assignToSlots`/`findAnchorRun` in apply-mask.ts) still resolves it
+ * check (`assignToSlots`/`findAnchor` in apply-mask.ts) still resolves it
  * to the one field it can — the surviving data plus everything after the
  * restored separator has to fit what follows, which pins the split uniquely
  * even with an identical separator later in the string.

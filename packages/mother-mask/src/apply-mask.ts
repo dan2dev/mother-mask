@@ -195,14 +195,40 @@ function separatorTailLength(value: string, valueIdx: number, text: string): num
   return 0
 }
 
-/** How much of `text` sits at `valueIdx` — the whole separator, or its surviving tail. */
-function separatorMatchLength(value: string, valueIdx: number, text: string): number {
-  return value.startsWith(text, valueIdx) ? text.length : separatorTailLength(value, valueIdx, text)
+/**
+ * Punctuation, symbols, and space separators — the shapes a person reaches
+ * for when they mean "this field is done", regardless of which one this
+ * particular mask happens to print.
+ *
+ * Deliberately excludes letters, digits, and every other script: a mistyped
+ * "a" in a date field is a typo, not a decision to close the day, so it stays
+ * the noise it has always been. See {@link isSeparatorIntent}.
+ */
+const SEPARATOR_INTENT = /[\p{P}\p{S}\p{Zs}]/u
+
+/**
+ * Whether `char` reads as a divider the user typed on purpose.
+ *
+ * A mask's own alphabet always wins: a custom token matching "." makes "."
+ * content in that mask, never a boundary, so it is never a stand-in there.
+ */
+function isSeparatorIntent(char: string, compiler: PatternCompiler, plan: CompiledMask): boolean {
+  return SEPARATOR_INTENT.test(char) && !compiler.isData(char, plan)
+}
+
+/** A separator resolved to the segment it introduces, plus how much of `value` it occupies. */
+interface Anchor {
+  run: number
+  /**
+   * UTF-16 units to consume: the whole divider, the fragment that survived an
+   * edit, or the single code point a stand-in was typed as.
+   */
+  length: number
 }
 
 /**
  * Find the segment that a separator sitting at `valueIdx` anchors the rest of
- * the value to, or `-1` when the character is just noise.
+ * the value to, or `undefined` when the character is just noise.
  *
  * A separator is only trusted as an anchor when everything still left in
  * `value` actually fits in the slot capacity from that segment onward.
@@ -233,16 +259,48 @@ function separatorMatchLength(value: string, valueIdx: number, text: string): nu
  * mask. Fixed runs never set it: their minimum is their maximum, and a run
  * that reaches its maximum leaves through {@link assignToSlots}'s
  * separator-consuming fast path without ever asking about anchors.
+ *
+ * `intent` is the last resort, for a character that reads as a divider but
+ * matches none of this mask's by text (see {@link isSeparatorIntent}): typing
+ * "." or "-" into `"9{1,2}/9{1,2}/9{4}"` means what typing "/" means, so it
+ * stands in for the divider closing the segment being typed and the mask
+ * prints its own "/" in its place.
+ *
+ * A stand-in is only ever read that way in the `committable` state above —
+ * the one place a divider carries information the mask cannot supply itself,
+ * because only the user knows whether a ranged segment is finished. Anywhere
+ * else the mask owns where its dividers go: a segment that reaches its width
+ * already reveals the next divider on its own (see `ApplyMaskOptions.eager`),
+ * so the stray character has nothing left to say and stays the noise it has
+ * always been. That keeps the rule honest in both directions — under
+ * `"9{1,2}/9{1,2}/9{4}"`, `"4."` and `"4/"` both give `"4/"`; under fixed
+ * `"99/99/9999"`, where one digit is short of the day's width, both give
+ * `"4"` — and leaves every mask without a bounded quantifier untouched.
  */
-function findAnchorRun(
+function findAnchor(
   value: string,
   valueIdx: number,
   plan: CompiledMask,
   fromRun: number,
   compiler: PatternCompiler,
   committable: boolean,
-): number {
+  intent: boolean,
+): Anchor | undefined {
   const runCount = plan.runChars.length
+  const fits = (run: number, length: number): boolean =>
+    (committable && run === fromRun + 1) ||
+    remainingDataChars(value, valueIdx + length, compiler, plan) <= plan.capacityFromRun[run]
+  // A stand-in can only mean the divider that closes the segment being typed
+  // — which of the ones further along was meant would be pure guesswork — and
+  // only where `committable` says that divider is the user's call to make.
+  // That is the same candidate `fits` already waives the capacity count for,
+  // so a stand-in needs no separate test: it consumes the one code point it
+  // was typed as, and the run it lands on is the one a real divider here
+  // would have landed on.
+  const standIn = (): Anchor | undefined =>
+    intent && committable && fromRun + 1 < runCount
+      ? { run: fromRun + 1, length: String.fromCodePoint(value.codePointAt(valueIdx)!).length }
+      : undefined
   for (let pass = 0; pass < 2; pass++) {
     for (let run = fromRun + 1; run < runCount; run++) {
       const text = separatorBefore(plan, run)
@@ -250,12 +308,14 @@ function findAnchorRun(
         ? (value.startsWith(text, valueIdx) ? text.length : 0)
         : separatorTailLength(value, valueIdx, text)
       if (!length) continue
-      if (committable && run === fromRun + 1) return run
-      const remaining = remainingDataChars(value, valueIdx + length, compiler, plan)
-      return remaining <= plan.capacityFromRun[run] ? run : -1
+      if (fits(run, length)) return { run, length }
+      // Capacity only shrinks rightward, so no farther candidate fits either.
+      // The character is still a divider the user typed, though, so it can
+      // fall back to closing the segment it was typed in.
+      return standIn()
     }
   }
-  return -1
+  return standIn()
 }
 
 /**
@@ -263,7 +323,7 @@ function findAnchorRun(
  *
  * Walks left to right filling the current run. Characters that don't match
  * the slot they land on are either an *anchor* (a separator that belongs to a
- * later segment, see {@link findAnchorRun} — jump there and keep the segments
+ * later segment, see {@link findAnchor} — jump there and keep the segments
  * in between empty) or noise (skip them). A run that fills up completely
  * advances to the next one, swallowing that segment's separator from `value`
  * if it's sitting right there.
@@ -311,15 +371,17 @@ function assignToSlots(
     // run, whose minimum equals its maximum (see `CompiledMask.runMin`).
     const committable = runFilled[runIdx] >= plan.runMin[runIdx] && runFilled[runIdx] < chars.length
     const anchor = readLiterals && (!matches || plan.hasEscapes)
-      ? findAnchorRun(value, valueIdx, plan, runIdx, compiler, committable) : -1
-    if (anchor >= 0) {
+      ? findAnchor(value, valueIdx, plan, runIdx, compiler, committable,
+          !matches && isSeparatorIntent(ch, compiler, plan))
+      : undefined
+    if (anchor) {
       // The run's *own* closing separator, sitting right where the run stops:
       // the user ended this field deliberately, so the boundary is input
       // rather than decoration and must survive rendering whatever `eager` says.
-      if (committable && anchor === runIdx + 1) runCommitted[runIdx] = true
-      literalSource[plan.literalBeforeRun[anchor]] = valueIdx
-      valueIdx += separatorMatchLength(value, valueIdx, separatorBefore(plan, anchor))
-      runIdx = anchor
+      if (committable && anchor.run === runIdx + 1) runCommitted[runIdx] = true
+      literalSource[plan.literalBeforeRun[anchor.run]] = valueIdx
+      valueIdx += anchor.length
+      runIdx = anchor.run
       slotIdx = 0
       continue
     }

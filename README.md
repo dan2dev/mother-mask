@@ -208,6 +208,34 @@ The user decides how wide a ranged segment is, using the separator:
 Reaching `min` alone never inserts anything: after `"3"` the value is `"3"`,
 because the next keystroke could still be a second digit.
 
+**Any separator ends the segment, and the mask prints its own.** A ranged
+segment is the one place a mask cannot work out its own boundary, so a person
+saying "this field is done" gets to say it with whichever divider is under
+their thumb — a keypad `.`, a `-`, a space — not only the one the pattern
+happens to spell:
+
+```ts
+bind(date, '9{1,2}/9{1,2}/9{4}')
+// type "3.4.1986" → "3/4/1986"
+// type "3-4-1986" → "3/4/1986"
+// type "3 4 1986" → "3/4/1986"
+```
+
+Any Unicode punctuation, symbol, or space works, and each one behaves exactly
+as the mask's own separator does — same value, same caret. Letters, digits,
+and other scripts do not: a mistyped `"a"` in a date field is a typo, not a
+decision, so it stays the noise it always was. Neither does a character this
+mask's own alphabet accepts — a custom token matching `"."` makes `"."` content
+in that mask, never a boundary.
+
+The rule reaches exactly as far as the ambiguity it resolves. A segment only
+reads a separator this way once it is at or past its `min` and still short of
+its `max`; everywhere else the mask owns where its dividers go, and a segment
+that reaches its width reveals the next divider by itself (see
+[Eager Mode](#eager-mode)). So a pattern with no `{min,max}` segment is
+completely unaffected — under `'99/99/9999'`, `"4."` and `"4/"` alike give
+`"4"`, since one digit is short of the day's width either way.
+
 Closing a segment early retires the slots it did not use, so a finished value
 can be shorter than the pattern's maximum: `"3/4/1986"` is complete at eight
 characters even though `getMaxLength` reports `10`. Anything typed past that

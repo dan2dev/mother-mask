@@ -1682,7 +1682,7 @@ nav.primary-nav.sidebar-nav a[aria-current='page']::before {
 
 .home-page .hero-input-wrap input {
   min-height: 62px;
-  padding: 14px 48px 14px 46px;
+  padding: 14px 16px 14px 46px;
   border: 2px solid transparent;
   border-radius: 14px;
   background: #f9f7fc;
@@ -1696,14 +1696,6 @@ nav.primary-nav.sidebar-nav a[aria-current='page']::before {
 .home-page .hero-input-wrap input:focus {
   border-color: #b6a2ff;
   box-shadow: 0 0 0 4px rgba(182, 162, 255, 0.14), 0 10px 26px rgba(0, 0, 0, 0.16);
-}
-
-.hero-input-check {
-  position: absolute;
-  right: 15px;
-  width: 18px;
-  height: 18px;
-  color: #d94ed7;
 }
 
 .hero-demo-note {

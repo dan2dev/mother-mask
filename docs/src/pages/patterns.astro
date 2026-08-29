@@ -15,6 +15,11 @@ A{1,8}   one to eight alphanumeric characters`
 
 const quantifierBind = `bind(date, '9{1,2}/9{1,2}/9{4}')
 // 3/4/1986   3/12/1986   12/4/1986   12/12/1986`
+
+const quantifierStandIn = `bind(date, '9{1,2}/9{1,2}/9{4}')
+// type "3.4.1986" → "3/4/1986"
+// type "3-4-1986" → "3/4/1986"
+// type "3 4 1986" → "3/4/1986"`
 ---
 
 <Layout
@@ -87,6 +92,20 @@ const quantifierBind = `bind(date, '9{1,2}/9{1,2}/9{4}')
       holds with <code>eager: false</code> too. Typing <code>"12"</code> instead reaches the maximum and may reveal <code>"/"</code> eagerly, exactly
       as a fixed <code>99</code> segment does. Reaching the minimum alone never inserts anything: after <code>"3"</code> the value is still
       <code>"3"</code>, because the next keystroke could be a second digit.
+    </p>
+    <p>
+      <strong>Any separator ends the segment, and the mask prints its own.</strong> A ranged segment is the one place a mask cannot work out its own
+      boundary, so a person saying "this field is done" gets to say it with whichever divider is under their thumb — a keypad <code>.</code>, a
+      <code>-</code>, a space — not only the one the pattern happens to spell.
+    </p>
+    <CodeBlock code={quantifierStandIn} lang="ts" />
+    <p>
+      Any Unicode punctuation, symbol, or space works, and each one behaves exactly as the mask's own separator does — same value, same caret.
+      Letters, digits, and other scripts do not: a mistyped <code>"a"</code> in a date field is a typo, not a decision, so it stays the noise it
+      always was. Neither does a character this mask's own alphabet accepts — a custom token matching <code>"."</code> makes <code>"."</code> content
+      in that mask, never a boundary. The rule reaches exactly as far as the ambiguity it resolves: a segment only reads a separator this way once it
+      is at or past its minimum and still short of its maximum, so a pattern with no <code>{'{min,max}'}</code> segment is completely unaffected —
+      under <code>'99/99/9999'</code>, <code>"4."</code> and <code>"4/"</code> alike give <code>"4"</code>.
     </p>
     <p>
       Closing a segment early retires the slots it did not use, so a finished value can be shorter than the pattern's maximum:
