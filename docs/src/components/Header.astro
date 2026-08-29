@@ -1,6 +1,7 @@
 ---
 import NavLinks from './NavLinks.astro'
 import { navHref } from '../data/nav'
+import pkg from '../../../packages/mother-mask/package.json'
 
 interface Props {
   current: string
@@ -11,7 +12,13 @@ const { current } = Astro.props
 
 <header>
   <div class="bar">
-    <a class="brand" href={navHref('')}>mother-mask</a>
+    <div class="brand-group">
+      <a class="brand" href={navHref('')}>
+        <svg class="icon" role="presentation"><use href="#logo-mark"></use></svg>
+        mother-mask
+      </a>
+      <span class="version-pill">v{pkg.version}</span>
+    </div>
     <details class="mobile-menu" id="mobile-menu">
       <summary>
         <svg class="icon" role="presentation"><use href="#menu-icon"></use></svg>

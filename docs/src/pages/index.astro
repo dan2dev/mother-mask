@@ -2,7 +2,6 @@
 import Layout from '../layouts/Layout.astro'
 import InstallBox from '../components/InstallBox.astro'
 import { navHref } from '../data/nav'
-import pkg from '../../../packages/mother-mask/package.json'
 ---
 
 <Layout
@@ -12,20 +11,25 @@ import pkg from '../../../packages/mother-mask/package.json'
   keywords="input mask, input masking, TypeScript input mask, JavaScript input mask, browser form masks, currency mask, phone mask, CPF mask, CNPJ mask"
 >
   <section class="hero" id="top">
+    <div class="blob-field" aria-hidden="true"></div>
+
     <div class="hero-copy">
-      <p class="eyebrow">TypeScript input masking · v{pkg.version}</p>
-      <h1>TypeScript input masks for browser forms.</h1>
-      <p>Bind a pattern to any input and keep edits, selections, and pasted values formatted without a framework dependency.</p>
+      <span class="pill">
+        <svg class="icon" role="presentation"><use href="#sparkle-icon"></use></svg>
+        The elegant masking library
+      </span>
+      <h1>TypeScript input masks with <span class="grad-text">care and precision</span>.</h1>
+      <p>mother-mask is a lightweight, framework-agnostic TypeScript library for input masking with a beautiful developer experience.</p>
       <div class="hero-actions">
-        <a class="button-link" href={navHref('examples.html')}>Try examples</a>
-        <a class="text-link" href={navHref('api.html')}>Read API</a>
+        <a class="button-link" href={navHref('quick-start.html')}>Get started</a>
+        <a class="text-link" href="https://github.com/dan2dev/mother-mask" target="_blank" rel="noreferrer">View on GitHub</a>
       </div>
       <InstallBox />
     </div>
 
     <div class="hero-demo" aria-label="Live mask preview">
       <div class="demo-toolbar">
-        <span>Live preview</span>
+        <span class="demo-dots" aria-hidden="true"><span></span><span></span><span></span></span>
         <code>bind()</code>
       </div>
       <label class="hero-field">
@@ -51,22 +55,49 @@ import pkg from '../../../packages/mother-mask/package.json'
 
     <div class="feature-grid">
       <div class="feature">
-        <h3>Pattern masks</h3>
+        <div class="icon-badge icon-badge-orange">
+          <svg class="icon" role="presentation"><use href="#bolt-icon"></use></svg>
+        </div>
+        <h3>Tiny &amp; fast</h3>
+        <p>Zero runtime dependencies, a few KB min+gz, and no framework to load first.</p>
+      </div>
+
+      <div class="feature">
+        <div class="icon-badge icon-badge-purple">
+          <svg class="icon" role="presentation"><use href="#code-icon"></use></svg>
+        </div>
+        <h3>Framework agnostic</h3>
+        <p>Works anywhere an <code>HTMLInputElement</code> exists: vanilla JS, React, Vue, and more.</p>
+      </div>
+
+      <div class="feature">
+        <div class="icon-badge icon-badge-teal">
+          <svg class="icon" role="presentation"><use href="#puzzle-icon"></use></svg>
+        </div>
+        <h3>Flexible patterns</h3>
         <p>
-          Add phone, date, CPF, CNPJ, CEP, SSN, ZIP+4, postal code, IBAN, VAT ID, license plate, credit card, and custom input masks with
-          <code>bind()</code>. Add custom tokens, case transforms, Unicode letters, and layouts chosen from the input value.
+          Phone, date, CPF, CNPJ, CEP, SSN, IBAN, VAT ID, license plate, and credit card masks — or define custom tokens, transforms, and
+          dynamic patterns with <code>resolveMask</code>.
         </p>
       </div>
 
       <div class="feature">
-        <h3>Decimal and currency masks</h3>
-        <p>Format money, quantities, localized separators, prefixes, suffixes, and negative values with <code>bindDecimal()</code> and decimal helper exports.</p>
+        <div class="icon-badge icon-badge-pink">
+          <svg class="icon" role="presentation"><use href="#heart-icon"></use></svg>
+        </div>
+        <h3>Developer friendly</h3>
+        <p>A small, fully typed API — <code>bind()</code> and <code>bindDecimal()</code> — plus pure formatting helpers for any framework.</p>
       </div>
+    </div>
+  </section>
 
-      <div class="feature">
-        <h3>Small browser package</h3>
-        <p>Ships with zero runtime dependencies, TypeScript types, ESM, CJS, and UMD builds for npm installs or direct CDN usage.</p>
+  <section class="cta-banner">
+    <div class="cta-banner-inner">
+      <div class="cta-banner-copy">
+        <h2>Ready to craft <span class="grad-text">beautiful</span> inputs?</h2>
+        <p>Install now and bring clarity and intelligence to your forms.</p>
       </div>
+      <InstallBox />
     </div>
   </section>
 </Layout>

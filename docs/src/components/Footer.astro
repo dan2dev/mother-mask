@@ -1,8 +1,33 @@
+---
+import { navHref } from '../data/nav'
+---
+
 <footer>
-  <span>MIT &middot; <a href="https://github.com/dan2dev" target="_blank" rel="noreferrer">Danilo Celestino de Castro</a></span>
-  <div class="footer-links">
-    <a href="https://github.com/dan2dev/mother-mask" target="_blank" rel="noreferrer">GitHub</a>
-    <a href="https://www.npmjs.com/package/mother-mask" target="_blank" rel="noreferrer">npm</a>
-    <a href="https://dan2dev.github.io/mother-mask/" target="_blank" rel="noreferrer">Live demo</a>
+  <div class="footer-brand">
+    <svg role="presentation"><use href="#logo-mark"></use></svg>
+    <p>mother-mask is crafted with care by <a href="https://github.com/dan2dev" target="_blank" rel="noreferrer">dan2dev</a>.</p>
+  </div>
+
+  <div class="footer-columns">
+    <div class="footer-column">
+      <span class="footer-column-label">Resources</span>
+      <a href={navHref('quick-start.html')}>Quick start</a>
+      <a href={navHref('examples.html')}>Examples</a>
+      <a href={navHref('api.html')}>API reference</a>
+    </div>
+
+    <div class="footer-column">
+      <span class="footer-column-label">Community</span>
+      <a href="https://github.com/dan2dev/mother-mask" target="_blank" rel="noreferrer">GitHub</a>
+      <a href="https://github.com/dan2dev/mother-mask/discussions" target="_blank" rel="noreferrer">Discussions</a>
+      <a href="https://github.com/dan2dev/mother-mask/issues" target="_blank" rel="noreferrer">Issues</a>
+    </div>
+
+    <div class="footer-column">
+      <span class="footer-column-label">Support</span>
+      <a href="https://www.npmjs.com/package/mother-mask" target="_blank" rel="noreferrer">npm</a>
+      <a href="https://dan2dev.github.io/mother-mask/" target="_blank" rel="noreferrer">Live demo</a>
+      <a href="https://github.com/dan2dev/mother-mask/blob/main/LICENSE" target="_blank" rel="noreferrer">License (MIT)</a>
+    </div>
   </div>
 </footer>
