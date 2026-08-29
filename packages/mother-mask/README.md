@@ -132,7 +132,7 @@ optionally pads and caps the integer part; it is unlimited by default.
 | `separator` | `','` | Thousands separator |
 | `decimalSeparator` | `'.'` | Separator before the fraction |
 | `prefix`, `suffix` | `''` | Fixed display text, excluded from numeric parsing |
-| `allowNegative` | `false` | Allow negative numbers |
+| `allowNegative` | `false` | Allow negative numbers — typing `-` anywhere makes the value negative, `+` anywhere makes it positive |
 | `onChange` | Unset | Binding callback receiving the formatted string and JS number |
 
 For decimal masks, `segmented` controls thousands grouping. It is separate from

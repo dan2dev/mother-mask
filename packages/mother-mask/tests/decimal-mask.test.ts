@@ -219,6 +219,57 @@ describe('processDecimal() — options', () => {
       expect(processDecimal('-', { allowNegative: true })).toBe('')
     })
   })
+
+  describe('"+" forces a value positive', () => {
+    it('a trailing "+" turns an already-negative value positive', () => {
+      expect(processDecimal('-1234+', { decimalPlaces: 2, allowNegative: true })).toBe('1,234.00')
+    })
+
+    it('a "+" in the middle of the digit stream turns it positive', () => {
+      expect(processDecimal('-12+34', { decimalPlaces: 2, allowNegative: true })).toBe('1,234.00')
+    })
+
+    it('"+" on an already-positive value is a no-op', () => {
+      expect(processDecimal('1234+', { decimalPlaces: 2, allowNegative: true })).toBe('1,234.00')
+    })
+
+    it('treats a lone "+" with no digits as empty', () => {
+      expect(processDecimal('+', { allowNegative: true })).toBe('')
+    })
+
+    it('is dropped as noise (no crash, no sign) when allowNegative is false', () => {
+      expect(processDecimal('-1234+', { decimalPlaces: 2 })).toBe('1,234.00')
+    })
+
+    it('resolves multiple sign characters by the last one in reading order', () => {
+      // "-" then "+" -> positive.
+      expect(processDecimal('-1234+', { decimalPlaces: 2, allowNegative: true })).toBe('1,234.00')
+      // "+" then "-" -> negative.
+      expect(processDecimal('+1234-', { decimalPlaces: 2, allowNegative: true })).toBe('-1,234.00')
+      // "-", "+", "-" -> negative (last one wins).
+      expect(processDecimal('-1234+-', { decimalPlaces: 2, allowNegative: true })).toBe(
+        '-1,234.00',
+      )
+    })
+
+    it('turns a value with a prefix positive, sign staying before the prefix', () => {
+      expect(
+        processDecimal('-1234+', { decimalPlaces: 2, allowNegative: true, prefix: '$' }),
+      ).toBe('$1,234.00')
+    })
+
+    it('flips the sign back to positive when unmasking through unmaskDecimal', () => {
+      expect(unmaskDecimal('-1,234.56+', { allowNegative: true })).toBe(1234.56)
+    })
+
+    it('composes with formatDecimalValue round-tripping through processDecimal', () => {
+      const negative = formatDecimalValue(-42.5, { decimalPlaces: 2, allowNegative: true })
+      expect(negative).toBe('-42.50')
+      expect(processDecimal(negative + '+', { decimalPlaces: 2, allowNegative: true })).toBe(
+        '42.50',
+      )
+    })
+  })
 })
 
 describe('processDecimal() — numberPlaces (fixed-width, left-padded integer part)', () => {

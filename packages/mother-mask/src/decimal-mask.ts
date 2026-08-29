@@ -227,7 +227,14 @@ function computeDecimalParts(raw: string, opts: ResolvedDecimalOptions): Decimal
       inFraction = true
       continue
     }
+    // A sign character anywhere in the body sets (not toggles) the sign —
+    // "-" always forces negative, "+" always forces positive, regardless of
+    // what the value's sign was before. Scanning left to right, the last
+    // sign character in the body wins, so alternating "+"/"-" (however
+    // unlikely outside of a paste) resolves the same way a human reads it:
+    // by the one typed last.
     if (ch === '-' && opts.allowNegative) isNegative = true
+    else if (ch === '+' && opts.allowNegative) isNegative = false
     // Anything else — thousands separator, prefix/suffix text, a repeated
     // separator, stray letters — is noise and is dropped.
   }

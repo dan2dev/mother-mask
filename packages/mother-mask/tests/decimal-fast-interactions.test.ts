@@ -504,6 +504,128 @@ describe('bindDecimal() negative-sign interactions', () => {
     await flushRafs()
     expect(input.value).toBe('-42.00')
   })
+
+  it('typing "+" anywhere turns a negative value positive', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2, allowNegative: true })
+    input.value = '-42.00'
+    input.setSelectionRange(6, 6)
+    insertAt(input, 6, '+')
+    await flushRafs()
+    expect(input.value).toBe('42.00')
+  })
+
+  it('typing "+" in the middle of a negative value (not just at the end) turns it positive', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2, allowNegative: true })
+    input.value = '-42.00'
+    input.setSelectionRange(3, 3)
+    // "-42.00" -> "-4+2.00"
+    insertAt(input, 3, '+')
+    await flushRafs()
+    expect(input.value).toBe('42.00')
+  })
+
+  it('typing "+" while already positive is a no-op (dropped as noise)', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2, allowNegative: true })
+    input.value = '42'
+    input.setSelectionRange(2, 2)
+    insertAt(input, 2, '+')
+    await flushRafs()
+    expect(input.value).toBe('42.00')
+  })
+
+  it('typing "-" then "+" as two separate keystrokes ends up positive', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2, allowNegative: true })
+    input.value = '42'
+    input.setSelectionRange(2, 2)
+    insertAt(input, 2, '-')
+    await flushRafs()
+    expect(input.value).toBe('-42.00')
+
+    insertAt(input, input.value.length, '+')
+    await flushRafs()
+    expect(input.value).toBe('42.00')
+  })
+
+  it('alternating "-"/"+" across several keystrokes ends on whichever sign was typed last', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2, allowNegative: true })
+    input.value = '7'
+    input.setSelectionRange(1, 1)
+
+    for (const key of ['-', '+', '-', '-', '+']) {
+      insertAt(input, input.value.length, key)
+      await flushRafs()
+    }
+    // Last sign typed was "+" -> positive.
+    expect(input.value).toBe('7.00')
+  })
+
+  it('typing "+" before the leading "-" (caret at the very start) still turns the value positive', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2, allowNegative: true })
+    input.value = '-42.00'
+    input.setSelectionRange(0, 0)
+    insertAt(input, 0, '+')
+    await flushRafs()
+    expect(input.value).toBe('42.00')
+  })
+
+  it('"+" is inert when allowNegative is false (no sign, no crash)', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2 })
+    input.value = '42'
+    input.setSelectionRange(2, 2)
+    insertAt(input, 2, '+')
+    await flushRafs()
+    expect(input.value).toBe('42.00')
+  })
+
+  it('"+" turns a negative value with a prefix positive, keeping the prefix after the sign is dropped', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2, allowNegative: true, prefix: '$' })
+    input.value = '-$42.00'
+    input.setSelectionRange(7, 7)
+    insertAt(input, 7, '+')
+    await flushRafs()
+    expect(input.value).toBe('$42.00')
+  })
+
+  it('"+" never persists as a literal character once the value reformats positive', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2, allowNegative: true })
+    input.value = '-42.00'
+    input.setSelectionRange(6, 6)
+    insertAt(input, 6, '+')
+    await flushRafs()
+    // Unlike "-", which renders as a leading character, "+" is consumed
+    // entirely into the sign decision — there is nothing left to backspace.
+    expect(input.value).not.toContain('+')
+    expect(input.value).toBe('42.00')
+  })
+
+  it('pasting "+" onto the end of a negative value turns it positive', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2, allowNegative: true })
+    input.value = '-42.00'
+    input.setSelectionRange(6, 6)
+    pasteAt(input, '+')
+    await flushRafs()
+    expect(input.value).toBe('42.00')
+  })
+
+  it('pasting a value containing both "+" and "-" resolves to whichever sign appears last', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { decimalPlaces: 2, allowNegative: true })
+    input.value = ''
+    input.setSelectionRange(0, 0)
+    pasteAt(input, '+-1234')
+    await flushRafs()
+    expect(input.value).toBe('-1,234.00')
+  })
 })
 
 // ---------------------------------------------------------------------------
