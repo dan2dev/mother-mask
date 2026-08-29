@@ -1,14 +1,25 @@
 # Documentation website
 
 The [mother-mask documentation and live examples](https://dan2dev.github.io/mother-mask/)
-are a static Vite multi-page site. Each nav section is its own HTML file at the
-`docs/` root (`index.html`, `quick-start.html`, `examples.html`,
-`advanced-patterns.html`, `editing.html`, `decimals.html`, `regional.html`,
-`patterns.html`, `cdn.html`, `api.html`); every page shares the same header,
-sidebar, and footer markup. Demo bindings live one file per page under
-`src/pages/`, sharing theme toggle, syntax highlighting, and helpers from
-`src/common.ts`. Styling is in `src/style.css`. `vite.config.ts` lists every
-page as a build entry point.
+are a static [Astro](https://astro.build) site. Every nav section is its own
+page under `src/pages/` (`index.astro`, `quick-start.astro`, `examples.astro`,
+`advanced-patterns.astro`, `editing.astro`, `decimals.astro`, `regional.astro`,
+`patterns.astro`, `cdn.astro`, `api.astro`); each builds to the matching
+`<name>.html` at the site root (`astro.config.mjs` sets `build.format: 'file'`
+so URLs stay identical to before). `src/layouts/Layout.astro` renders the
+shared header, sidebar, footer, icon sprite, and SEO/JSON-LD tags; `src/data/nav.ts`
+is the single ordered list of pages that drives the sidebar, the mobile menu,
+prev/next links, and JSON-LD breadcrumbs. Reusable page pieces (code blocks,
+demo cards, the install box) live under `src/components/`. Code samples are
+highlighted at build time by Astro's Shiki-powered `<Code>` component — no
+client-side highlighting pass, no hand-escaped HTML in page source.
+
+Demo bindings live one file per page under `src/scripts/demos/` (only for
+pages with live `bind()`/`bindDecimal()` calls — index, examples, regional,
+decimals, editing, advanced-patterns), sharing `$()`/`setHint()` helpers from
+`src/scripts/hint.ts`. `src/scripts/chrome.ts` is the site-wide script loaded
+on every page: theme toggle, in-page smooth scroll, and code/install-box copy
+buttons. Styling is in `src/styles/global.css`.
 
 ## Run locally
 
@@ -25,7 +36,7 @@ bun install --no-save
 bun run dev
 ```
 
-Open the local URL printed by Vite. Content and demo changes reload during
+Open the local URL printed by Astro. Content and demo changes reload during
 development. If you change library source, rebuild the library, or run its
 `bun run dev` command in another terminal to watch for changes.
 
@@ -38,11 +49,11 @@ bun run build
 bun run preview
 ```
 
-The build runs TypeScript checks and writes the static site to `dist/`. Preview
-serves that build locally; it is not a production server. The relative `base`
-in `vite.config.ts` keeps asset links working under the GitHub Pages project path.
-The same config injects the library's package version into the page and its
-structured data during development and builds.
+The build runs `astro check` and writes the static site to `dist/`. Preview
+serves that build locally; it is not a production server. `astro.config.mjs`
+sets `site`/`base` for GitHub Pages' project path and reads the library's
+package version directly in `Layout.astro` for the page and its structured
+data — no build-time string replacement needed.
 
 ## Updating documentation
 
@@ -50,20 +61,14 @@ structured data during development and builds.
   `cp README.md packages/mother-mask/README.md` after editing the root copy.
 - Check API names, options, and defaults against `packages/mother-mask/src/`.
   Update visible snippets and their live bindings together, keeping each
-  example's HTML and its `bind()`/`bindDecimal()` call in the same
-  `src/pages/*.ts` file as the page it renders on.
-- Adding a page: create `<name>.html` at the `docs/` root (copy an existing
-  page's header/sidebar/footer chrome, including the SEO block: title,
-  description, canonical, `og:*`/`twitter:*` tags including `og:image`, and
-  the `WebPage` + `BreadcrumbList` JSON-LD scripts — update every URL and the
-  breadcrumb's page name), add matching `<a>` links with the same `href` to
-  both the desktop sidebar nav and the mobile menu nav on every page, add
-  `<name>` to the `pages` list in `vite.config.ts`, and add a
-  `src/pages/<name>.ts` entry script (even an empty `import '../common'` if
-  the page has no live bindings). Update the `<nav class="page-nav">` prev/next
-  links on the new page and on its now-adjacent neighbors so the reading order
-  stays a chain, and add the new URL to `public/sitemap.xml`. Give new demo
-  inputs accessible labels and explain what an example demonstrates.
+  example's demo card and its `bind()`/`bindDecimal()` call in the matching
+  `src/pages/<name>.astro` + `src/scripts/demos/<name>.ts` pair.
+- Adding a page: create `src/pages/<name>.astro` using `Layout` (pass
+  `current`, `title`, `description`) for the shared chrome and SEO/JSON-LD,
+  add one entry to `src/data/nav.ts` (this alone updates the sidebar, mobile
+  menu, and prev/next links on every page), and add the new URL to
+  `public/sitemap.xml`. Give new demo inputs accessible labels and explain
+  what an example demonstrates.
 - Every page must have exactly one `<h1>` (its own topic, not the site name) —
   it's a real ranking/accessibility signal, not just styling. Use the
   `page-title` class if it needs to render at section-heading size rather than

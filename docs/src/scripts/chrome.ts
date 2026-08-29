@@ -1,24 +1,7 @@
-// Shared chrome: syntax highlighting, theme toggle, and in-page smooth scroll.
-// Every page's entry script imports this first.
-//
-// style.css is linked directly from each page's <head> (not imported here) so
-// it loads as a real render-blocking <link>, in dev too — importing it from
-// JS makes Vite's dev server inject it via a script-created <style> tag
-// instead, which paints the raw unstyled HTML first and pops the CSS in
-// after, flashing on every hard navigation between pages.
-import hljs from 'highlight.js/lib/core'
-import bash from 'highlight.js/lib/languages/bash'
-import typescript from 'highlight.js/lib/languages/typescript'
-import xml from 'highlight.js/lib/languages/xml'
-
-hljs.registerLanguage('bash', bash)
-hljs.registerLanguage('html', xml)
-hljs.registerLanguage('ts', typescript)
-hljs.registerLanguage('typescript', typescript)
-
-document.querySelectorAll<HTMLElement>('pre code, code.snippet, .install-box code').forEach((block) => {
-  hljs.highlightElement(block)
-})
+// Site-wide chrome, loaded on every page via Layout.astro: theme toggle,
+// in-page smooth scroll, and copy buttons on code blocks / the install box.
+// Code samples are highlighted at build time by Astro's <Code> component
+// (Shiki), so there's no client-side highlighting pass here.
 
 // ── Theme toggle ─────────────────────────────────────────────────────────────
 
@@ -56,20 +39,25 @@ systemTheme.addEventListener('change', (e) => {
   applyTheme(currentTheme)
 })
 
-// ── Hint helper ──────────────────────────────────────────────────────────────
+// ── Copy buttons (CodeBlock + InstallBox) ────────────────────────────────────
+// Each `.copy-btn` copies the text of the nearest `pre`/`code` sibling in its
+// own parent, so this works unmodified for both a CodeBlock's Shiki <pre> and
+// InstallBox's inline install command.
 
-export function setHint(id: string, state: { text: string; ok?: boolean; error?: boolean }) {
-  const el = document.querySelector(`#${id}`)
-  if (!el) return
-  el.textContent = state.text
-  el.className = `hint${state.ok ? ' ok' : state.error ? ' error' : ''}`
-}
+document.querySelectorAll<HTMLButtonElement>('.copy-btn').forEach((button) => {
+  const target = button.parentElement?.querySelector('pre, code')
+  if (!target) return
 
-export const $ = <T extends HTMLElement>(id: string) => document.querySelector<T>(`#${id}`)!
-
-// Normalize accepted characters inside the mask so caret mapping stays intact.
-export const uppercaseLetter = { match: /[a-z]/i, transform: (char: string) => char.toUpperCase() }
-export const uppercaseAlphanumeric = { match: /[a-z0-9]/i, transform: (char: string) => char.toUpperCase() }
+  button.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(target.textContent ?? '')
+    button.classList.add('copied')
+    button.innerHTML = '<svg class="icon" role="presentation"><use href="#check-icon"></use></svg>'
+    setTimeout(() => {
+      button.classList.remove('copied')
+      button.innerHTML = '<svg class="icon" role="presentation"><use href="#copy-icon"></use></svg>'
+    }, 1600)
+  })
+})
 
 // ── Smooth-scroll for same-page nav links ───────────────────────────────────
 // Cross-page links (e.g. "examples.html#foo") are left to the browser; only

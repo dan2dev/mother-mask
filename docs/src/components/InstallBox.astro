@@ -1,0 +1,16 @@
+---
+import CodeBlock from './CodeBlock.astro'
+
+interface Props {
+  command?: string
+}
+
+const { command = 'npm install mother-mask' } = Astro.props
+---
+
+<div class="install-box" id="install">
+  <CodeBlock code={command} lang="bash" inline id="install-cmd" />
+  <button class="copy-btn" id="copy-install" type="button" aria-label="Copy install command">
+    <svg class="icon" role="presentation"><use href="#copy-icon"></use></svg>
+  </button>
+</div>

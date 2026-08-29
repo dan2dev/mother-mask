@@ -1,6 +1,5 @@
-import '../common'
 import { bind } from 'mother-mask'
-import { $, setHint, uppercaseLetter } from '../common'
+import { $, setHint, uppercaseLetter } from '../hint'
 
 // ── US — phone ───────────────────────────────────────────────────────────────
 

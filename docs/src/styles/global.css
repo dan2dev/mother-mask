@@ -12,12 +12,6 @@
   --accent-bg: rgba(23, 105, 170, 0.1);
   --ok: #0b8f68;
   --error: #c93d48;
-  --syntax-keyword: #8b3fc7;
-  --syntax-string: #0f7a5f;
-  --syntax-number: #b25400;
-  --syntax-title: #1769aa;
-  --syntax-attr: #a04670;
-  --syntax-comment: #7d8791;
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, 'SF Mono', Consolas, monospace;
@@ -51,12 +45,6 @@
   --accent-bg: rgba(103, 183, 247, 0.14);
   --ok: #46d6a5;
   --error: #ff7b86;
-  --syntax-keyword: #d59cff;
-  --syntax-string: #71d5b3;
-  --syntax-number: #f0a45d;
-  --syntax-title: #82c8ff;
-  --syntax-attr: #f294b8;
-  --syntax-comment: #83909e;
   color-scheme: dark;
 }
 
@@ -77,12 +65,6 @@
     --accent-bg: rgba(103, 183, 247, 0.14);
     --ok: #46d6a5;
     --error: #ff7b86;
-    --syntax-keyword: #d59cff;
-    --syntax-string: #71d5b3;
-    --syntax-number: #f0a45d;
-    --syntax-title: #82c8ff;
-    --syntax-attr: #f294b8;
-    --syntax-comment: #83909e;
     color-scheme: dark;
   }
 }
@@ -217,49 +199,26 @@ pre code {
   overflow-wrap: normal;
 }
 
-.hljs {
-  color: var(--code-text);
-  background: transparent;
+/* Astro's <Code> component (Shiki) ships both a light and a dark palette per
+   token as `--shiki-light`/`--shiki-dark` custom properties (configured in
+   astro.config.mjs). Shiki's own default color is the light theme; this
+   override swaps to the dark variant when the site's manual toggle — not
+   just OS preference — sets data-theme="dark", keeping code blocks in sync
+   with the same toggle everything else on the page follows. */
+:root[data-theme='dark'] .astro-code,
+:root[data-theme='dark'] .astro-code span {
+  color: var(--shiki-dark) !important;
+  background-color: var(--shiki-dark-bg) !important;
 }
 
-.hljs-keyword,
-.hljs-built_in,
-.hljs-type {
-  color: var(--syntax-keyword);
+.code-block {
+  position: relative;
 }
 
-.hljs-string,
-.hljs-symbol,
-.hljs-bullet {
-  color: var(--syntax-string);
-}
-
-.hljs-number,
-.hljs-literal {
-  color: var(--syntax-number);
-}
-
-.hljs-title,
-.hljs-title.function_,
-.hljs-function .hljs-title {
-  color: var(--syntax-title);
-}
-
-.hljs-attr,
-.hljs-attribute,
-.hljs-property,
-.hljs-variable {
-  color: var(--syntax-attr);
-}
-
-.hljs-comment {
-  color: var(--syntax-comment);
-  font-style: italic;
-}
-
-.hljs-tag,
-.hljs-name {
-  color: var(--syntax-title);
+.code-block .copy-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
 }
 
 .icon {
@@ -605,7 +564,8 @@ nav.primary-nav.sidebar-nav a {
   width: 100%;
 }
 
-.install-box code {
+.install-box code,
+.install-box .astro-code {
   background: none;
   padding: 0;
   font-size: 15px;
@@ -797,7 +757,8 @@ input:focus {
   grid-column: 1 / -1;
 }
 
-.example .snippet {
+.example .snippet,
+.example .astro-code.snippet {
   display: block;
   font-size: 12.5px;
   margin: 4px 0 12px;

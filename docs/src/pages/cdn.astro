@@ -1,0 +1,21 @@
+---
+import Layout from '../layouts/Layout.astro'
+import CodeBlock from '../components/CodeBlock.astro'
+
+const snippet = `<script src="https://unpkg.com/mother-mask/dist/mother-mask.umd.js"></script>
+<script>
+  const dispose = MotherMask.bind(document.getElementById('cpf'), '999.999.999-99')
+</script>`
+---
+
+<Layout
+  current="cdn"
+  title="UMD / CDN — mother-mask docs"
+  description="Use mother-mask directly from a CDN with the UMD build and the global MotherMask object — no bundler required."
+>
+  <section id="cdn">
+    <h1 class="page-title">UMD / CDN</h1>
+    <CodeBlock code={snippet} lang="html" />
+    <p style="margin-top: 12px">The global name is <code>MotherMask</code>.</p>
+  </section>
+</Layout>

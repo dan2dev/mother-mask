@@ -1,0 +1,73 @@
+---
+import Layout from '../layouts/Layout.astro'
+import CodeBlock from '../components/CodeBlock.astro'
+import { navHref } from '../data/nav'
+
+const snippet = `bind(input, '\\\\A-999999') // '123456' → 'A-123456'
+bind(input, '\\\\9-99')     // '12' → '9-12'
+bind(input, '\\\\Z-99')     // '12' → 'Z-12'
+bind(input, '\\\\\\\\99')      // a literal backslash, then two digits`
+---
+
+<Layout
+  current="patterns"
+  title="Pattern syntax — mother-mask docs"
+  description="mother-mask pattern syntax reference: digit, letter, and alphanumeric tokens, custom tokens, and escaped literals."
+>
+  <section id="patterns">
+    <h1 class="page-title">Pattern syntax</h1>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Character</th>
+            <th>Matches</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>9</code></td>
+            <td>Digit (<code>0</code>–<code>9</code>)</td>
+          </tr>
+          <tr>
+            <td><code>Z</code></td>
+            <td>ASCII letter (<code>a</code>–<code>z</code>, <code>A</code>–<code>Z</code>)</td>
+          </tr>
+          <tr>
+            <td><code>A</code></td>
+            <td>ASCII alphanumeric (digit or letter)</td>
+          </tr>
+          <tr>
+            <td>Custom token</td>
+            <td>Its local matcher and optional transform</td>
+          </tr>
+          <tr>
+            <td><code>\</code></td>
+            <td>Escapes a token or another backslash</td>
+          </tr>
+          <tr>
+            <td>Anything else</td>
+            <td>Literal — inserted as the user fills slots</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top: 12px">
+      Array masks: pass patterns <strong>shortest → longest by data capacity</strong>; the active one is picked from how many data characters are
+      accepted, not a prefix or card network. Use <a href={navHref('advanced-patterns.html')}><code>resolveMask</code></a> to choose a layout from
+      content instead.
+    </p>
+    <h2>Escaped literals</h2>
+    <CodeBlock code={snippet} lang="ts" />
+    <p>
+      Backslash escapes a built-in or custom token, or another backslash. Before any other character, or at the end of a pattern, it remains
+      literal. JavaScript string literals need an extra backslash as shown above. Older patterns using backslash immediately before a token must
+      double it to keep the backslash in the output.
+    </p>
+    <p>
+      Complete literal runs are formatting at their boundaries; escaped runs remain formatting after a segment shrinks. If a literal also matches
+      the data alphabet, raw and formatted values can be ambiguous. Use a distinct separator, such as <code>'\\9-99'</code>, and avoid resolver
+      literals that look like data but are absent from the fallback pattern.
+    </p>
+  </section>
+</Layout>

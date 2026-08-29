@@ -1,6 +1,5 @@
-import '../common'
 import { bind } from 'mother-mask'
-import { $, uppercaseLetter } from '../common'
+import { $, uppercaseLetter } from '../hint'
 
 bind($('ex-hex'), 'HH:HH:HH:HH:HH:HH', { tokens: { H: /[0-9A-Fa-f]/ } })
 bind($('ex-upper'), 'UUU-999', {

@@ -1,0 +1,65 @@
+---
+import Layout from '../layouts/Layout.astro'
+import CodeBlock from '../components/CodeBlock.astro'
+import ExampleCard from '../components/ExampleCard.astro'
+
+const caretSnippet = `// | marks the caret after the edit.
+// Delete 222:          (111) |-3333
+// Backspace again:     (111|-3333
+// The caret stays before the untouched -3333 tail.
+
+// CPF: select 012.153.441 in 012.153.441-39, then type 015.
+// Result:              015.|-39`
+---
+
+<Layout
+  current="editing"
+  title="Segmented editing — mother-mask docs"
+  description="How mother-mask handles segmented editing, eager literals, and backspace behavior across independent mask fields."
+>
+  <section id="editing">
+    <h1 class="page-title">Segmented editing and eager literals</h1>
+    <p class="section-sub">
+      Static patterns and arrays use <code>segmented: true</code> and <code>eager: true</code> by default. Separators anchor independent fields
+      while you edit.
+    </p>
+
+    <div class="examples-grid">
+      <ExampleCard snippet="bind(input, '(999) 999-9999')" inputId="ex-phone-edit" ariaLabel="Segmented phone editing" inputmode="tel" value="(111) 222-3333">
+        <Fragment slot="title">Empty an internal segment</Fragment>
+        <span class="hint">Place the caret after 222 and press Backspace three times.</span>
+      </ExampleCard>
+
+      <ExampleCard
+        snippet="bind(input, '(999) 999-9999', { eager: false })"
+        inputId="ex-phone-edit-lazy"
+        ariaLabel="Segmented phone editing without eager literals"
+        inputmode="tel"
+        value="(111) 222-3333"
+      >
+        <Fragment slot="title">The same edit without eager literals</Fragment>
+        <span class="hint">Existing internal dividers remain even with eager disabled.</span>
+      </ExampleCard>
+    </div>
+
+    <CodeBlock code={caretSnippet} lang="ts" />
+
+    <p>
+      Existing internal dividers survive while later segments contain data. Backspace follows collapsed text to the left, including backward word
+      and line deletion. Movement within a divider that stays visible is preserved. Selecting everything and deleting clears the field.
+    </p>
+    <p>
+      Repeated separators can make an edited value ambiguous: <code>1/2025</code> with <code>99/99/9999</code> resolves to the earliest fields that
+      fit. Distinct separators give more precise anchors. For a continuous value where all following characters should shift, set
+      <code>segmented: false</code>.
+    </p>
+    <p>
+      Eager mode reveals the next literal when a segment fills: typing <code>25</code> into a date shows <code>25/</code>. Set
+      <code>eager: false</code> to wait for the next digit. <code>bind()</code> does not immediately restore an eager literal removed with
+      Backspace/Delete. Pure helpers have no edit history and apply the configured eager option on every call. Arrow keys, Home/End, and selection
+      shortcuts retain native behavior.
+    </p>
+  </section>
+</Layout>
+
+<script src="../scripts/demos/editing.ts"></script>

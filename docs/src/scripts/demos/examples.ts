@@ -1,6 +1,5 @@
-import '../common'
 import { bind, bindDecimal } from 'mother-mask'
-import { $, setHint, uppercaseLetter, uppercaseAlphanumeric } from '../common'
+import { $, setHint, uppercaseLetter, uppercaseAlphanumeric } from '../hint'
 
 // ── CPF ──────────────────────────────────────────────────────────────────────
 

@@ -1,0 +1,14 @@
+---
+import NavLinks from './NavLinks.astro'
+
+interface Props {
+  current: string
+}
+
+const { current } = Astro.props
+---
+
+<aside class="sidebar">
+  <span class="sidebar-label">Docs</span>
+  <NavLinks current={current} class="primary-nav sidebar-nav" />
+</aside>

@@ -1,0 +1,67 @@
+---
+import Layout from '../layouts/Layout.astro'
+import CodeBlock from '../components/CodeBlock.astro'
+import ExampleCard from '../components/ExampleCard.astro'
+
+const snippet = `import { bindDecimal, formatDecimalValue, unmaskDecimal } from 'mother-mask'
+
+const options = {
+  decimalPlaces: 2,
+  separator: '.',
+  decimalSeparator: ',',
+  suffix: ' €',
+}
+
+input.value = formatDecimalValue(1234.5, options) // '1.234,50 €'
+bindDecimal(input, {
+  ...options,
+  onChange: (value, numericValue) => console.log(value, numericValue),
+})
+unmaskDecimal('1.234,50 €', options) // 1234.5`
+---
+
+<Layout
+  current="decimals"
+  title="Decimal formatting — mother-mask docs"
+  description="Format currency, quantities, and decimals with bindDecimal — prefixes, suffixes, locale separators, and fixed widths."
+>
+  <section id="decimals">
+    <h1 class="page-title">Decimal formatting</h1>
+    <p class="section-sub">
+      The integer part grows freely by default. The fraction is optional and unlimited until <code>decimalPlaces</code> is set. Use text inputs
+      with <code>inputmode="decimal"</code>.
+    </p>
+
+    <div class="examples-grid">
+      <ExampleCard snippet="bindDecimal(input)" inputId="ex-decimal-free" ariaLabel="Optional unlimited decimal fraction" inputmode="decimal" placeholder="1,234.56789">
+        <Fragment slot="title">Optional fraction (default)</Fragment>
+        <span class="hint">Type 1234, then add .56789; no fixed precision is imposed.</span>
+      </ExampleCard>
+
+      <ExampleCard
+        snippet="bindDecimal(input, { numberPlaces: 2, decimalPlaces: 2 })"
+        inputId="ex-decimal-width"
+        ariaLabel="Fixed width decimal"
+        inputmode="decimal"
+        placeholder="07.30"
+      >
+        <Fragment slot="title">Fixed integer and fraction widths</Fragment>
+        <span class="hint">Paste 7.3 to see 07.30; each part is capped at two digits.</span>
+      </ExampleCard>
+    </div>
+
+    <p>
+      Set <code>decimalPlaces: 2</code> for fixed, zero-padded currency decimals, or <code>0</code> for integers only. <code>numberPlaces</code>
+      pads and caps the integer part. Here <code>segmented</code> controls thousands grouping; it does not mean independent pattern fields.
+    </p>
+    <p>
+      Prefixes and suffixes are fixed display text, excluded from numeric parsing even when they contain digits or a decimal separator. Typing
+      inside a prefix inserts at the start of the number; typing inside a suffix inserts at the end. Use the same locale and affix options when
+      formatting and parsing.
+    </p>
+
+    <CodeBlock code={snippet} lang="ts" />
+  </section>
+</Layout>
+
+<script src="../scripts/demos/decimals.ts"></script>

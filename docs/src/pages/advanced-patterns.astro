@@ -1,0 +1,89 @@
+---
+import Layout from '../layouts/Layout.astro'
+import ExampleCard from '../components/ExampleCard.astro'
+---
+
+<Layout
+  current="advanced-patterns"
+  title="Custom tokens & dynamic patterns — mother-mask docs"
+  description="Define custom mask tokens, transforms, Unicode letters, and content-dependent patterns with resolveMask in mother-mask."
+>
+  <section id="advanced-patterns">
+    <h1 class="page-title">Custom tokens and dynamic patterns</h1>
+    <p class="section-sub">Formatting only: no date, card, or identifier validation. These options also work with applyMask, process, and buildMask.</p>
+
+    <div class="examples-grid">
+      <ExampleCard snippet="bind(input, 'HH:HH:HH:HH:HH:HH', { tokens: { H: /[0-9A-Fa-f]/ } })" inputId="ex-hex" ariaLabel="MAC address" placeholder="a1:b2:c3:d4:e5:f6">
+        <Fragment slot="title">Hexadecimal MAC address</Fragment>
+        <span class="hint">Try a1b2c3d4e5f6; g is rejected.</span>
+      </ExampleCard>
+
+      <ExampleCard snippet="bind(input, 'UUU-999', { tokens: { U: uppercaseLetter } })" inputId="ex-upper" ariaLabel="Uppercase identifier" placeholder="ABC-123">
+        <Fragment slot="title">Uppercase identifier</Fragment>
+        <span class="hint">Type abc123, then replace a letter in the middle.</span>
+      </ExampleCard>
+
+      <ExampleCard
+        snippet="bind(input, '9999 9999 9999 9999', { resolveMask: v => v.startsWith('34') || v.startsWith('37') ? '9999 999999 99999' : '9999 9999 9999 9999' })"
+        inputId="ex-dynamic-card"
+        ariaLabel="Card layout by prefix"
+        inputmode="numeric"
+        placeholder="3412 345678 90123"
+        wide
+      >
+        <Fragment slot="title">Card layout by prefix</Fragment>
+        <span class="hint">Change 34 to 51: the layout changes while your caret stays at the edit.</span>
+      </ExampleCard>
+
+      <ExampleCard snippet="bind(input, '\\A-999999')" inputId="ex-escaped" ariaLabel="Literal A identifier" placeholder="A-123456">
+        <Fragment slot="title">Literal token character</Fragment>
+        <span class="hint">The A is fixed text, not a slot.</span>
+      </ExampleCard>
+
+      <ExampleCard snippet="bind(input, 'LLLL', { tokens: { L: /\p{L}/u } })" inputId="ex-unicode" ariaLabel="Unicode letters" placeholder="ÁЖλ𐐀">
+        <Fragment slot="title">Unicode letters</Fragment>
+        <span class="hint">One code point per slot; provisional IME text is preserved until commit.</span>
+      </ExampleCard>
+    </div>
+
+    <h2>Token and transform contracts</h2>
+    <p>
+      A token is a <code>RegExp</code>, a character predicate, or <code>{'{ match, transform? }'}</code>. Keys are single Unicode code points;
+      backslash is reserved. Overrides of <code>9</code>, <code>Z</code>, and <code>A</code> apply only to that operation or binding. Definitions are
+      snapshotted on bind; dispose and rebind to change them. Use pure matchers. RegExp <code>g</code>/<code>y</code> flags are ignored on a private
+      copy without changing the caller's <code>lastIndex</code>.
+    </p>
+    <p>
+      A transform must return exactly one code point; otherwise the engine throws a <code>RangeError</code>. Use an idempotent transform whose output
+      still matches the token. Uppercasing <code>ß</code> to <code>SS</code> is not supported. Normalize with tokens instead of assigning to
+      <code>input.value</code> in a callback so the engine can map the caret through the transformation.
+    </p>
+
+    <h2>Content-dependent masks</h2>
+    <p>
+      <code>resolveMask</code> runs once per masking application, before transforms. It receives candidate data accepted by the fallback pattern's
+      slots (or any fallback array member), with complete fallback literal runs at their boundaries and nonmatching characters removed. Escaped runs
+      remain formatting after a segment shrinks. Make the fallback alphabet cover every layout the resolver can return. Return a string or an
+      ordered array; arrays still select by capacity. Resolution is not recursive.
+    </p>
+    <p>
+      Resolvers always format one continuous identifier, removing old separators before applying the new layout, even with
+      <code>segmented: true</code>. Use static masks or arrays when fields must remain independently editable. <code>eager</code> still applies, and
+      the caret follows the logical data when a layout changes.
+    </p>
+
+    <h2>Unicode, composition, and length</h2>
+    <p>
+      Slots match Unicode code points, not grapheme clusters. Combining marks and joined emoji occupy separate slots if accepted; no normalization
+      is performed. Built-in <code>Z</code> and <code>A</code> remain ASCII-only. Caret offsets use UTF-16, as DOM selections do.
+    </p>
+    <p>
+      Custom-token bindings leave provisional IME text and selection untouched until composition commits, including when the matcher only accepts
+      ASCII. Built-in-only masks keep live formatting during Android autocorrect composition. Bindings with custom tokens or a resolver do not add
+      <code>maxlength</code>; the engine still caps slots. Author-supplied limits remain in place. Disposal removes only attributes added by the
+      binding.
+    </p>
+  </section>
+</Layout>
+
+<script src="../scripts/demos/advanced-patterns.ts"></script>

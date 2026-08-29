@@ -1,0 +1,149 @@
+---
+import Icons from '../components/Icons.astro'
+import Header from '../components/Header.astro'
+import Sidebar from '../components/Sidebar.astro'
+import Footer from '../components/Footer.astro'
+import PageNav from '../components/PageNav.astro'
+import { NAV, canonicalFor, navHref } from '../data/nav'
+import pkg from '../../../packages/mother-mask/package.json'
+import '../styles/global.css'
+
+interface Props {
+  /** Nav slug for this page — drives sidebar/mobile highlighting, prev/next, and breadcrumbs. */
+  current: string
+  title: string
+  description: string
+  /** Homepage only. */
+  keywords?: string
+}
+
+const { current, title, description, keywords } = Astro.props
+const item = NAV.find((n) => n.slug === current)
+if (!item) throw new Error(`Unknown nav slug: ${current}`)
+
+const canonical = canonicalFor(item.path)
+const isHome = current === 'index'
+const version = pkg.version
+
+const webPage = {
+  '@type': 'WebPage',
+  '@id': `${canonical}#webpage`,
+  url: canonical,
+  name: title,
+  description,
+  isPartOf: {
+    '@type': 'WebSite',
+    '@id': 'https://dan2dev.github.io/mother-mask/#website',
+    name: 'mother-mask',
+    url: 'https://dan2dev.github.io/mother-mask/',
+  },
+  about: { '@id': 'https://dan2dev.github.io/mother-mask/#software' },
+}
+
+const softwareSourceCode = {
+  '@type': 'SoftwareSourceCode',
+  '@id': 'https://dan2dev.github.io/mother-mask/#software',
+  name: 'mother-mask',
+  description:
+    'Zero-dependency TypeScript input masks with custom tokens, transforms, dynamic patterns, Unicode, segmented editing, and decimal formatting.',
+  url: 'https://dan2dev.github.io/mother-mask/',
+  codeRepository: 'https://github.com/dan2dev/mother-mask',
+  downloadUrl: 'https://www.npmjs.com/package/mother-mask',
+  programmingLanguage: 'TypeScript',
+  runtimePlatform: 'Browser',
+  softwareVersion: version,
+  license: 'https://opensource.org/licenses/MIT',
+  keywords: [
+    'input mask',
+    'input masking',
+    'TypeScript input mask',
+    'JavaScript input mask',
+    'browser form masks',
+    'currency mask',
+    'phone mask',
+    'CPF mask',
+    'CNPJ mask',
+  ],
+  author: { '@type': 'Person', name: 'Danilo Celestino de Castro', url: 'https://github.com/dan2dev' },
+}
+
+const breadcrumb = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'mother-mask', item: 'https://dan2dev.github.io/mother-mask/' },
+    { '@type': 'ListItem', position: 2, name: item.label, item: canonical },
+  ],
+}
+---
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href={navHref('favicon.svg')} />
+    <meta name="description" content={description} />
+    {keywords && <meta name="keywords" content={keywords} />}
+    <meta name="author" content="Danilo Celestino de Castro" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href={canonical} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="mother-mask" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content="https://dan2dev.github.io/mother-mask/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="mother-mask — TypeScript input masks for browser forms" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content="https://dan2dev.github.io/mother-mask/og-image.png" />
+    <meta name="theme-color" content="#1769aa" />
+    <title>{title}</title>
+    {
+      isHome ? (
+        <script is:inline type="application/ld+json" set:html={JSON.stringify({ '@context': 'https://schema.org', '@graph': [softwareSourceCode, webPage] })} />
+      ) : (
+        <script is:inline type="application/ld+json" set:html={JSON.stringify({ '@context': 'https://schema.org', ...webPage })} />
+      )
+    }
+    {/* Pre-paint theme: must run before first paint, so it stays a plain
+        blocking inline script rather than a bundled module. Kept in sync
+        with the toggle logic in src/scripts/chrome.ts. */}
+    <script is:inline>
+      ;(function () {
+        var stored = localStorage.getItem('theme')
+        var theme = stored === 'dark' || stored === 'light' ? stored : window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+        document.documentElement.setAttribute('data-theme', theme)
+        document.documentElement.style.colorScheme = theme
+      })()
+    </script>
+    {!isHome && <script is:inline type="application/ld+json" set:html={JSON.stringify(breadcrumb)} />}
+  </head>
+  <body>
+    <Icons />
+
+    <div id="app">
+      <Header current={current} />
+
+      <div class="layout">
+        <Sidebar current={current} />
+
+        <div class="content">
+          <main>
+            <slot />
+
+            <PageNav current={current} />
+          </main>
+
+          <Footer />
+        </div>
+      </div>
+    </div>
+
+    <script src="../scripts/chrome.ts"></script>
+  </body>
+</html>

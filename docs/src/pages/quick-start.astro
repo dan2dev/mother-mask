@@ -1,0 +1,37 @@
+---
+import Layout from '../layouts/Layout.astro'
+import CodeBlock from '../components/CodeBlock.astro'
+
+const htmlSnippet = `<input id="phone" type="text" inputmode="tel" aria-label="Phone number" />`
+
+const tsSnippet = `import { bind, process } from 'mother-mask'
+
+const input = document.querySelector<HTMLInputElement>('#phone')!
+const mask = '(99) 99999-9999'
+input.value = process('11987654321', mask)
+
+const dispose = bind(input, mask, {
+  onChange: value => console.log(value),
+})
+
+// Call during cleanup, before rebinding or removing the input.
+dispose()`
+---
+
+<Layout
+  current="quick-start"
+  title="Quick start — mother-mask docs"
+  description="Install mother-mask and bind your first TypeScript input mask in a few lines: HTML input, bind(), and cleanup on dispose."
+>
+  <section id="quick-start">
+    <h1 class="page-title">Quick start</h1>
+    <p class="section-sub">Bind after the input exists and dispose when it is removed or needs a different mask.</p>
+    <CodeBlock code={htmlSnippet} lang="html" />
+    <CodeBlock code={tsSnippet} lang="ts" />
+    <p>
+      A binding formats edits, not the initial value or programmatic assignments. Use <code>process()</code> or <code>formatDecimalValue()</code> for
+      those. Callbacks run after edits, not on initial binding. Rebinding an already-bound input does nothing; dispose the original binding first.
+      Cleanup removes listeners, pending frames, and library-added attributes while preserving author-supplied attributes.
+    </p>
+  </section>
+</Layout>

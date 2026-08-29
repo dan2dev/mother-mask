@@ -1,0 +1,34 @@
+---
+// Build-time syntax highlighting via Astro's Shiki-powered <Code> component —
+// no client-side highlight.js pass, no FOUC, and no hand-escaped `&lt;`/`&gt;`
+// in page source. `themes` must be passed here explicitly: unlike Markdown
+// code fences, <Code> does not inherit astro.config.mjs's
+// `markdown.shikiConfig` — see the `.astro-code` override in
+// src/styles/global.css for how the dark variant follows the site's toggle.
+import { Code } from 'astro:components'
+
+const THEMES = { light: 'github-light', dark: 'github-dark' } as const
+
+interface Props {
+  code: string
+  lang?: 'ts' | 'html' | 'bash'
+  inline?: boolean
+  id?: string
+  class?: string
+}
+
+const { code, lang = 'ts', inline = false, id, class: className } = Astro.props
+---
+
+{
+  inline ? (
+    <Code code={code} lang={lang} themes={THEMES} inline id={id} class={className} />
+  ) : (
+    <div class="code-block">
+      <Code code={code} lang={lang} themes={THEMES} />
+      <button class="copy-btn" type="button" aria-label="Copy code">
+        <svg class="icon" role="presentation"><use href="#copy-icon" /></svg>
+      </button>
+    </div>
+  )
+}

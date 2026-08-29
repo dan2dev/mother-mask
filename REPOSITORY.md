@@ -11,7 +11,7 @@ identical so GitHub and npm show the same guidance. The website lives in [`docs/
 ```
 mother-mask/
 ├── packages/mother-mask/   # published npm package (source + build)
-├── docs/                   # Vite documentation website and live demos
+├── docs/                   # Astro documentation website and live demos
 ├── e2e/                    # real-browser tests and fixtures
 ├── examples/basic-examples/ # standalone examples (optional)
 ├── Makefile                # workspace-level commands

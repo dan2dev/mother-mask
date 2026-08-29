@@ -1,0 +1,34 @@
+---
+import NavLinks from './NavLinks.astro'
+import { navHref } from '../data/nav'
+
+interface Props {
+  current: string
+}
+
+const { current } = Astro.props
+---
+
+<header>
+  <div class="bar">
+    <a class="brand" href={navHref('')}>mother-mask</a>
+    <details class="mobile-menu" id="mobile-menu">
+      <summary>
+        <svg class="icon" role="presentation"><use href="#menu-icon"></use></svg>
+        <span>Menu</span>
+      </summary>
+      <NavLinks current={current} class="mobile-menu-nav" />
+    </details>
+    <div class="header-links">
+      <button class="icon-link" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+        <svg class="icon" role="presentation"><use href="#moon-icon"></use></svg>
+      </button>
+      <a class="icon-link" href="https://github.com/dan2dev/mother-mask" target="_blank" rel="noreferrer" aria-label="GitHub repository">
+        <svg class="icon" role="presentation"><use href="#github-icon"></use></svg>
+      </a>
+      <a class="icon-link" href="https://www.npmjs.com/package/mother-mask" target="_blank" rel="noreferrer" aria-label="npm package">
+        <svg class="icon" role="presentation"><use href="#npm-icon"></use></svg>
+      </a>
+    </div>
+  </div>
+</header>
