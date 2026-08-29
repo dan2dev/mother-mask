@@ -1,6 +1,7 @@
 export type {
   ApplyMaskOptions,
   BindDecimalOptions,
+  BindInputAttributes,
   BindOptions,
   DecimalMaskOptions,
   MaskPattern,

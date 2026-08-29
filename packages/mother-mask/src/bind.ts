@@ -7,6 +7,7 @@ import {
   MASKED_ATTR,
   releaseOnce,
   restoreSwallowedSeparators,
+  setBindInputAttributes,
   setCaret,
   trackAttrs,
 } from './bind-shared'
@@ -166,7 +167,17 @@ export function bind(
 ): () => void {
   if (isAlreadyBound(input)) return () => {}
 
-  const { onChange, segmented, eager, tokens, resolveMask } = toBindOptions(third)
+  const {
+    onChange,
+    segmented,
+    eager,
+    tokens,
+    resolveMask,
+    autocomplete,
+    autocorrect,
+    autocapitalize,
+    spellcheck,
+  } = toBindOptions(third)
 
   const compiler = new PatternCompiler(tokens)
   const format = (value: string, caret: number, editEager = eager) =>
@@ -186,10 +197,7 @@ export function bind(
   const maxLength = resolveMask || deferComposition ? Infinity : getMaxLength(mask)
 
   input.setAttribute(MASKED_ATTR, Array.isArray(mask) ? mask.join('|') : mask)
-  setIfMissing('autocomplete', 'off')
-  setIfMissing('autocorrect', 'off')
-  setIfMissing('autocapitalize', 'off')
-  setIfMissing('spellcheck', 'false')
+  setBindInputAttributes(setIfMissing, { autocomplete, autocorrect, autocapitalize, spellcheck })
   if (Number.isFinite(maxLength)) setIfMissing('maxlength', String(maxLength))
 
   let lockInput = false

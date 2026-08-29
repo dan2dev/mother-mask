@@ -5,6 +5,7 @@ import {
   isAlreadyBound,
   MASKED_ATTR,
   releaseOnce,
+  setBindInputAttributes,
   setCaret,
   trackAttrs,
 } from './bind-shared'
@@ -67,7 +68,14 @@ export function bindDecimal(
 ): () => void {
   if (isAlreadyBound(input)) return () => {}
 
-  const { onChange, ...maskOptions } = toBindDecimalOptions(second)
+  const {
+    onChange,
+    autocomplete,
+    autocorrect,
+    autocapitalize,
+    spellcheck,
+    ...maskOptions
+  } = toBindDecimalOptions(second)
   const decimalOptions: DecimalMaskOptions = maskOptions
   const { decimalSeparator, decimalPlaces } = resolveDecimalOptions(decimalOptions)
 
@@ -75,10 +83,7 @@ export function bindDecimal(
   const { setIfMissing, removeTracked } = trackAttrs(input)
 
   input.setAttribute(MASKED_ATTR, 'decimal')
-  setIfMissing('autocomplete', 'off')
-  setIfMissing('autocorrect', 'off')
-  setIfMissing('autocapitalize', 'off')
-  setIfMissing('spellcheck', 'false')
+  setBindInputAttributes(setIfMissing, { autocomplete, autocorrect, autocapitalize, spellcheck })
 
   let lockInput = false
   let isComposing = false

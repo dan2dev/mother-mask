@@ -112,8 +112,26 @@ export interface ApplyMaskOptions {
   eager?: boolean
 }
 
+/**
+ * Input attributes managed by {@link bind} and {@link bindDecimal}.
+ *
+ * Each option is applied only when the input does not already declare that
+ * attribute. Attributes added by a binder are removed by its disposer;
+ * author-supplied attributes are preserved.
+ */
+export interface BindInputAttributes {
+  /** Browser autofill hint. Uses the DOM's autocomplete value type. @default 'off' */
+  autocomplete?: HTMLInputElement['autocomplete']
+  /** Browser autocorrection behavior. @default 'off' */
+  autocorrect?: 'on' | 'off'
+  /** Mobile keyboard capitalization behavior. @default 'off' */
+  autocapitalize?: 'on' | 'off' | 'none' | 'sentences' | 'words' | 'characters'
+  /** Whether the browser should spellcheck the field. @default false */
+  spellcheck?: HTMLInputElement['spellcheck']
+}
+
 /** Options for {@link bind}. */
-export interface BindOptions extends ApplyMaskOptions {
+export interface BindOptions extends ApplyMaskOptions, BindInputAttributes {
   /** Fires with the masked value after input, paste, or keyboard-driven changes. */
   onChange?: (value: string) => void
 }
@@ -165,7 +183,7 @@ export interface DecimalMaskOptions {
 }
 
 /** Options for {@link bindDecimal}. */
-export interface BindDecimalOptions extends DecimalMaskOptions {
+export interface BindDecimalOptions extends DecimalMaskOptions, BindInputAttributes {
   /** Fires with the masked string and its parsed numeric value after input, paste, or keyboard-driven changes. */
   onChange?: (value: string, numericValue: number) => void
 }

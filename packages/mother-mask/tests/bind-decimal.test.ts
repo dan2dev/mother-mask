@@ -41,6 +41,43 @@ describe('bindDecimal() — event handlers', () => {
     vi.resetModules()
   })
 
+  it('sets safe input attributes by default', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input)
+    expect({
+      autocomplete: input.getAttribute('autocomplete'),
+      autocorrect: input.getAttribute('autocorrect'),
+      autocapitalize: input.getAttribute('autocapitalize'),
+      spellcheck: input.getAttribute('spellcheck'),
+    }).toEqual({
+      autocomplete: 'off',
+      autocorrect: 'off',
+      autocapitalize: 'off',
+      spellcheck: 'false',
+    })
+  })
+
+  it('accepts typed input-attribute overrides', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, {
+      autocomplete: 'transaction-amount',
+      autocorrect: 'on',
+      autocapitalize: 'characters',
+      spellcheck: true,
+    })
+    expect({
+      autocomplete: input.getAttribute('autocomplete'),
+      autocorrect: input.getAttribute('autocorrect'),
+      autocapitalize: input.getAttribute('autocapitalize'),
+      spellcheck: input.getAttribute('spellcheck'),
+    }).toEqual({
+      autocomplete: 'transaction-amount',
+      autocorrect: 'on',
+      autocapitalize: 'characters',
+      spellcheck: 'true',
+    })
+  })
+
   it('masks a pasted raw digit string on next animation frame (integer-first)', async () => {
     const { bindDecimal } = await import('../src/index')
     bindDecimal(input, { decimalPlaces: 2, prefix: '$' })

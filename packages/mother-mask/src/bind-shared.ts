@@ -6,7 +6,20 @@
 // which formatter a binder plugs in.
 // ---------------------------------------------------------------------------
 
+import type { BindInputAttributes } from './types'
+
 export const MASKED_ATTR = 'data-masked'
+
+/** Apply the binder-managed input attributes, using safe editing defaults. */
+export function setBindInputAttributes(
+  setIfMissing: (name: string, value: string) => void,
+  options: BindInputAttributes,
+): void {
+  setIfMissing('autocomplete', options.autocomplete ?? 'off')
+  setIfMissing('autocorrect', options.autocorrect ?? 'off')
+  setIfMissing('autocapitalize', options.autocapitalize ?? 'off')
+  setIfMissing('spellcheck', String(options.spellcheck ?? false))
+}
 
 /** `bind()`/`bindDecimal()` are idempotent: a second call on the same element is a no-op. */
 export function isAlreadyBound(input: Element): boolean {

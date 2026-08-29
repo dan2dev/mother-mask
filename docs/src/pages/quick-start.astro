@@ -11,6 +11,7 @@ const mask = '(99) 99999-9999'
 input.value = process('11987654321', mask)
 
 const dispose = bind(input, mask, {
+  autocomplete: 'tel',
   onChange: value => console.log(value),
 })
 
@@ -31,7 +32,9 @@ const dispose = bind(input, mask, {
     <p>
       A binding formats edits, not the initial value or programmatic assignments. Use <code>process()</code> or <code>formatDecimalValue()</code> for
       those. Callbacks run after edits, not on initial binding. Rebinding an already-bound input does nothing; dispose the original binding first.
-      Cleanup removes listeners, pending frames, and library-added attributes while preserving author-supplied attributes.
+      Bindings default <code>autocomplete</code>, <code>autocorrect</code>, and <code>autocapitalize</code> to <code>off</code>, and <code>spellcheck</code> to
+      <code>false</code>; all four are configurable. Cleanup removes listeners, pending frames, and library-added attributes while preserving
+      author-supplied attributes.
     </p>
   </section>
 </Layout>

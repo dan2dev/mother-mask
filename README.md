@@ -66,6 +66,19 @@ bind(input, '999.999.999-99', {
 })
 ```
 
+Both binders add `autocomplete="off"`, `autocorrect="off"`,
+`autocapitalize="off"`, and `spellcheck="false"` when those attributes are
+absent. Override the defaults through the same typed options object:
+
+```ts
+bind(input, '(99) 99999-9999', {
+  autocomplete: 'tel',
+  autocorrect: 'on',
+  autocapitalize: 'words',
+  spellcheck: true,
+})
+```
+
 Bind each input once. Calling `bind` or `bindDecimal` on an already-bound input
 does nothing; dispose the existing binding before changing its options. In a UI
 framework, bind after the input mounts and call the disposer during cleanup.
@@ -371,7 +384,10 @@ The global name is `MotherMask`.
 | `formatDecimalValue(value, options?)` | Display string from a JS number |
 
 Pattern options (`ApplyMaskOptions`) are `segmented` (default `true`), `eager`
-(default `true`), `tokens`, and `resolveMask`. `BindOptions` adds `onChange`.
+(default `true`), `tokens`, and `resolveMask`. `BindOptions` adds `onChange` and
+the shared `BindInputAttributes`: `autocomplete`, `autocorrect`,
+`autocapitalize`, and `spellcheck`. `BindDecimalOptions` includes the same DOM
+attribute options.
 `bind` also accepts a `(value) => void` callback as its third argument;
 `bindDecimal` accepts `(value, numericValue) => void` as its second argument.
 
@@ -388,6 +404,7 @@ Exported types:
 - `MaskResolver`
 - `MaskResult`
 - `ApplyMaskOptions`
+- `BindInputAttributes`
 - `BindOptions`
 - `DecimalMaskOptions`
 - `BindDecimalOptions`

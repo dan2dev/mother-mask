@@ -31,7 +31,14 @@ interface ApplyMaskOptions {
   resolveMask?: MaskResolver
 }
 
-interface BindOptions extends ApplyMaskOptions {
+interface BindInputAttributes {
+  autocomplete?: HTMLInputElement['autocomplete'] // default 'off'
+  autocorrect?: 'on' | 'off'                      // default 'off'
+  autocapitalize?: 'on' | 'off' | 'none' | 'sentences' | 'words' | 'characters' // default 'off'
+  spellcheck?: boolean                             // default false
+}
+
+interface BindOptions extends ApplyMaskOptions, BindInputAttributes {
   onChange?: (value: string) => void
 }
 
@@ -46,7 +53,7 @@ interface DecimalMaskOptions {
   allowNegative?: boolean     // default false
 }
 
-interface BindDecimalOptions extends DecimalMaskOptions {
+interface BindDecimalOptions extends DecimalMaskOptions, BindInputAttributes {
   onChange?: (value: string, numericValue: number) => void
 }`
 ---
@@ -75,7 +82,8 @@ interface BindDecimalOptions extends DecimalMaskOptions {
             <tr>
               <td>Third argument</td>
               <td>
-                <code>BindOptions</code>: <code>segmented</code>, <code>eager</code>, <code>tokens</code>, <code>resolveMask</code>, and <code>onChange</code>;
+                <code>BindOptions</code>: pattern options, <code>onChange</code>, and the input attributes <code>autocomplete</code>, <code>autocorrect</code>,
+                <code>autocapitalize</code>, and <code>spellcheck</code>;
                 or a <code>(value) =&gt; void</code> callback
               </td>
             </tr>
@@ -145,7 +153,8 @@ interface BindDecimalOptions extends DecimalMaskOptions {
             <tr>
               <td>Second argument</td>
               <td>
-                <code>BindDecimalOptions</code> (decimal options plus <code>onChange</code>), or a <code>(value, numericValue) =&gt; void</code> callback
+                <code>BindDecimalOptions</code> (decimal options, <code>onChange</code>, and the shared input attributes), or a
+                <code>(value, numericValue) =&gt; void</code> callback
               </td>
             </tr>
           </tbody>

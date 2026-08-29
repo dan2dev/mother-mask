@@ -689,6 +689,37 @@ describe('bind()', () => {
     expect(input.getAttribute('spellcheck')).toBe('false')
   })
 
+  it('accepts typed input-attribute overrides', () => {
+    bind(input, '999', {
+      autocomplete: 'tel',
+      autocorrect: 'on',
+      autocapitalize: 'words',
+      spellcheck: true,
+    })
+    expect({
+      autocomplete: input.getAttribute('autocomplete'),
+      autocorrect: input.getAttribute('autocorrect'),
+      autocapitalize: input.getAttribute('autocapitalize'),
+      spellcheck: input.getAttribute('spellcheck'),
+    }).toEqual({
+      autocomplete: 'tel',
+      autocorrect: 'on',
+      autocapitalize: 'words',
+      spellcheck: 'true',
+    })
+  })
+
+  it('preserves author-supplied input attributes over binding defaults and options', () => {
+    input.setAttribute('autocomplete', 'email')
+    input.setAttribute('spellcheck', 'true')
+    const dispose = bind(input, '999', { autocomplete: 'off', spellcheck: false })
+    expect(input.getAttribute('autocomplete')).toBe('email')
+    expect(input.getAttribute('spellcheck')).toBe('true')
+    dispose()
+    expect(input.getAttribute('autocomplete')).toBe('email')
+    expect(input.getAttribute('spellcheck')).toBe('true')
+  })
+
   it('sets data-masked to pipe-joined string for array masks', () => {
     bind(input, ['(99) 9999-9999', '(99) 99999-9999'])
     expect(input.getAttribute('data-masked')).toBe(
