@@ -7,12 +7,20 @@ const snippet = `bind(input, '\\\\A-999999') // '123456' → 'A-123456'
 bind(input, '\\\\9-99')     // '12' → '9-12'
 bind(input, '\\\\Z-99')     // '12' → 'Z-12'
 bind(input, '\\\\\\\\99')      // a literal backslash, then two digits`
+
+const quantifiers = `9{4}     exactly four digits
+9{1,2}   one or two digits
+Z{2,4}   two to four letters
+A{1,8}   one to eight alphanumeric characters`
+
+const quantifierBind = `bind(date, '9{1,2}/9{1,2}/9{4}')
+// 3/4/1986   3/12/1986   12/4/1986   12/12/1986`
 ---
 
 <Layout
   current="patterns"
   title="Pattern syntax — mother-mask docs"
-  description="mother-mask pattern syntax reference: digit, letter, and alphanumeric tokens, custom tokens, and escaped literals."
+  description="mother-mask pattern syntax reference: digit, letter, and alphanumeric tokens, bounded quantifiers, custom tokens, and escaped literals."
 >
   <section id="patterns">
     <h1 class="page-title">Pattern syntax</h1>
@@ -42,6 +50,10 @@ bind(input, '\\\\\\\\99')      // a literal backslash, then two digits`
             <td>Its local matcher and optional transform</td>
           </tr>
           <tr>
+            <td><code>{'{'}n{'}'}</code> / <code>{'{'}min,max{'}'}</code></td>
+            <td>Repeats the token before it — see <a href="#quantifiers">bounded quantifiers</a></td>
+          </tr>
+          <tr>
             <td><code>\</code></td>
             <td>Escapes a token or another backslash</td>
           </tr>
@@ -56,6 +68,45 @@ bind(input, '\\\\\\\\99')      // a literal backslash, then two digits`
       Array masks: pass patterns <strong>shortest → longest by data capacity</strong>; the active one is picked from how many data characters are
       accepted, not a prefix or card network. Use <a href={navHref('advanced-patterns.html')}><code>resolveMask</code></a> to choose a layout from
       content instead.
+    </p>
+    <h2 id="quantifiers">Bounded quantifiers</h2>
+    <p>
+      A slot token may be followed by a bounded repeat count. <code>{'{'}n{'}'}</code> is exactly <em>n</em> occurrences;
+      <code>{'{'}min,max{'}'}</code> is anywhere from <em>min</em> to <em>max</em>.
+    </p>
+    <CodeBlock code={quantifiers} lang="ts" />
+    <p>
+      <code>{'{'}n{'}'}</code> is shorthand — <code>9{'{'}4{'}'}</code> and <code>9999</code> compile to the same mask.
+      <code>{'{'}min,max{'}'}</code> adds a <strong>variable-width segment</strong>, which is what lets a date accept a one- or two-digit day and
+      month without padding:
+    </p>
+    <CodeBlock code={quantifierBind} lang="ts" />
+    <p>
+      The separator is how the user picks a width. Typing <code>"3/"</code> commits the one-digit first segment: once a ranged segment reaches its
+      minimum, typing the literal that follows it ends that segment, and the separator stays visible — it is input rather than decoration, so this
+      holds with <code>eager: false</code> too. Typing <code>"12"</code> instead reaches the maximum and may reveal <code>"/"</code> eagerly, exactly
+      as a fixed <code>99</code> segment does. Reaching the minimum alone never inserts anything: after <code>"3"</code> the value is still
+      <code>"3"</code>, because the next keystroke could be a second digit.
+    </p>
+    <p>
+      Closing a segment early retires the slots it did not use, so a finished value can be shorter than the pattern's maximum:
+      <code>"3/4/1986"</code> is complete at eight characters even though <code>getMaxLength</code> reports <code>10</code>. Anything typed past
+      that point is dropped rather than repacked — the boundaries the user set hold, and the character that no longer fits falls off the end,
+      exactly as an extra digit does on a full fixed mask. <code>maxlength</code> alone is therefore not a completeness check for a ranged mask;
+      inspect the value if you need one.
+    </p>
+    <p>
+      Mother Mask <strong>does not validate dates</strong>, or anything else semantic — it never inspects a value to decide that <code>"34"</code>
+      cannot be a day and must mean <code>3/4</code>. A quantifier is a width rule; explicit separators are how a user says a segment is shorter than
+      its maximum.
+    </p>
+    <p>
+      Only bounded forms are syntax. <code>*</code>, <code>+</code>, <code>?</code>, <code>{'{'}n,{'}'}</code>, <code>{'{'},n{'}'}</code>,
+      <code>{'{'}0{'}'}</code> and <code>{'{'}2,1{'}'}</code> are not, and neither is a repeat count above 1000; those brace sequences stay literal
+      text. A quantifier is only read directly after an unescaped token, so <code>'\\9{'{'}1,2{'}'}'</code> is the literal text
+      <code>9{'{'}1,2{'}'}</code>. <a href={navHref('api.html')}><code>getMaxLength</code></a> and the <code>maxlength</code> <code>bind</code> sets
+      use the compiled maximum (<code>10</code> for <code>'9{'{'}1,2{'}'}/9{'{'}1,2{'}'}/9{'{'}4{'}'}'</code>), never the length of the pattern
+      source, and array masks still select by compiled slot capacity.
     </p>
     <h2>Escaped literals</h2>
     <CodeBlock code={snippet} lang="ts" />

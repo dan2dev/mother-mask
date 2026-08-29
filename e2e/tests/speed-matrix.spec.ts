@@ -30,6 +30,7 @@ const MASKS: MaskConfig[] = [
   },
   { name: 'date', mask: '99/99/9999', digits: '25122025', expected: '25/12/2025' },
   { name: 'mercosul plate', mask: 'ZZZ-9Z99', digits: 'ABC1D23', expected: 'ABC-1D23' },
+  { name: 'quantified date', mask: '9{1,2}/9{1,2}/9{4}', digits: '12121986', expected: '12/12/1986' },
 ]
 
 interface TypingSessionResult {

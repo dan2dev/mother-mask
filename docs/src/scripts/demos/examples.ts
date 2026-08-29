@@ -42,6 +42,10 @@ bind($('ex-date-flat'), '99/99/9999', { segmented: false })
 bind($('ex-date-eager'), '99/99/9999') // eager is on by default
 bind($('ex-date-not-eager'), '99/99/9999', { eager: false })
 
+// Bounded quantifiers: day and month take one *or* two digits. Typing the "/"
+// after a single digit commits that segment; reaching two reveals it eagerly.
+bind($('ex-date-flex'), '9{1,2}/9{1,2}/9{4}')
+
 // ── Time ─────────────────────────────────────────────────────────────────────
 
 bind($('ex-time'), '99:99')

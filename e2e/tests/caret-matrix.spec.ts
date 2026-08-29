@@ -130,6 +130,33 @@ async function runMatrix(
       }
     }
 
+    /**
+     * Mirrors `bind()`'s select-and-replace rescue (`restoreSwallowedSeparators`
+     * in bind-shared.ts): typing over a selection destroys the same dividers a
+     * Delete would, so the swallowed ones go back — but only when the plain
+     * reformat would otherwise move text the edit never touched. Reimplemented
+     * here, like `frameLiterals` above, so the oracle stays independent of the
+     * wiring it is checking.
+     */
+    const isData = (c: string): boolean => /[0-9a-zA-Z]/.test(c)
+    const rescueReplace = (raw: string, pos: number, insertedLength: number): string => {
+      if (Array.isArray(mask)) return raw
+      const removedLength = full.length - raw.length + insertedLength
+      const cutStart = pos - insertedLength
+      if (removedLength <= 0 || cutStart < 0) return raw
+      const deletedEnd = cutStart + removedLength
+      if (deletedEnd > full.length) return raw
+      if (full.slice(0, cutStart) !== raw.slice(0, cutStart) || full.slice(deletedEnd) !== raw.slice(pos)) return raw
+      const tail = full.slice(deletedEnd)
+      const removed = full.slice(cutStart, deletedEnd)
+      if (!Array.from(tail).some(isData) || !Array.from(removed).some(isData)) return raw
+      let literals = ''
+      for (const c of removed) if (!isData(c)) literals += c
+      if (!literals) return raw
+      return window.motherMask.buildMask(raw, mask, pos, options).process().endsWith(tail)
+        ? raw : raw.slice(0, pos) + literals + raw.slice(pos)
+    }
+
     // Select [start,end) and type over it.
     for (let start = 0; start <= full.length; start++) {
       for (let end = start + 1; end <= full.length; end++) {
@@ -141,7 +168,7 @@ async function runMatrix(
         input.setSelectionRange(start + 1, start + 1)
         dispatchInput(input, ch, 'insertText')
 
-        const m = window.motherMask.buildMask(raw, mask, start + 1, options)
+        const m = window.motherMask.buildMask(rescueReplace(raw, start + 1, ch.length), mask, start + 1, options)
         const expectedValue = m.process()
         const expectedCaret = m.caret
         if (input.value !== expectedValue || input.selectionStart !== expectedCaret) {

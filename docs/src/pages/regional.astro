@@ -6,13 +6,13 @@ import ExampleCard from '../components/ExampleCard.astro'
 <Layout
   current="regional"
   title="Regional formats — mother-mask docs"
-  description="US, Canada, Germany, and Poland input mask examples with mother-mask: phone, SSN, ZIP+4, postal code, SIN, IBAN, and VAT ID."
+  description="US, Canada, Germany, and Poland input mask examples with mother-mask: phone, SSN, ZIP+4, dates, postal code, SIN, IBAN, and VAT ID."
 >
   <section id="regional">
     <h1 class="page-title">Regional formats</h1>
     <p class="section-sub">
       Common regional formats built with <code>bind()</code>. These masks format input; “complete” means the expected character count is present,
-      not that a checksum or identifier is valid.
+      not that a checksum or identifier is valid — the date masks below never check that a month or day exists.
     </p>
 
     <div class="examples-grid">
@@ -29,6 +29,26 @@ import ExampleCard from '../components/ExampleCard.astro'
       <ExampleCard snippet="bind(input, '99999-9999')" inputId="ex-us-zip" placeholder="00000-0000" inputmode="numeric">
         <Fragment slot="title">US — ZIP+4</Fragment>
         <span class="hint" id="ex-us-zip-hint">5, or 9 with the +4 suffix</span>
+      </ExampleCard>
+
+      <ExampleCard
+        snippet="bind(input, '9{1,2}/9{1,2}/9{4}')"
+        inputId="ex-us-date"
+        placeholder="M/D/YYYY"
+        inputmode="numeric"
+      >
+        <Fragment slot="title">US — date (M/D/YYYY)</Fragment>
+        <span class="hint" id="ex-us-date-hint">month and day take one or two digits</span>
+      </ExampleCard>
+
+      <ExampleCard
+        snippet="bind(input, '9{4}-9{1,2}-9{1,2}')"
+        inputId="ex-iso-date"
+        placeholder="YYYY-M-D"
+        inputmode="numeric"
+      >
+        <Fragment slot="title">ISO 8601 — date, unpadded</Fragment>
+        <span class="hint" id="ex-iso-date-hint">type "2026-8-29" without padding</span>
       </ExampleCard>
 
       <ExampleCard

@@ -207,6 +207,24 @@ describe('caret matrix — select + replace at every selection range', () => {
         const failures: string[] = []
         let total = 0
         const len = cfg.full.length
+        const compiler = new PatternCompiler(cfg.options?.tokens)
+        const isData = (ch: string): boolean => compiler.isData(ch)
+        const isStaticMask = !Array.isArray(cfg.mask) && !cfg.options?.resolveMask
+
+        /**
+         * Mirrors `bind()`'s select-and-replace rescue (see `bind.ts`): typing
+         * over a selection destroys the same dividers a Delete would, so the
+         * swallowed ones go back — but only when the plain reformat would
+         * otherwise move text the edit never touched.
+         */
+        const rescueReplace = (raw: string, pos: number, insertedLength: number): string => {
+          if (!isStaticMask) return raw
+          const removedLength = cfg.full.length - raw.length + insertedLength
+          const rescued = restoreSwallowedSeparators(raw, pos, removedLength, cfg.full, isData, insertedLength)
+          if (rescued === raw) return raw
+          const tail = cfg.full.slice(pos - insertedLength + removedLength)
+          return buildMask(raw, cfg.mask, pos, options).process().endsWith(tail) ? raw : rescued
+        }
 
         for (let start = 0; start <= len; start++) {
           for (let end = start + 1; end <= len; end++) {
@@ -218,7 +236,7 @@ describe('caret matrix — select + replace at every selection range', () => {
               input.setSelectionRange(start + 1, start + 1)
               dispatchInput(input, { data: ch, inputType: 'insertText' })
 
-              const m = buildMask(raw, cfg.mask, start + 1, options)
+              const m = buildMask(rescueReplace(raw, start + 1, ch.length), cfg.mask, start + 1, options)
               const expectedValue = m.process()
               const expectedCaret = m.caret
 

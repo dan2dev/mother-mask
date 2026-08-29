@@ -73,6 +73,58 @@ export interface LiteralToken {
   text: string
 }
 
+/**
+ * Upper bound on a bounded quantifier's repeat count.
+ *
+ * A run is expanded to `max` real slots at compile time, so an unbounded
+ * number here would let a one-line pattern allocate arbitrarily much. No
+ * realistic field needs more, and anything larger is treated as malformed
+ * (the braces stay literal text) rather than throwing, which keeps the
+ * conservative "unknown brace sequences are literals" rule intact.
+ */
+const MAX_QUANTIFIER = 1000
+
+/** A parsed `{n}` / `{min,max}` suffix; `end` indexes its closing brace. */
+interface Quantifier {
+  min: number
+  max: number
+  end: number
+}
+
+/**
+ * Read a bounded quantifier whose `{` sits at `points[start]`.
+ *
+ * Only `{n}` and `{min,max}` with `1 <= min <= max <= MAX_QUANTIFIER` are
+ * syntax; `{n,}`, `{,n}`, `{0}`, `{2,1}`, `{}` and anything non-numeric are
+ * *not*, and return `undefined` so the caller leaves the braces as ordinary
+ * literal characters — exactly how a mask containing them behaved before
+ * quantifiers existed. No `*`, `+` or `?` forms are recognized at all.
+ */
+function parseQuantifier(points: string[], start: number): Quantifier | undefined {
+  if (points[start] !== '{') return undefined
+  let i = start + 1
+  // -1 means "no digits here" or "over the cap"; both are malformed.
+  const readCount = (): number => {
+    let n = -1
+    while (i < points.length && points[i] >= '0' && points[i] <= '9') {
+      n = (n < 0 ? 0 : n) * 10 + (points[i].charCodeAt(0) - 48)
+      i++
+      if (n > MAX_QUANTIFIER) return -1
+    }
+    return n
+  }
+  const min = readCount()
+  if (min < 1) return undefined
+  let max = min
+  if (points[i] === ',') {
+    i++
+    max = readCount()
+    if (max < min) return undefined
+  }
+  if (points[i] !== '}') return undefined
+  return { min, max, end: i }
+}
+
 export type MaskToken = LiteralToken | { kind: 'slots'; chars: Slot[] }
 
 /**
@@ -92,6 +144,16 @@ export interface CompiledMask {
   tokens: MaskToken[]
   /** Slot characters of each run (e.g. `["999", "999", "999", "99"]`). */
   runChars: Slot[][]
+  /**
+   * Fewest slots each run accepts before the literal after it may close it.
+   *
+   * `runChars[i].length` is the *maximum*; this is the minimum a bounded
+   * quantifier declared (`9{1,2}` → `1`). A run with no quantifier — every
+   * run in every pattern written before this syntax existed — has
+   * `runMin[i] === runChars[i].length`, so "at minimum but short of maximum"
+   * is vacuously impossible for it and nothing about fixed masks changes.
+   */
+  runMin: number[]
   /** Index into a flat, run-concatenated slot array where each run starts. */
   runOffset: number[]
   /** Token index of the literal directly before run `i`, or `-1` at the mask start. */
@@ -117,6 +179,7 @@ function compileMask(mask: string, definitions: Map<string, Slot>): CompiledMask
   const tokens: MaskToken[] = []
   const runOfToken: number[] = []
   const runChars: Slot[][] = []
+  const runMin: number[] = []
   const runToken: number[] = []
 
   const points = Array.from(mask)
@@ -133,13 +196,23 @@ function compileMask(mask: string, definitions: Map<string, Slot>): CompiledMask
     const slot = escaped ? undefined : definitions.get(ch)
     const previous = tokens[tokens.length - 1]
     if (slot) {
-      maxLength += slot.maxLength
-      if (previous?.kind === 'slots') previous.chars.push(slot)
-      else {
-        const chars = [slot]
+      // A quantifier is only syntax directly after an unescaped token, so an
+      // escaped `\9{1,2}` keeps both the "9" and the braces as literal text.
+      const quantifier = parseQuantifier(points, i + 1)
+      const min = quantifier ? quantifier.min : 1
+      const max = quantifier ? quantifier.max : 1
+      if (quantifier) i = quantifier.end
+      maxLength += slot.maxLength * max
+      if (previous?.kind === 'slots') {
+        for (let n = 0; n < max; n++) previous.chars.push(slot)
+        runMin[runMin.length - 1] += min
+      } else {
+        const chars: Slot[] = []
+        for (let n = 0; n < max; n++) chars.push(slot)
         runOfToken.push(runChars.length)
         runToken.push(tokens.length)
         runChars.push(chars)
+        runMin.push(min)
         tokens.push({ kind: 'slots', chars })
       }
     } else {
@@ -203,6 +276,7 @@ function compileMask(mask: string, definitions: Map<string, Slot>): CompiledMask
     parts,
     tokens,
     runChars,
+    runMin,
     runOffset,
     literalBeforeRun,
     capacityFromRun,

@@ -140,9 +140,21 @@ export function createFrameScheduler(): { scheduleFrame: (callback: () => void) 
  * restored separator has to fit what follows, which pins the split uniquely
  * even with an identical separator later in the string.
  *
- * `removedLength` and `pos` must describe a *pure* deletion — `previousValue`
- * with `[pos, pos + removedLength)` cut out and nothing else changed. Any
- * other shape (a mixed insert+delete, IME weirdness) is left untouched.
+ * Typing a character straight over a selection destroys exactly the same
+ * dividers the equivalent Delete would have, so `insertedLength` widens this
+ * to that case: selecting the `"3/12"` of `"3/12/1986"` and typing `"4"`
+ * takes the day, the month, *and* the divider between them, handing the
+ * engine `"4/1986"`. On a mask whose separators all read alike there is
+ * nothing left in the value to say which field the surviving `"/"` belongs
+ * to, so the untouched year breaks apart into `"4/19/86"`. Putting the
+ * divider back pins it where it never moved from. The inserted text keeps its
+ * place — the separators go in directly behind it, exactly where they stood.
+ *
+ * `pos`, `removedLength` and `insertedLength` must describe a single splice —
+ * `previousValue` with `[pos - insertedLength, pos - insertedLength +
+ * removedLength)` replaced by the `insertedLength` characters ending at
+ * `pos`, and nothing else changed. Any other shape (IME weirdness, a
+ * multi-range edit) fails the checks below and is left untouched.
  */
 export function restoreSwallowedSeparators(
   rawValue: string,
@@ -150,12 +162,14 @@ export function restoreSwallowedSeparators(
   removedLength: number,
   previousValue: string,
   isData: (char: string) => boolean,
+  insertedLength = 0,
 ): string {
-  if (removedLength <= 0) return rawValue
-  const deletedEnd = pos + removedLength
+  if (removedLength <= 0 || insertedLength < 0 || insertedLength > pos) return rawValue
+  const cutStart = pos - insertedLength
+  const deletedEnd = cutStart + removedLength
   if (deletedEnd > previousValue.length) return rawValue
   if (
-    previousValue.slice(0, pos) !== rawValue.slice(0, pos) ||
+    previousValue.slice(0, cutStart) !== rawValue.slice(0, cutStart) ||
     previousValue.slice(deletedEnd) !== rawValue.slice(pos)
   ) return rawValue
 
@@ -169,7 +183,7 @@ export function restoreSwallowedSeparators(
   // inside the deleted span is a genuine separator the deletion swallowed —
   // never a coincidence. Keep them, in order, and drop the data alongside
   // them that this edit did mean to delete.
-  const removed = previousValue.slice(pos, deletedEnd)
+  const removed = previousValue.slice(cutStart, deletedEnd)
   if (!Array.from(removed).some(isData)) return rawValue
   let literals = ''
   for (const ch of removed) if (!isData(ch)) literals += ch

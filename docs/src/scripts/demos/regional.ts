@@ -25,6 +25,35 @@ bind($('ex-us-zip'), '99999-9999', (v) => {
   )
 })
 
+// ── Dates — bounded quantifiers ──────────────────────────────────────────────
+
+// `9{1,2}` accepts one *or* two digits, so nothing has to be padded. The
+// separator the user types is what closes a one-digit field; reaching two
+// digits closes it eagerly instead. No calendar validation happens here — as
+// far as the mask is concerned, "13" is a perfectly good month.
+
+function dateHint(id: string, value: string, separator: string, yearFirst: boolean, empty: string): void {
+  const parts = value.split(separator)
+  const [year, other] = yearFirst ? [parts[0], parts[2]] : [parts[2], parts[0]]
+  const done = parts.length === 3 && year?.length === 4 && !!parts[1] && !!other
+  setHint(
+    id,
+    value === ''
+      ? { text: empty }
+      : done
+        ? { text: '✓ complete', ok: true }
+        : { text: `type "${separator}" to end a one-digit field`, error: true },
+  )
+}
+
+bind($('ex-us-date'), '9{1,2}/9{1,2}/9{4}', (v) => {
+  dateHint('ex-us-date-hint', v, '/', false, 'month and day take one or two digits')
+})
+
+bind($('ex-iso-date'), '9{4}-9{1,2}-9{1,2}', (v) => {
+  dateHint('ex-iso-date-hint', v, '-', true, 'type "2026-8-29" without padding')
+})
+
 // ── Canada — postal code ─────────────────────────────────────────────────────
 
 bind($('ex-ca-postal'), 'Z9Z 9Z9', {

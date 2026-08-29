@@ -164,6 +164,7 @@ bindDecimal(input, { prefix: 'Q1 ', decimalPlaces: 2 })
 | `Z` | ASCII letter |
 | `A` | ASCII letter or digit |
 | Custom token | Matches its local definition (see below) |
+| `{n}` / `{min,max}` | Repeats the token before it (see [quantifiers](#bounded-quantifiers)) |
 | `\` | Escapes a token or another backslash (see [escaping](#escaped-literals)) |
 | Anything else | Literal separator |
 
@@ -174,6 +175,63 @@ bind(input, '999.999.999-99')
 bind(input, '99/99/9999')
 bind(input, 'AA.AAA.AAA/AAAA-99')
 ```
+
+## Bounded Quantifiers
+
+A slot token can be followed by a bounded repeat count. `{n}` is exactly `n`
+occurrences; `{min,max}` is anywhere from `min` to `max`:
+
+```text
+9{4}     exactly four digits
+9{1,2}   one or two digits
+Z{2,4}   two to four letters
+A{1,8}   one to eight alphanumeric characters
+```
+
+`{n}` is just shorthand — `9{4}` and `9999` compile to the same mask.
+`{min,max}` is the new capability: a **variable-width segment**.
+
+```ts
+bind(date, '9{1,2}/9{1,2}/9{4}')
+// 3/4/1986   3/12/1986   12/4/1986   12/12/1986
+```
+
+The user decides how wide a ranged segment is, using the separator:
+
+- **Typing `"3/"` commits the one-digit first segment.** Once a ranged segment
+  has reached its `min`, typing the literal that follows it ends that segment
+  for good, and the separator stays visible — it is input, not decoration, so
+  this holds with `eager: false` too.
+- **Typing `"12"` reaches `max` and may reveal `"/"` eagerly**, exactly as a
+  fixed `99` segment does. With `eager: false` it waits for the next character.
+
+Reaching `min` alone never inserts anything: after `"3"` the value is `"3"`,
+because the next keystroke could still be a second digit.
+
+Closing a segment early retires the slots it did not use, so a finished value
+can be shorter than the pattern's maximum: `"3/4/1986"` is complete at eight
+characters even though `getMaxLength` reports `10`. Anything typed past that
+point is dropped rather than repacked — the boundaries the user set hold, and
+the character that no longer fits falls off the end, exactly as an extra digit
+does on a full fixed mask. So `maxlength` alone is not a completeness check for
+a ranged mask; inspect the value if you need one.
+
+Mother Mask **does not validate dates** — or anything else semantic. It never
+inspects a value to decide that `"34"` cannot be a day and must mean `3/4`.
+A quantifier is a width rule; explicit separators are how a user says a
+segment is shorter than its maximum.
+
+Only bounded forms are syntax. `*`, `+`, `?`, `{n,}`, `{,n}`, `{0}` and
+`{2,1}` are not, and neither is a repeat count above 1000; those brace
+sequences stay literal text, exactly as they did before quantifiers existed.
+A quantifier is only read directly after an unescaped token, so the pattern
+`'\\9{1,2}'` is the literal text `9{1,2}`.
+
+`getMaxLength` and the `maxlength` `bind` sets use the compiled maximum
+(`10` for `'9{1,2}/9{1,2}/9{4}'`), never the length of the pattern source.
+Ordered mask arrays likewise select by compiled slot capacity. In flat mode
+(`segmented: false`) there are no segment boundaries to commit, so a ranged
+run simply behaves as its maximum width.
 
 ## Custom Tokens and Transforms
 
@@ -203,7 +261,15 @@ Use an idempotent transform whose output still matches the token. UTF-16 width
 may change: the caret follows the source character, not the output's case or width.
 
 Custom tokens work with ordered arrays, segmented editing, eager literals,
-and all four APIs: `applyMask`, `process`, `buildMask`, and `bind`.
+[bounded quantifiers](#bounded-quantifiers), and all four APIs: `applyMask`,
+`process`, `buildMask`, and `bind`. A quantified run reuses the same matcher
+and transform, and a transform still runs exactly once per accepted character:
+
+```ts
+process('ab-123', 'U{1,2}-9{1,3}', {
+  tokens: { U: { match: /[a-z]/i, transform: char => char.toUpperCase() } },
+}) // 'AB-123'
+```
 
 Use token transforms to normalize case while preserving the caret, rather than
 rewriting `input.value` inside an `onChange` callback.
@@ -251,7 +317,9 @@ bind(input, '\\\\99')      // a literal backslash, then two digits
 
 In the pattern, backslash escapes a built-in/custom token or another backslash.
 Before any other character it remains literal; a trailing backslash also remains
-literal. Existing masks that used a backslash immediately before a token or
+literal. An escaped token cannot take a
+[quantifier](#bounded-quantifiers) either — `'\\9{1,2}'` is the literal text
+`9{1,2}`. Existing masks that used a backslash immediately before a token or
 backslash must double it to keep that backslash in the output.
 
 Complete literal runs are treated as formatting at their boundary; escaped runs
@@ -318,6 +386,16 @@ bind(input, '(99) 99999-9999')
 // → "(|) 98765-4321"     "98765" and "4321" never moved
 ```
 
+Typing a character straight over a selection destroys the same dividers the
+equivalent Delete would, so it gets the same rescue — but only when it has to.
+Selecting the `"3/12"` of `"3/12/1986"` on `'9{1,2}/9{1,2}/9{4}'` and typing
+`"4"` leaves `"4/1986"`, where the lone surviving `"/"` reads equally well as
+the day's; without the rescue the untouched year breaks apart into
+`"4/19/86"`. Restoring the divider gives `"4/|/1986"` instead, with the caret
+in the emptied month. Where the tail was never in danger — retyping a CPF over
+`"012.153.441"`, whose `"-"` is distinct — nothing is restored and the digits
+keep filling from the left exactly as before.
+
 This is bind-only, like eager's Backspace/Delete handling above: pure
 `applyMask`/`buildMask`/`process` see only the resulting `(value, caret)` and
 can't tell a deletion from fresh input, so `applyMask("98765-4321", mask, 0)`
@@ -350,6 +428,10 @@ Pass `eager: false` to wait for the next real character instead:
 bind(input, '99/99/9999', { eager: false })
 // typing "25" shows "25" until the next digit arrives
 ```
+
+A [ranged segment](#bounded-quantifiers) reveals its separator only at its
+maximum, never at its minimum. A separator the user types themselves is
+their input rather than a reveal, so it survives `eager: false`.
 
 `bind` does not reinsert an eager separator immediately after Backspace/Delete
 removes it: deleting the `"."` off `"012."` leaves `"012"`. This is binding behavior;
@@ -415,9 +497,10 @@ attribute options.
 `bind` also accepts a `(value) => void` callback as its third argument;
 `bindDecimal` accepts `(value, numericValue) => void` as its second argument.
 
-Optional caret arguments default to `0`. `getMaxLength` counts literals and
-reserves up to two UTF-16 units per custom-token slot; it is not a count of data
-characters. See [dynamic masks](#content-dependent-masks) for `maxlength` handling.
+Optional caret arguments default to `0`. `getMaxLength` counts literals,
+counts a [quantified](#bounded-quantifiers) run at its maximum, and reserves up
+to two UTF-16 units per custom-token slot; it is not a count of data characters
+and never the length of the pattern source. See [dynamic masks](#content-dependent-masks) for `maxlength` handling.
 
 Exported types:
 

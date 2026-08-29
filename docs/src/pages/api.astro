@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro'
 import CodeBlock from '../components/CodeBlock.astro'
+import { navHref } from '../data/nav'
 
 const pureFormattingSnippet = `import { applyMask, process, processDecimal } from 'mother-mask'
 
@@ -109,7 +110,11 @@ interface BindDecimalOptions extends DecimalMaskOptions, BindInputAttributes {
             </tr>
             <tr>
               <td><code>getMaxLength(mask, options?)</code></td>
-              <td>Formatted UTF-16 upper bound, including literals; up to two units per custom-token slot. <code>Infinity</code> with a resolver.</td>
+              <td>
+                Formatted UTF-16 upper bound, including literals; up to two units per custom-token slot, and a
+                <a href={navHref('patterns.html')}>quantified</a> run counted at its maximum — never the length of the pattern source.
+                <code>Infinity</code> with a resolver.
+              </td>
             </tr>
             <tr>
               <td><code>applyMask(value, mask, inputCaret?, options?)</code></td>

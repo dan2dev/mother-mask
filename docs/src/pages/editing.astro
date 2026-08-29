@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro'
 import CodeBlock from '../components/CodeBlock.astro'
 import ExampleCard from '../components/ExampleCard.astro'
+import { navHref } from '../data/nav'
 
 const caretSnippet = `// | marks the caret after the edit.
 // Delete 222:          (111) |-3333
@@ -51,6 +52,21 @@ const caretSnippet = `// | marks the caret after the edit.
     <p>
       Repeated separators can make an edited value ambiguous: <code>1/2025</code> with <code>99/99/9999</code> resolves to the earliest fields that
       fit. Distinct separators give more precise anchors. For a continuous value where all following characters should shift, set the mask's <code>segmented: false</code>.
+    </p>
+    <p>
+      A <a href={navHref('patterns.html')}>bounded quantifier</a> such as <code>9{'{'}1,2{'}'}</code> makes a segment variable-width, and the
+      separator you type is what closes it: with <code>9{'{'}1,2{'}'}/9{'{'}1,2{'}'}/9{'{'}4{'}'}</code>, typing <code>3/</code> commits a
+      one-digit day. That boundary then behaves like any other divider while you edit — later fields stay anchored, and the retired slots are not
+      quietly reclaimed by the next keystroke.
+    </p>
+    <p>
+      Typing a character straight over a selection destroys the same dividers the equivalent Delete would, so <code>bind()</code> gives it the same
+      rescue — but only when it has to. Selecting the <code>3/12</code> of <code>3/12/1986</code> and typing <code>4</code> leaves
+      <code>4/1986</code>, where the one surviving <code>/</code> reads equally well as the day's, and the untouched year would otherwise break
+      apart into <code>4/19/86</code>. Restoring the divider gives <code>4/|/1986</code>, caret in the emptied month. Where the tail was never in
+      danger — retyping a CPF over <code>012.153.441</code>, whose <code>-</code> is distinct — nothing is restored. Like the Backspace/Delete
+      handling, this is <code>bind()</code>-only: the pure helpers see just <code>(value, caret)</code> and cannot tell a replacement from fresh
+      input.
     </p>
     <p>
       Eager mode reveals the next literal when a segment fills: typing <code>25</code> into a date shows <code>25/</code>. Set <code>eager: false</code> to

@@ -149,6 +149,21 @@ describe('bind() agrees with buildMask() at every edit position', () => {
       const rescue = (raw: string, pos: number, removedLength: number): string =>
         isPlainContentDelete ? restoreSwallowedSeparators(raw, pos, removedLength, full, isData) : raw
 
+      /**
+       * The same rescue for typing over a selection, which destroys the same
+       * dividers a Delete would. Unlike the delete case it is conditional:
+       * the divider only goes back when the plain reformat would otherwise
+       * move text the edit never touched (see `bind.ts`).
+       */
+      const rescueReplace = (raw: string, pos: number, insertedLength: number): string => {
+        if (!isPlainContentDelete) return raw
+        const removedLength = full.length - raw.length + insertedLength
+        const rescued = restoreSwallowedSeparators(raw, pos, removedLength, full, isData, insertedLength)
+        if (rescued === raw) return raw
+        const tail = full.slice(pos - insertedLength + removedLength)
+        return buildMask(raw, mask, pos, options).process().endsWith(tail) ? raw : rescued
+      }
+
       // Insert at every position.
       for (let pos = 0; pos <= full.length; pos++) {
         for (const ch of chars) {
@@ -175,7 +190,7 @@ describe('bind() agrees with buildMask() at every edit position', () => {
           input.setSelectionRange(start + 1, start + 1)
           dispatchInput(input, ch, 'insertText')
 
-          const m = buildMask(raw, mask, start + 1, options)
+          const m = buildMask(rescueReplace(raw, start + 1, ch.length), mask, start + 1, options)
           check(`replace [${start},${end}) ch=${ch}`, input, m.process(), m.caret)
         }
       }

@@ -24,4 +24,8 @@ bind($('phone'), ['(99) 9999-9999', '(99) 99999-9999'])
 bind($('plate'), 'ZZZ-9999', { segmented: false })
 bind($('mercosul'), 'ZZZ-9Z99')
 bind($('date'), '99/99/9999')
+// Bounded quantifiers: day and month accept one *or* two digits, so the user
+// types "3/4/1986" without padding. The typed "/" is what commits a
+// one-digit segment; reaching two digits reveals it eagerly instead.
+bind($('flexdate'), '9{1,2}/9{1,2}/9{4}')
 bindDecimal($('usd'), { decimalPlaces: 2, prefix: '$' })

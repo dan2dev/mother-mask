@@ -261,15 +261,48 @@ export function bind(
     // change with the new, shorter data count, and a literal restored from
     // the old pattern's layout can land at a position the newly-resolved
     // one never had.
+    const isStaticMask = !Array.isArray(mask) && !resolveMask
     const isPlainContentDelete =
-      !Array.isArray(mask) && !resolveMask &&
+      isStaticMask &&
       (inputEvent.inputType === 'deleteContentBackward' ||
         inputEvent.inputType === 'deleteContentForward' ||
         inputEvent.inputType === 'deleteByCut')
-    const formatValue = isPlainContentDelete
-      ? restoreSwallowedSeparators(rawValue, pos, previousLength - rawValue.length, lastMaskedValue, isData)
-      : rawValue
-    const m = format(formatValue, pos, eagerForEdit(eager, isDeleteLike))
+    // Typing over a selection destroys the same dividers the equivalent
+    // Delete would have, so it gets the same rescue. `insertText` is the one
+    // insert type that reports what it inserted, which is what makes the edit
+    // a splice this can reason about; paste, IME commits and drag-and-drop
+    // leave `data` null and stay a plain reformat.
+    const insertedText =
+      isStaticMask && inputEvent.inputType === 'insertText' && typeof inputEvent.data === 'string'
+        ? inputEvent.data : ''
+    const editEager = eagerForEdit(eager, isDeleteLike)
+
+    let formatValue = rawValue
+    if (isPlainContentDelete) {
+      formatValue = restoreSwallowedSeparators(
+        rawValue, pos, previousLength - rawValue.length, lastMaskedValue, isData,
+      )
+    } else if (insertedText) {
+      const removedLength = previousLength - rawValue.length + insertedText.length
+      const rescued = restoreSwallowedSeparators(
+        rawValue, pos, removedLength, lastMaskedValue, isData, insertedText.length,
+      )
+      // Unlike a deletion — where the divider is unambiguously gone and gets
+      // restored outright — replacing a selection still leaves the user
+      // typing forward, so the divider only goes back when it has to. What
+      // survives past the cut is text this edit never touched and the mask
+      // already formatted, so it has to come back out unchanged and at the
+      // end. Retyping a CPF over "012.153.441" keeps its "-39" either way,
+      // and a restored dot would only sit in the user's way. Replacing the
+      // "3/12" of "3/12/1986" is the other case: every separator in that mask
+      // reads alike, the lone surviving "/" gets taken for the day's, and the
+      // untouched year breaks apart into "4/19/86". There it goes back.
+      const untouchedTail = lastMaskedValue.slice(pos - insertedText.length + removedLength)
+      if (rescued !== rawValue && !format(rawValue, pos, editEager).value.endsWith(untouchedTail)) {
+        formatValue = rescued
+      }
+    }
+    const m = format(formatValue, pos, editEager)
     target.value = m.value
     setCaret(target, resolveCaretAfterEdit(kind, rawValue, pos, previousLength, m, resolveMask, lastMaskedValue))
 

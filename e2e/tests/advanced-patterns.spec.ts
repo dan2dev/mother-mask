@@ -174,6 +174,35 @@ for (const segmented of [true, false]) {
           if (!lead || raw.startsWith(lead) || !value.startsWith(lead + divider)) return -1
           return lead.length
         }
+        /**
+         * Mirrors `bind()`'s select-and-replace rescue (`restoreSwallowedSeparators`
+         * in bind-shared.ts): typing over a selection destroys the same
+         * dividers a Delete would, so the swallowed ones go back — but only
+         * when the plain reformat would otherwise move text the edit never
+         * touched. Reimplemented here, like `frameLiterals` above, so the
+         * oracle stays independent of the wiring it is checking.
+         */
+        const isData = (c: string): boolean => /[0-9]/.test(c) || /\p{L}/u.test(c)
+        const rescueReplace = (
+          mask: string | string[], full: string, raw: string, pos: number,
+          insertedLength: number, options: object,
+        ): string => {
+          if (Array.isArray(mask)) return raw
+          const removedLength = full.length - raw.length + insertedLength
+          const cutStart = pos - insertedLength
+          if (removedLength <= 0 || cutStart < 0) return raw
+          const deletedEnd = cutStart + removedLength
+          if (deletedEnd > full.length) return raw
+          if (full.slice(0, cutStart) !== raw.slice(0, cutStart) || full.slice(deletedEnd) !== raw.slice(pos)) return raw
+          const tail = full.slice(deletedEnd)
+          const removed = full.slice(cutStart, deletedEnd)
+          if (!Array.from(tail).some(isData) || !Array.from(removed).some(isData)) return raw
+          let literals = ''
+          for (const ch of removed) if (!isData(ch)) literals += ch
+          if (!literals) return raw
+          return buildMask(raw, mask, pos, options).process().endsWith(tail)
+            ? raw : raw.slice(0, pos) + literals + raw.slice(pos)
+        }
         const failures: string[] = []
         let total = 0
         for (const cfg of cases) {
@@ -192,7 +221,9 @@ for (const segmented of [true, false]) {
                 input.value = raw
                 input.setSelectionRange(pos, pos)
                 input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: kind, data: char }))
-                const m = buildMask(raw, cfg.mask, pos, { ...options, eager: kind.startsWith('delete') ? false : eager })
+                const formatValue = kind === 'insertText'
+                  ? rescueReplace(cfg.mask, cfg.full, raw, pos, char.length, options) : raw
+                const m = buildMask(formatValue, cfg.mask, pos, { ...options, eager: kind.startsWith('delete') ? false : eager })
                 const value = m.process()
                 const suffix = cfg.full.slice(end)
                 const backwardLimit = !value.startsWith(cfg.full.slice(0, pos)) && value.endsWith(suffix)

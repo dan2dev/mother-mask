@@ -161,6 +161,17 @@ interface Assignment {
   slotSource: number[]
   /** How many slots of each run are filled (always a prefix of the run). */
   runFilled: number[]
+  /**
+   * Runs the user closed early by typing their own separator.
+   *
+   * Only ever true for a run holding at least `runMin` but fewer than
+   * `runChars.length` characters — a state a bounded quantifier (`9{1,2}`)
+   * makes reachable and a fixed run cannot reach at all, since its minimum
+   * *is* its maximum. It records the one thing the rendered value would
+   * otherwise lose: that "3/" is a finished one-digit day, not two digits
+   * with the second still to come.
+   */
+  runCommitted: boolean[]
   /** For each literal token, the `value` index it was consumed from, or `-1` if it wasn't. */
   literalSource: number[]
 }
@@ -209,6 +220,19 @@ function separatorMatchLength(value: string, valueIdx: number, text: string): nu
  * did, right in front of the segment it introduces, so it anchors the same
  * way. Without that, deleting an area code repacks the segment behind it:
  * " 123-4567" would render as "(123) -4567" instead of "() 123-4567".
+ *
+ * `committable` lifts the capacity veto for one candidate only: the run
+ * immediately after a bounded-quantifier run that has already met its
+ * minimum. There the separator is a width the *user chose*, not a guess the
+ * mask is making, so it outranks a capacity count — and the count is
+ * measuring the wrong thing anyway, since it silently assumes the ranged run
+ * will grow to its maximum. Without this, typing a ninth digit into a full
+ * `"3/12/1986"` withdraws the day's boundary and repacks every field into
+ * `"31/21/9861"`; with it, the boundary holds and the digit that no longer
+ * fits falls off the tail, exactly as an extra digit does on a full fixed
+ * mask. Fixed runs never set it: their minimum is their maximum, and a run
+ * that reaches its maximum leaves through {@link assignToSlots}'s
+ * separator-consuming fast path without ever asking about anchors.
  */
 function findAnchorRun(
   value: string,
@@ -216,6 +240,7 @@ function findAnchorRun(
   plan: CompiledMask,
   fromRun: number,
   compiler: PatternCompiler,
+  committable: boolean,
 ): number {
   const runCount = plan.runChars.length
   for (let pass = 0; pass < 2; pass++) {
@@ -225,6 +250,7 @@ function findAnchorRun(
         ? (value.startsWith(text, valueIdx) ? text.length : 0)
         : separatorTailLength(value, valueIdx, text)
       if (!length) continue
+      if (committable && run === fromRun + 1) return run
       const remaining = remainingDataChars(value, valueIdx + length, compiler, plan)
       return remaining <= plan.capacityFromRun[run] ? run : -1
     }
@@ -256,6 +282,7 @@ function assignToSlots(
   const slotChar: string[] = new Array(plan.totalSlots).fill('')
   const slotSource: number[] = new Array(plan.totalSlots).fill(-1)
   const runFilled: number[] = new Array(runCount).fill(0)
+  const runCommitted: boolean[] = new Array(runCount).fill(false)
   const literalSource: number[] = new Array(plan.tokens.length).fill(-1)
 
   let runIdx = 0
@@ -278,9 +305,18 @@ function assignToSlots(
     const chars = plan.runChars[runIdx]
     const ch = String.fromCodePoint(value.codePointAt(valueIdx)!)
     const matches = chars[slotIdx].match(ch)
+    // This run has met its bounded-quantifier minimum but not its maximum —
+    // the one state in which the literal that follows it is a boundary the
+    // *user* sets rather than one the mask imposes. Always false for a fixed
+    // run, whose minimum equals its maximum (see `CompiledMask.runMin`).
+    const committable = runFilled[runIdx] >= plan.runMin[runIdx] && runFilled[runIdx] < chars.length
     const anchor = readLiterals && (!matches || plan.hasEscapes)
-      ? findAnchorRun(value, valueIdx, plan, runIdx, compiler) : -1
+      ? findAnchorRun(value, valueIdx, plan, runIdx, compiler, committable) : -1
     if (anchor >= 0) {
+      // The run's *own* closing separator, sitting right where the run stops:
+      // the user ended this field deliberately, so the boundary is input
+      // rather than decoration and must survive rendering whatever `eager` says.
+      if (committable && anchor === runIdx + 1) runCommitted[runIdx] = true
       literalSource[plan.literalBeforeRun[anchor]] = valueIdx
       valueIdx += separatorMatchLength(value, valueIdx, separatorBefore(plan, anchor))
       runIdx = anchor
@@ -308,8 +344,18 @@ function assignToSlots(
     // where everything belongs and the caret must not overrule it — that is
     // also what keeps rendering idempotent, since re-masking "82--2" at the
     // same caret has to give "82--2" back rather than "8--22".
+    //
+    // A capacity match across two runs with *different* alphabets is a
+    // coincidence rather than evidence, so a character this segment can hold
+    // and the next one cannot is not allowed to trigger the jump: with
+    // `ZZZZ-999`, "yABy" leaves three letters over and the digit segment has
+    // exactly three slots, and jumping there would drop all three as noise
+    // and render "y" — a value that no longer re-masks to itself. A
+    // character neither segment accepts carries no such counter-evidence
+    // (it is noise wherever it lands), so it still lets the jump through.
     if (
       !caretBoundaryUsed && slotIdx > 0 && valueIdx === inputCaret && runIdx + 1 < runCount &&
+      (!matches || plan.runChars[runIdx + 1][0].match(ch)) &&
       value.indexOf(separatorBefore(plan, runIdx + 1), valueIdx) < 0 &&
       remainingDataChars(value, valueIdx, compiler, plan) === plan.capacityFromRun[runIdx + 1]
     ) {
@@ -346,7 +392,7 @@ function assignToSlots(
     valueIdx += ch.length // stray/noise char — skip it
   }
 
-  return { slotChar, slotSource, runFilled, literalSource }
+  return { slotChar, slotSource, runFilled, runCommitted, literalSource }
 }
 
 /**
@@ -359,6 +405,13 @@ function assignToSlots(
  * - **retained boundary** — it was present in the input and there is data in
  *   a later segment. Emptying a field must not remove its untouched dividers:
  *   "(111) 222-3333" becomes "(111) -3333", not "(111-3333".
+ * - **committed boundary** — the segment right before it is a bounded-
+ *   quantifier run (`9{1,2}`) that the user closed early by typing this very
+ *   separator, at or past its minimum (see `Assignment.runCommitted`). "3/"
+ *   with `9{1,2}/9{1,2}/9{4}` is a finished one-digit day; dropping the "/"
+ *   would re-read it as an unfinished two-digit one and swallow the next
+ *   keystroke into the same field. Fixed runs can never be in this state, so
+ *   `"25/"` on `99/99/9999` still follows the eager rule alone.
  * - **intact frame** — it opens the mask, the value holds data, and the
  *   divider closing the field it opens is still in the value. An opening
  *   literal can only disappear by being deleted, and a deletion that cut
@@ -394,7 +447,7 @@ function resolveLiteralVisibility(
   eager: boolean,
 ): boolean[] {
   const { tokens, runBeforeLiteral, runAfterLiteral, literalBeforeRun, runChars } = plan
-  const { runFilled, literalSource } = assignment
+  const { runFilled, runCommitted, literalSource } = assignment
   const visible: boolean[] = new Array(tokens.length).fill(false)
   let lastFilledRun = runFilled.length - 1
   while (lastFilledRun >= 0 && runFilled[lastFilledRun] === 0) lastFilledRun--
@@ -414,6 +467,7 @@ function resolveLiteralVisibility(
     visible[t] =
       (after >= 0 && (runFilled[after] > 0 || (literalSource[t] >= 0 && after < lastFilledRun))) ||
       frameIntact ||
+      (before >= 0 && runCommitted[before]) ||
       (eager && (before < 0 || runFilled[before] === runChars[before].length))
   }
 
@@ -450,6 +504,18 @@ function resolveLiteralVisibility(
  * being typed, or it was already in `value` ahead of the caret. That's what
  * puts the caret at `015.|-39` — past the separator the just-completed "015"
  * revealed, but not past the "-" that anchors the untouched "39".
+ *
+ * A divider standing directly behind the caret carries it too, even with
+ * eager off and even when the field it closes is not full, as long as that
+ * field holds data whose last character ends *at* the caret. The user's own
+ * text stops exactly there, so the boundary is behind them and the empty
+ * field it opens is where they are typing next: replacing the "3/12" of
+ * "3/12/1986" with "4" lands at `4/|/1986`, in the emptied month, rather
+ * than at `4|//1986` outside the day just finished. Requiring the field to
+ * end at the caret is what keeps a divider standing in front of text the
+ * edit never reached from dragging the caret over it, and requiring data
+ * further along keeps it to genuinely *emptied middle* fields — a divider
+ * with nothing behind it is the tail of the value, which eager alone owns.
  */
 function renderAssignment(
   plan: CompiledMask,
@@ -461,6 +527,11 @@ function renderAssignment(
 ): MaskResult {
   const { tokens, runChars, runOffset, runBeforeLiteral, runAfterLiteral, runOfToken } = plan
   const { slotChar, slotSource, runFilled } = assignment
+  let lastFilledRun = runFilled.length - 1
+  while (lastFilledRun >= 0 && runFilled[lastFilledRun] === 0) lastFilledRun--
+  /** Whether run `r` holds data whose last character ends exactly at the caret. */
+  const editEndsAt = (r: number): boolean =>
+    r >= 0 && runFilled[r] > 0 && slotSource[runOffset[r] + runFilled[r] - 1] === inputCaret
 
   let output = ''
   let outputCaret = 0
@@ -491,7 +562,9 @@ function renderAssignment(
       output += token.text
       if (
         atFrontier &&
-        (caretAfterLiteral || (revealed && opensEmptySegment) || (source >= 0 && source < inputCaret))
+        (caretAfterLiteral ||
+          ((revealed || (editEndsAt(before) && lastFilledRun > after)) && opensEmptySegment) ||
+          (source >= 0 && source < inputCaret))
       ) {
         outputCaret = output.length
       }

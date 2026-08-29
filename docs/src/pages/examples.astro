@@ -83,6 +83,16 @@ const rawSnippet = `bind(input, '999.999.999-99', value => {
         <span class="hint">type "25" — the "/" waits for the next digit</span>
       </ExampleCard>
 
+      <ExampleCard
+        snippet="bind(input, '9{1,2}/9{1,2}/9{4}')"
+        inputId="ex-date-flex"
+        placeholder="D/M/YYYY"
+        inputmode="numeric"
+      >
+        <Fragment slot="title">Date — one or two digits (<code>{'{'}min,max{'}'}</code>)</Fragment>
+        <span class="hint">type "3/4/1986" — the "/" you type commits the short segment</span>
+      </ExampleCard>
+
       <ExampleCard snippet="bind(input, '99:99')" inputId="ex-time" placeholder="HH:MM" inputmode="numeric" value="14:30">
         <Fragment slot="title">Time</Fragment>
         <span class="hint">simple HH:MM bind mask</span>

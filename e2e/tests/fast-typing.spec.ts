@@ -73,6 +73,26 @@ test.describe('fast typing keeps the caret at the end while appending', () => {
     expect(await caretAtEnd(page, '#date')).toBe(true)
   })
 
+  test('quantified date: fast typing with explicit separators keeps one-digit segments', async ({ page }) => {
+    await page.goto('/')
+    const field = page.locator('#flexdate')
+    await field.click()
+    await field.pressSequentially('3/4/1986', { delay: 0 })
+
+    await expect(field).toHaveValue('3/4/1986')
+    expect(await caretAtEnd(page, '#flexdate')).toBe(true)
+  })
+
+  test('quantified date: fast typing 8 bare digits fills both segments to their maximum', async ({ page }) => {
+    await page.goto('/')
+    const field = page.locator('#flexdate')
+    await field.click()
+    await field.pressSequentially('12121986', { delay: 0 })
+
+    await expect(field).toHaveValue('12/12/1986')
+    expect(await caretAtEnd(page, '#flexdate')).toBe(true)
+  })
+
   test('decimal mask: fast typing digits and separator formats the fraction correctly', async ({ page }) => {
     await page.goto('/')
     const field = page.locator('#usd')
