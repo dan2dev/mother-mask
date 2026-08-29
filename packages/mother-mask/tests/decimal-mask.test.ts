@@ -215,8 +215,8 @@ describe('processDecimal() — options', () => {
       )
     })
 
-    it('treats a lone "-" with no digits as empty', () => {
-      expect(processDecimal('-', { allowNegative: true })).toBe('')
+    it('keeps a lone "-" with no digits as a bare negative sign (not empty)', () => {
+      expect(processDecimal('-', { allowNegative: true })).toBe('-')
     })
   })
 
@@ -267,6 +267,63 @@ describe('processDecimal() — options', () => {
       expect(negative).toBe('-42.50')
       expect(processDecimal(negative + '+', { decimalPlaces: 2, allowNegative: true })).toBe(
         '42.50',
+      )
+    })
+  })
+
+  describe('a lone "-" with no digits (empty-field sign persistence)', () => {
+    it('shows just the sign, not the fully-empty string', () => {
+      expect(processDecimal('-', { allowNegative: true })).toBe('-')
+      expect(applyDecimalMask('-', 1, { allowNegative: true })).toEqual({ value: '-', caret: 1 })
+    })
+
+    it('shows the sign before the prefix, with no prefix-less state in between', () => {
+      expect(processDecimal('-', { allowNegative: true, prefix: '$' })).toBe('-$')
+      expect(applyDecimalMask('-', 1, { allowNegative: true, prefix: '$' })).toEqual({
+        value: '-$',
+        caret: 2,
+      })
+    })
+
+    it('does not force decimalPlaces/numberPlaces padding while there are no real digits', () => {
+      expect(processDecimal('-', { allowNegative: true, decimalPlaces: 2 })).toBe('-')
+      expect(processDecimal('-', { allowNegative: true, numberPlaces: 3, decimalPlaces: 2 })).toBe(
+        '-',
+      )
+    })
+
+    it('does not show the suffix either, for the same reason', () => {
+      expect(processDecimal('-', { allowNegative: true, suffix: ' USD' })).toBe('-')
+    })
+
+    it('is idempotent — reparsing "-" (or "-" + prefix) reproduces itself', () => {
+      expect(processDecimal('-', { allowNegative: true })).toBe('-')
+      expect(processDecimal('-$', { allowNegative: true, prefix: '$' })).toBe('-$')
+    })
+
+    it('a repeated "-" on an otherwise-empty value stays a single bare sign', () => {
+      expect(processDecimal('--', { allowNegative: true })).toBe('-')
+      expect(processDecimal('---', { allowNegative: true })).toBe('-')
+    })
+
+    it('falls back to fully empty when allowNegative is false', () => {
+      expect(processDecimal('-', { decimalPlaces: 2 })).toBe('')
+    })
+
+    it('a "+" cancels the lone "-" back to fully empty', () => {
+      expect(processDecimal('-+', { allowNegative: true })).toBe('')
+      expect(processDecimal('+-', { allowNegative: true })).toBe('-')
+    })
+
+    it('unmasks the bare sign as plain 0 (never -0)', () => {
+      expect(unmaskDecimal('-', { allowNegative: true })).toBe(0)
+      expect(Object.is(unmaskDecimal('-', { allowNegative: true }), -0)).toBe(false)
+    })
+
+    it('typing a real digit right after the bare sign produces a proper negative value', () => {
+      expect(processDecimal('-5', { allowNegative: true, decimalPlaces: 2 })).toBe('-5.00')
+      expect(processDecimal('-$5', { allowNegative: true, prefix: '$', decimalPlaces: 2 })).toBe(
+        '-$5.00',
       )
     })
   })

@@ -297,7 +297,23 @@ export function applyDecimalMask(
   if (!value) return { value: '', caret: 0 }
 
   const { isNegative, intDigits, fracDigits, hasSeparator } = computeDecimalParts(value, opts)
-  if (intDigits === '' && fracDigits === '' && !hasSeparator) return { value: '', caret: 0 }
+  if (intDigits === '' && fracDigits === '' && !hasSeparator) {
+    // No digits typed yet, but with `allowNegative` a lone "-" still counts:
+    // an otherwise-empty field the user just typed "-" into stays negative
+    // (shown as just the sign, plus the prefix so it reads as "-$" rather
+    // than losing which currency it is) instead of collapsing back to fully
+    // empty. There's nothing to pad or group without real digits, so the
+    // fraction and any numberPlaces padding still wait for the first one.
+    // Deleting that "-" (or typing "+", which clears `isNegative` the same
+    // way it does everywhere else) removes the only content left and this
+    // falls back to the plain empty case below — "positive" here just means
+    // "no sign to show".
+    if (isNegative) {
+      const signOutput = '-' + opts.prefix
+      return { value: signOutput, caret: signOutput.length }
+    }
+    return { value: '', caret: 0 }
+  }
 
   const { intPart, paddedInt, groupedInt } = formatIntegerPart(intDigits, opts)
   const fracPadded =

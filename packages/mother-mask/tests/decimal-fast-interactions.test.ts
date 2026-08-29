@@ -629,6 +629,137 @@ describe('bindDecimal() negative-sign interactions', () => {
 })
 
 // ---------------------------------------------------------------------------
+// 5b. "-" on an otherwise-empty field — the sign persists on its own instead
+// of collapsing back to nothing, and "+" / deleting it collapses it back.
+// ---------------------------------------------------------------------------
+
+describe('bindDecimal() negative sign on an otherwise-empty field', () => {
+  let input: HTMLInputElement
+
+  beforeEach(() => {
+    input = setupInput()
+  })
+
+  afterEach(() => {
+    input.remove()
+    vi.unstubAllGlobals()
+    vi.resetModules()
+  })
+
+  it('typing "-" into an empty field turns it negative, showing just the sign', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { allowNegative: true })
+    input.value = ''
+    input.setSelectionRange(0, 0)
+    insertAt(input, 0, '-')
+    await flushRafs()
+    expect(input.value).toBe('-')
+  })
+
+  it('does the same with a prefix — the sign shows before the prefix', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { allowNegative: true, prefix: '$' })
+    input.value = ''
+    input.setSelectionRange(0, 0)
+    insertAt(input, 0, '-')
+    await flushRafs()
+    expect(input.value).toBe('-$')
+  })
+
+  it('does not force decimalPlaces padding while there are still no digits', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { allowNegative: true, decimalPlaces: 2, prefix: '$' })
+    input.value = ''
+    input.setSelectionRange(0, 0)
+    insertAt(input, 0, '-')
+    await flushRafs()
+    // Not "-$0.00" — the fraction only appears once a real digit is typed,
+    // same as the (already-tested) plain positive empty-field case.
+    expect(input.value).toBe('-$')
+  })
+
+  it('backspacing the lone "-" returns the field to fully empty', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { allowNegative: true })
+    input.value = ''
+    input.setSelectionRange(0, 0)
+    insertAt(input, 0, '-')
+    await flushRafs()
+    expect(input.value).toBe('-')
+
+    backspaceN(input, 1)
+    await flushRafs()
+    expect(input.value).toBe('')
+  })
+
+  it('typing "+" right after the lone "-" also collapses the field back to empty', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { allowNegative: true })
+    input.value = ''
+    input.setSelectionRange(0, 0)
+    insertAt(input, 0, '-')
+    await flushRafs()
+    expect(input.value).toBe('-')
+
+    insertAt(input, input.value.length, '+')
+    await flushRafs()
+    expect(input.value).toBe('')
+  })
+
+  it('with a prefix, backspacing just the "-" (leaving the prefix behind) also collapses to fully empty', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { allowNegative: true, prefix: '$' })
+    input.value = '-$'
+    input.setSelectionRange(1, 1) // caret right after "-", before "$"
+    // Backspace removes the "-", leaving the bare prefix character "$" with
+    // no sign and no digits — that has nothing to anchor the prefix to
+    // either, so it collapses the same way the sign-less empty state does.
+    const withoutSign = input.value.slice(0, 0) + input.value.slice(1)
+    press(input, 'Backspace', withoutSign, 0)
+    await flushRafs()
+    expect(input.value).toBe('')
+  })
+
+  it('typing a digit right after the lone sign continues correctly as negative', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { allowNegative: true, decimalPlaces: 2, prefix: '$' })
+    input.value = ''
+    input.setSelectionRange(0, 0)
+    insertAt(input, 0, '-')
+    await flushRafs()
+    expect(input.value).toBe('-$')
+
+    insertAt(input, input.value.length, '5')
+    await flushRafs()
+    expect(input.value).toBe('-$5.00')
+  })
+
+  it('is unreachable when allowNegative is false — "-" into an empty field stays empty', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, {})
+    input.value = ''
+    input.setSelectionRange(0, 0)
+    insertAt(input, 0, '-')
+    await flushRafs()
+    expect(input.value).toBe('')
+  })
+
+  it('typing "-" then "-" again on an empty field stays a single bare sign (idempotent)', async () => {
+    const { bindDecimal } = await import('../src/index')
+    bindDecimal(input, { allowNegative: true })
+    input.value = ''
+    input.setSelectionRange(0, 0)
+    insertAt(input, 0, '-')
+    await flushRafs()
+    expect(input.value).toBe('-')
+
+    insertAt(input, input.value.length, '-')
+    await flushRafs()
+    expect(input.value).toBe('-')
+  })
+})
+
+// ---------------------------------------------------------------------------
 // 6. iOS (keyup) parity for fast interactions
 // ---------------------------------------------------------------------------
 
