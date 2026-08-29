@@ -1172,20 +1172,59 @@ footer {
 
 .footer-brand {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 14px;
   max-width: 32ch;
 }
 
 .footer-brand-mark {
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  transition: transform 0.2s ease;
+}
+
+.footer-brand-mark:hover {
+  transform: translateY(-2px);
+}
+
+.footer-brand-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.footer-brand-name {
+  width: fit-content;
+  color: var(--text-h);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 
 .footer-brand p {
   margin: 0;
-  font-size: 14px;
+  font-size: 12.5px;
+  line-height: 1.4;
   color: var(--text-dim);
+}
+
+.footer-brand .footer-author {
+  color: var(--accent);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.footer-author span {
+  display: inline-block;
+  margin-left: 1px;
+  transition: transform 0.2s ease;
+}
+
+.footer-author:hover span {
+  transform: translate(2px, -2px);
 }
 
 .footer-columns {

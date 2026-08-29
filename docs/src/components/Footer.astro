@@ -4,10 +4,18 @@ import { navHref } from '../data/nav'
 
 <footer>
   <div class="footer-brand">
-    <span class="brand-mark footer-brand-mark" aria-hidden="true">
+    <a class="brand-mark footer-brand-mark" href={navHref('')} aria-label="mother-mask home">
       <img src={navHref('mother-mask-logo.svg')} alt="" width="40" height="40" loading="lazy" />
-    </span>
-    <p>mother-mask is crafted with care by <a href="https://github.com/dan2dev" target="_blank" rel="noreferrer">dan2dev</a>.</p>
+    </a>
+    <div class="footer-brand-copy">
+      <span class="footer-brand-name">mother-mask</span>
+      <p>
+        Crafted with care by &nbsp;
+        <a class="footer-author" href="https://github.com/dan2dev" target="_blank" rel="noreferrer">
+          dan2dev <span aria-hidden="true">↗</span>
+        </a>
+      </p>
+    </div>
   </div>
 
   <div class="footer-columns">
