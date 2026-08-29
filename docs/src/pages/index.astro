@@ -10,7 +10,7 @@ const playgroundCode = `import { bind, bindDecimal } from 'mother-mask'
 
 bind(phone, '(99) 99999-9999')
 bind(card, '9999 9999 9999 9999')
-bind(date, '99/99/9999')
+bind(date, '9{1,2}/9{1,2}/9{4}')
 bindDecimal(amount, {
   prefix: 'R$ ',
   separator: '.',

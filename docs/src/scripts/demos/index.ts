@@ -14,7 +14,7 @@ bind($('hero-phone'), '(99) 99999-9999', (v) => {
 })
 
 bind($('hero-card'), '9999 9999 9999 9999')
-bind($('hero-date'), '99/99/9999')
+bind($('hero-date'), '9{1,2}/9{1,2}/9{4}')
 bindDecimal($('hero-currency'), {
   prefix: 'R$ ',
   separator: '.',
