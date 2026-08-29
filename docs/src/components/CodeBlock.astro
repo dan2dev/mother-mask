@@ -5,9 +5,12 @@
 // code fences, <Code> does not inherit astro.config.mjs's
 // `markdown.shikiConfig` — see the `.astro-code` override in
 // src/styles/global.css for how the dark variant follows the site's toggle.
+// The theme objects themselves (not stock github-light/dark) come from
+// ../styles/code-theme, built from this site's own brand palette.
 import { Code } from 'astro:components'
+import { codeThemeLight, codeThemeDark } from '../styles/code-theme'
 
-const THEMES = { light: 'github-light', dark: 'github-dark' } as const
+const THEMES = { light: codeThemeLight, dark: codeThemeDark } as const
 
 interface Props {
   code: string

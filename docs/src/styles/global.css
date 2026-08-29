@@ -228,6 +228,7 @@ pre code {
 
 .code-block {
   position: relative;
+  margin: 20px 0;
 }
 
 .code-block .copy-btn {
@@ -739,6 +740,18 @@ nav.primary-nav.sidebar-nav a {
   overflow-wrap: anywhere;
 }
 
+/* Shiki tokenizes this as bash and colors "npm" vs. the rest separately
+   (with an off-brand blue for the args) — flatten it to a single color so a
+   one-line install command doesn't get syntax-highlighting treatment. Needs
+   to out-specificity the global dark-theme span override above. */
+.install-box .astro-code span {
+  color: var(--code-text) !important;
+}
+
+:root[data-theme='dark'] .install-box .astro-code span {
+  color: var(--code-text) !important;
+}
+
 .copy-btn {
   display: flex;
   align-items: center;
@@ -904,7 +917,7 @@ input:focus {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-  margin-top: 18px;
+  margin: 18px 0;
   @media (max-width: 720px) {
     grid-template-columns: 1fr;
   }
@@ -1161,7 +1174,7 @@ td {
 }
 
 .cta-banner .install-box .astro-code span {
-  color: var(--shiki-dark) !important;
+  color: #f6f2ff !important;
   background: transparent !important;
 }
 
@@ -1553,53 +1566,6 @@ nav.primary-nav.sidebar-nav a[aria-current='page']::before {
   filter: saturate(0.84) contrast(1.02);
 }
 
-.hero-orbit {
-  position: absolute;
-  z-index: 3;
-  inset: 0;
-  pointer-events: none;
-}
-
-.orbit-chip {
-  position: absolute;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
-  border-radius: 10px;
-  color: var(--text-h);
-  background: color-mix(in srgb, var(--bg-raised) 88%, transparent);
-  box-shadow: 0 18px 45px -24px var(--text-h);
-  backdrop-filter: blur(12px);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.orbit-chip code {
-  padding: 0;
-  background: none;
-  font-size: 12px;
-}
-
-.orbit-chip-top {
-  top: 13%;
-  right: -3%;
-}
-
-.orbit-chip-bottom {
-  left: -2%;
-  bottom: 17%;
-}
-
-.status-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--ok);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 14%, transparent);
-}
-
 .spark-grid {
   position: absolute;
   z-index: -1;
@@ -1830,6 +1796,7 @@ nav.primary-nav.sidebar-nav a[aria-current='page']::before {
 
 .playground-code-window .code-block {
   height: calc(100% - 54px);
+  margin: 0;
 }
 
 .playground-code-window pre {
@@ -2012,14 +1979,6 @@ footer {
 
   .hero-visual {
     width: calc(100% - 28px);
-  }
-
-  .orbit-chip-top {
-    right: -8%;
-  }
-
-  .orbit-chip-bottom {
-    left: -8%;
   }
 
   .feature-strip {
