@@ -253,7 +253,7 @@ export class PatternCompiler {
     const cached = this.cache.get(mask)
     if (cached) return cached
     const plan = compileMask(mask, this.definitions)
-    if (this.cache.size === 64) this.cache.delete(this.cache.keys().next().value!)
+    if (this.cache.size >= 64) this.cache.delete(this.cache.keys().next().value!)
     this.cache.set(mask, plan)
     return plan
   }
@@ -327,12 +327,16 @@ export class PatternCompiler {
 // Safe to share only the built-in alphabet; this instance never sees user callbacks.
 export const defaultCompiler = new PatternCompiler()
 
-/** Maximum formatted UTF-16 length (custom slots allow two units). Infinity for a resolver. */
-export function getMaxLength(mask: MaskPattern, options?: ApplyMaskOptions): number {
-  if (options?.resolveMask) return Infinity
-  const compiler = options?.tokens ? new PatternCompiler(options.tokens) : defaultCompiler
+/** {@link getMaxLength} against an existing compiler — `bind()` reuses its own instead of validating and probing the tokens a second time. */
+export function maskMaxLength(mask: MaskPattern, compiler: PatternCompiler): number {
   const patterns = Array.isArray(mask) ? mask : [mask]
   let max = 0
   for (const pattern of patterns) max = Math.max(max, compiler.compile(pattern).maxLength)
   return max
+}
+
+/** Maximum formatted UTF-16 length (custom slots allow two units). Infinity for a resolver. */
+export function getMaxLength(mask: MaskPattern, options?: ApplyMaskOptions): number {
+  if (options?.resolveMask) return Infinity
+  return maskMaxLength(mask, options?.tokens ? new PatternCompiler(options.tokens) : defaultCompiler)
 }

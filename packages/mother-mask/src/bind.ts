@@ -1,17 +1,14 @@
 import { applyWithCompiler } from './apply-mask'
 import {
+  attachBinder,
   createFrameScheduler,
   editStillPending,
   getCaret,
   isAlreadyBound,
-  MASKED_ATTR,
-  releaseOnce,
   restoreSwallowedSeparators,
-  setBindInputAttributes,
   setCaret,
-  trackAttrs,
 } from './bind-shared'
-import { getMaxLength, PatternCompiler } from './pattern'
+import { maskMaxLength, PatternCompiler } from './pattern'
 import { isIos } from './platform'
 import type { BindOptions, MaskPattern, MaskResolver, MaskResult } from './types'
 
@@ -195,21 +192,13 @@ export function bind(
   // completely inert. See `PatternCompiler.hasComposingRisk`.
   const deferComposition = compiler.hasComposingRisk
 
-  // Attributes set here are removed on dispose so a later `bind()` can re-apply them.
-  const { setIfMissing, removeTracked } = trackAttrs(input)
-
   // Resolver capacity is unknowable; custom-token IME drafts may exceed even
   // the two-UTF-16-unit-per-slot bound. Enforce those capacities in the engine.
   // Author-supplied maxlength remains an intentional application constraint.
-  // Pass `tokens` through even when composition isn't deferred: an ASCII-safe
-  // custom token still needs its own definition (not the built-in one a
-  // reused key like "A" would otherwise fall back to, or the literal a
-  // non-built-in key would otherwise be mistaken for) to size correctly.
-  const maxLength = resolveMask || deferComposition ? Infinity : getMaxLength(mask, { tokens })
-
-  input.setAttribute(MASKED_ATTR, Array.isArray(mask) ? mask.join('|') : mask)
-  setBindInputAttributes(setIfMissing, { autocomplete, autocorrect, autocapitalize, spellcheck })
-  if (Number.isFinite(maxLength)) setIfMissing('maxlength', String(maxLength))
+  // The binding's own compiler sizes this, so a custom token gets its own
+  // definition (not the built-in one a reused key like "A" would otherwise
+  // fall back to, or the literal a non-built-in key would be mistaken for).
+  const maxLength = resolveMask || deferComposition ? Infinity : maskMaxLength(mask, compiler)
 
   let lockInput = false
   let isComposing = false
@@ -219,7 +208,6 @@ export function bind(
   // across calls since `input` fires once per real mutation — see `onInput`).
   let lastMaskedValue = (input as HTMLInputElement).value ?? ''
 
-  const keyEventName = isIos() ? 'keyup' : 'keydown'
   const { scheduleFrame, cancelPendingFrames } = createFrameScheduler()
 
   const onPaste = (e: Event): void => {
@@ -318,7 +306,7 @@ export function bind(
 
     // `input` already handled this keystroke (it fires before `keyup`); skip
     // the redundant iOS `keyup` pass so we don't reformat the value twice.
-    if (keyEventName === 'keyup' && skipNextKeyup) {
+    if (isIos() && skipNextKeyup) {
       skipNextKeyup = false
       return
     }
@@ -400,20 +388,12 @@ export function bind(
     })
   }
 
-  input.addEventListener('paste', onPaste)
-  input.addEventListener('input', onInput)
-  input.addEventListener('compositionstart', onCompositionStart)
-  input.addEventListener('compositionend', onCompositionEnd)
-  input.addEventListener(keyEventName, onKey)
-
-  return releaseOnce(() => {
-    input.removeEventListener('paste', onPaste)
-    input.removeEventListener('input', onInput)
-    input.removeEventListener('compositionstart', onCompositionStart)
-    input.removeEventListener('compositionend', onCompositionEnd)
-    input.removeEventListener(keyEventName, onKey)
-    input.removeAttribute(MASKED_ATTR)
-    removeTracked()
-    cancelPendingFrames()
-  })
+  return attachBinder(
+    input,
+    Array.isArray(mask) ? mask.join('|') : mask,
+    { autocomplete, autocorrect, autocapitalize, spellcheck },
+    maxLength,
+    [onPaste, onInput, onCompositionStart, onCompositionEnd, onKey],
+    cancelPendingFrames,
+  )
 }

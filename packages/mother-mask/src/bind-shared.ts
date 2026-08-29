@@ -6,6 +6,7 @@
 // which formatter a binder plugs in.
 // ---------------------------------------------------------------------------
 
+import { isIos } from './platform'
 import type { BindInputAttributes } from './types'
 
 export const MASKED_ATTR = 'data-masked'
@@ -190,4 +191,46 @@ export function trackAttrs(input: Element): { setIfMissing: (name: string, value
     for (const name of attrsSetHere) input.removeAttribute(name)
   }
   return { setIfMissing, removeTracked }
+}
+
+/** A binder's handlers in the order their events are attached. The last one listens on `keyup` (iOS) or `keydown` (elsewhere) — see `isIos()`. */
+export type BinderHandlers = readonly [
+  paste: (e: Event) => void,
+  input: (e: Event) => void,
+  compositionstart: (e: Event) => void,
+  compositionend: (e: Event) => void,
+  key: (e: Event) => void,
+]
+
+/**
+ * Everything a binder does to take — and later release — ownership of an
+ * element, in one place: mark it bound (`data-masked` set to `marker`), apply
+ * the managed attributes (plus `maxlength` when finite), attach the five
+ * listeners, and return the dispose function that reverses each of those
+ * steps and cancels any reformat frame still in flight. Keeping attach and
+ * detach in a single helper makes the add/remove symmetry impossible to break
+ * from a binder — exactly the class of leak `memory.test.ts` guards against.
+ */
+export function attachBinder(
+  input: Element,
+  marker: string,
+  attributes: BindInputAttributes,
+  maxLength: number,
+  handlers: BinderHandlers,
+  cancelPendingFrames: () => void,
+): () => void {
+  const { setIfMissing, removeTracked } = trackAttrs(input)
+  input.setAttribute(MASKED_ATTR, marker)
+  setBindInputAttributes(setIfMissing, attributes)
+  if (Number.isFinite(maxLength)) setIfMissing('maxlength', String(maxLength))
+
+  const names = ['paste', 'input', 'compositionstart', 'compositionend', isIos() ? 'keyup' : 'keydown']
+  for (let i = 0; i < names.length; i++) input.addEventListener(names[i], handlers[i])
+
+  return releaseOnce(() => {
+    for (let i = 0; i < names.length; i++) input.removeEventListener(names[i], handlers[i])
+    input.removeAttribute(MASKED_ATTR)
+    removeTracked()
+    cancelPendingFrames()
+  })
 }

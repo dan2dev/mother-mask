@@ -27,8 +27,13 @@ interface ResolvedDecimalOptions {
 /** @internal exported for {@link bindDecimal}'s "." / "," key normalization */
 export function resolveDecimalOptions(options?: DecimalMaskOptions): ResolvedDecimalOptions {
   const rawPlaces = options?.decimalPlaces
+  // Capped at 100 — `Number.prototype.toFixed`'s own limit — so every API
+  // accepts the same range and `formatDecimalValue` can never throw where
+  // `processDecimal` succeeds.
   const decimalPlaces =
-    rawPlaces != null && Number.isFinite(rawPlaces) ? Math.max(0, Math.floor(rawPlaces)) : undefined
+    rawPlaces != null && Number.isFinite(rawPlaces)
+      ? Math.min(100, Math.max(0, Math.floor(rawPlaces)))
+      : undefined
   const rawNumberPlaces = options?.numberPlaces
   const numberPlaces =
     rawNumberPlaces != null && Number.isFinite(rawNumberPlaces)
@@ -86,6 +91,27 @@ function formatIntegerPart(
   const paddedInt = opts.numberPlaces != null ? intPart.padStart(opts.numberPlaces, '0') : intPart
   const groupedInt = opts.segmented ? groupThousands(paddedInt, opts.separator) : paddedInt
   return { intPart, paddedInt, groupedInt }
+}
+
+/**
+ * Rewrite `Number` exponential notation ("1e+21", "1.5e-7") as plain
+ * positional digits. `String()` and `toFixed()` fall back to exponential form
+ * for |values| ≥ 1e21 (`String()` also for tiny fractions), and that text
+ * would otherwise reach the digit-oriented formatter, which mangles it —
+ * grouping "1e+21" into "1e,+21". Strings without an exponent pass through
+ * unchanged.
+ */
+function expandExponent(s: string): string {
+  const e = s.indexOf('e')
+  if (e < 0) return s
+  const exponent = Number(s.slice(e + 1))
+  const mantissa = s.slice(0, e)
+  const dot = mantissa.indexOf('.')
+  const digits = dot < 0 ? mantissa : mantissa.slice(0, dot) + mantissa.slice(dot + 1)
+  const point = (dot < 0 ? mantissa.length : dot) + exponent
+  if (point <= 0) return '0.' + '0'.repeat(-point) + digits
+  if (point >= digits.length) return digits + '0'.repeat(point - digits.length)
+  return digits.slice(0, point) + '.' + digits.slice(point)
 }
 
 /**
@@ -309,7 +335,8 @@ export function unmaskDecimal(value: string, options?: DecimalMaskOptions): numb
   const opts = resolveDecimalOptions(options)
   const { isNegative, intDigits, fracDigits } = computeDecimalParts(value, opts)
   const n = Number(fracDigits ? `${intDigits || '0'}.${fracDigits}` : intDigits || '0')
-  return isNegative ? -n : n
+  // Never `-0`: a lone "-" with no digits is documented to parse as plain 0.
+  return isNegative && n !== 0 ? -n : n
 }
 
 /**
@@ -469,7 +496,15 @@ export function formatDecimalValue(value: number, options?: DecimalMaskOptions):
 
   const isNegative = opts.allowNegative && value < 0
   const abs = Math.abs(value)
-  const fixed = opts.decimalPlaces != null ? abs.toFixed(opts.decimalPlaces) : String(abs)
+  let fixed = opts.decimalPlaces != null ? abs.toFixed(opts.decimalPlaces) : String(abs)
+  if (fixed.indexOf('e') >= 0) {
+    // With `decimalPlaces` set, only |values| ≥ 1e21 reach here (`toFixed`
+    // never exponentiates below that) and those floats are exact integers —
+    // so expanding `String(abs)` loses nothing, and the fixed-width fraction
+    // is pure zero padding.
+    fixed = expandExponent(String(abs)) +
+      (opts.decimalPlaces ? '.' + '0'.repeat(opts.decimalPlaces) : '')
+  }
   const dotIdx = fixed.indexOf('.')
   const intRaw = dotIdx === -1 ? fixed : fixed.slice(0, dotIdx)
   const fracPart = dotIdx === -1 ? '' : fixed.slice(dotIdx + 1)

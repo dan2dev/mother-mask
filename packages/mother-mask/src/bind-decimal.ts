@@ -1,14 +1,12 @@
 import {
+  attachBinder,
   createFrameScheduler,
   editStillPending,
   getCaret,
   isAlreadyBound,
-  MASKED_ATTR,
-  releaseOnce,
-  setBindInputAttributes,
   setCaret,
-  trackAttrs,
 } from './bind-shared'
+import { isDigitChar } from './chars'
 import {
   applyDecimalMask,
   applyDecimalMaskReplacingLoneZero,
@@ -30,10 +28,6 @@ function toBindDecimalOptions(
   if (second == null) return {}
   if (typeof second === 'function') return { onChange: second }
   return second
-}
-
-function isDigitKey(key: string): boolean {
-  return key.length === 1 && key >= '0' && key <= '9'
 }
 
 interface DecimalEdit {
@@ -79,17 +73,10 @@ export function bindDecimal(
   const decimalOptions: DecimalMaskOptions = maskOptions
   const { decimalSeparator, decimalPlaces } = resolveDecimalOptions(decimalOptions)
 
-  // Attributes set here are removed on dispose so a later `bindDecimal()` can re-apply them.
-  const { setIfMissing, removeTracked } = trackAttrs(input)
-
-  input.setAttribute(MASKED_ATTR, 'decimal')
-  setBindInputAttributes(setIfMissing, { autocomplete, autocorrect, autocapitalize, spellcheck })
-
   let lockInput = false
   let isComposing = false
   let skipNextKeyup = false
   let pendingSeparatorEdit: { text: string; starts: number[] } | null = null
-  const keyEventName = isIos() ? 'keyup' : 'keydown'
   const { scheduleFrame, cancelPendingFrames } = createFrameScheduler()
 
   const applyResult = (target: HTMLInputElement, m: MaskResult): void => {
@@ -180,7 +167,7 @@ export function bindDecimal(
     // digits extends the real digit stream instead of combining with a padding
     // zero.
     const insertedDigit =
-      insertedText != null && insertedText.length === 1 && isDigitKey(insertedText)
+      insertedText != null && insertedText.length === 1 && isDigitChar(insertedText)
         ? insertedText
         : undefined
     const replaced = insertedDigit
@@ -238,7 +225,7 @@ export function bindDecimal(
 
     if (isComposing) return
 
-    if (keyEventName === 'keyup' && skipNextKeyup) {
+    if (isIos() && skipNextKeyup) {
       skipNextKeyup = false
       return
     }
@@ -310,20 +297,12 @@ export function bindDecimal(
     })
   }
 
-  input.addEventListener('paste', onPaste)
-  input.addEventListener('input', onInput)
-  input.addEventListener('compositionstart', onCompositionStart)
-  input.addEventListener('compositionend', onCompositionEnd)
-  input.addEventListener(keyEventName, onKey)
-
-  return releaseOnce(() => {
-    input.removeEventListener('paste', onPaste)
-    input.removeEventListener('input', onInput)
-    input.removeEventListener('compositionstart', onCompositionStart)
-    input.removeEventListener('compositionend', onCompositionEnd)
-    input.removeEventListener(keyEventName, onKey)
-    input.removeAttribute(MASKED_ATTR)
-    removeTracked()
-    cancelPendingFrames()
-  })
+  return attachBinder(
+    input,
+    'decimal',
+    { autocomplete, autocorrect, autocapitalize, spellcheck },
+    Infinity,
+    [onPaste, onInput, onCompositionStart, onCompositionEnd, onKey],
+    cancelPendingFrames,
+  )
 }

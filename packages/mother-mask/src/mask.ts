@@ -31,7 +31,7 @@ export class Mask {
   }
 }
 
-/** Build a `Mask` instance, resolving array patterns by value length. */
+/** Build a `Mask` instance; array patterns are resolved by data count when `process()` runs. */
 export function buildMask(
   value: string,
   mask: MaskPattern,
