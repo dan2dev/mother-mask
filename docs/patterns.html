@@ -7,29 +7,25 @@
         <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
         <meta
             name="description"
-            content="Zero-dependency TypeScript input masks with custom tokens, Unicode, dynamic patterns and decimal formatting. Documentation, API reference and live examples."
-        />
-        <meta
-            name="keywords"
-            content="input mask, input masking, TypeScript input mask, JavaScript input mask, browser form masks, currency mask, phone mask, CPF mask, CNPJ mask"
+            content="mother-mask pattern syntax reference: digit, letter, and alphanumeric tokens, custom tokens, and escaped literals."
         />
         <meta name="author" content="Danilo Celestino de Castro" />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://dan2dev.github.io/mother-mask/" />
+        <link rel="canonical" href="https://dan2dev.github.io/mother-mask/patterns.html" />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="mother-mask" />
         <meta property="og:locale" content="en_US" />
         <meta
             property="og:url"
-            content="https://dan2dev.github.io/mother-mask/"
+            content="https://dan2dev.github.io/mother-mask/patterns.html"
         />
         <meta
             property="og:title"
-            content="mother-mask — TypeScript input masks for browser forms"
+            content="Pattern syntax — mother-mask docs"
         />
         <meta
             property="og:description"
-            content="TypeScript input masks with custom tokens, Unicode, dynamic patterns and decimal formatting. Explore the API and try live examples."
+            content="mother-mask pattern syntax reference: digit, letter, and alphanumeric tokens, custom tokens, and escaped literals."
         />
         <meta property="og:image" content="https://dan2dev.github.io/mother-mask/og-image.png" />
         <meta property="og:image:width" content="1200" />
@@ -38,65 +34,32 @@
         <meta name="twitter:card" content="summary_large_image" />
         <meta
             name="twitter:title"
-            content="mother-mask — TypeScript input masks for browser forms"
+            content="Pattern syntax — mother-mask docs"
         />
         <meta
             name="twitter:description"
-            content="TypeScript input masks with custom tokens, Unicode, dynamic patterns and decimal formatting. Explore the API and try live examples."
+            content="mother-mask pattern syntax reference: digit, letter, and alphanumeric tokens, custom tokens, and escaped literals."
         />
         <meta name="twitter:image" content="https://dan2dev.github.io/mother-mask/og-image.png" />
         <meta name="theme-color" content="#1769aa" />
-        <title>mother-mask — TypeScript input masks for browser forms</title>
+        <title>Pattern syntax — mother-mask docs</title>
         <script type="application/ld+json">
             {
                 "@context": "https://schema.org",
-                "@graph": [
-                    {
-                        "@type": "SoftwareSourceCode",
-                        "@id": "https://dan2dev.github.io/mother-mask/#software",
-                        "name": "mother-mask",
-                        "description": "Zero-dependency TypeScript input masks with custom tokens, transforms, dynamic patterns, Unicode, segmented editing, and decimal formatting.",
-                        "url": "https://dan2dev.github.io/mother-mask/",
-                        "codeRepository": "https://github.com/dan2dev/mother-mask",
-                        "downloadUrl": "https://www.npmjs.com/package/mother-mask",
-                        "programmingLanguage": "TypeScript",
-                        "runtimePlatform": "Browser",
-                        "softwareVersion": "__MOTHER_MASK_VERSION__",
-                        "license": "https://opensource.org/licenses/MIT",
-                        "keywords": [
-                            "input mask",
-                            "input masking",
-                            "TypeScript input mask",
-                            "JavaScript input mask",
-                            "browser form masks",
-                            "currency mask",
-                            "phone mask",
-                            "CPF mask",
-                            "CNPJ mask"
-                        ],
-                        "author": {
-                            "@type": "Person",
-                            "name": "Danilo Celestino de Castro",
-                            "url": "https://github.com/dan2dev"
-                        }
-                    },
-                    {
-                        "@type": "WebPage",
-                        "@id": "https://dan2dev.github.io/mother-mask/#webpage",
-                        "url": "https://dan2dev.github.io/mother-mask/",
-                        "name": "mother-mask documentation",
-                        "description": "Documentation, API reference, install guide, CDN usage, and live examples for the mother-mask TypeScript input mask library.",
-                        "isPartOf": {
-                            "@type": "WebSite",
-                            "@id": "https://dan2dev.github.io/mother-mask/#website",
-                            "name": "mother-mask",
-                            "url": "https://dan2dev.github.io/mother-mask/"
-                        },
-                        "about": {
-                            "@id": "https://dan2dev.github.io/mother-mask/#software"
-                        }
-                    }
-                ]
+                "@type": "WebPage",
+                "@id": "https://dan2dev.github.io/mother-mask/patterns.html#webpage",
+                "url": "https://dan2dev.github.io/mother-mask/patterns.html",
+                "name": "Pattern syntax — mother-mask docs",
+                "description": "mother-mask pattern syntax reference: digit, letter, and alphanumeric tokens, custom tokens, and escaped literals.",
+                "isPartOf": {
+                    "@type": "WebSite",
+                    "@id": "https://dan2dev.github.io/mother-mask/#website",
+                    "name": "mother-mask",
+                    "url": "https://dan2dev.github.io/mother-mask/"
+                },
+                "about": {
+                    "@id": "https://dan2dev.github.io/mother-mask/#software"
+                }
             }
         </script>
         <script>
@@ -112,6 +75,16 @@
                 document.documentElement.setAttribute("data-theme", theme);
                 document.documentElement.style.colorScheme = theme;
             })();
+        </script>
+        <script type="application/ld+json">
+            {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                    { "@type": "ListItem", "position": 1, "name": "mother-mask", "item": "https://dan2dev.github.io/mother-mask/" },
+                    { "@type": "ListItem", "position": 2, "name": "Patterns", "item": "https://dan2dev.github.io/mother-mask/patterns.html" }
+                ]
+            }
         </script>
     </head>
     <body>
@@ -208,14 +181,14 @@
                             <span>Menu</span>
                         </summary>
                         <nav class="mobile-menu-nav" aria-label="Primary">
-                            <a href="index.html#top" aria-current="page">Overview</a>
+                            <a href="index.html#top">Overview</a>
                             <a href="quick-start.html">Quick start</a>
                             <a href="examples.html">Examples</a>
                             <a href="advanced-patterns.html">Custom patterns</a>
                             <a href="editing.html">Editing</a>
                             <a href="decimals.html">Decimals</a>
                             <a href="regional.html">Regional</a>
-                            <a href="patterns.html">Patterns</a>
+                            <a href="patterns.html" aria-current="page">Patterns</a>
                             <a href="cdn.html">CDN</a>
                             <a href="api.html">API</a>
                         </nav>
@@ -261,14 +234,14 @@
                 <aside class="sidebar">
                     <span class="sidebar-label">Docs</span>
                     <nav class="primary-nav sidebar-nav" aria-label="Primary">
-                        <a href="index.html#top" aria-current="page">Overview</a>
+                        <a href="index.html#top">Overview</a>
                         <a href="quick-start.html">Quick start</a>
                         <a href="examples.html">Examples</a>
                         <a href="advanced-patterns.html">Custom patterns</a>
                         <a href="editing.html">Editing</a>
                         <a href="decimals.html">Decimals</a>
                         <a href="regional.html">Regional</a>
-                        <a href="patterns.html">Patterns</a>
+                        <a href="patterns.html" aria-current="page">Patterns</a>
                         <a href="cdn.html">CDN</a>
                         <a href="api.html">API</a>
                     </nav>
@@ -276,124 +249,91 @@
 
                 <div class="content">
                     <main>
-                        <section class="hero" id="top">
-                            <div class="hero-copy">
-                                <p class="eyebrow">TypeScript input masking · v__MOTHER_MASK_VERSION__</p>
-                                <h1>
-                                    TypeScript input masks for browser forms.
-                                </h1>
-                                <p>
-                                    Bind a pattern to any input and keep edits,
-                                    selections, and pasted values formatted
-                                    without a framework dependency.
-                                </p>
-                                <div class="hero-actions">
-                                    <a class="button-link" href="examples.html"
-                                        >Try examples</a
-                                    >
-                                    <a class="text-link" href="api.html"
-                                        >Read API</a
-                                    >
-                                </div>
-                                <div class="install-box" id="install">
-                                    <code class="language-bash" id="install-cmd"
-                                        >npm install mother-mask</code
-                                    >
-                                    <button
-                                        class="copy-btn"
-                                        id="copy-install"
-                                        type="button"
-                                        aria-label="Copy install command"
-                                    >
-                                        <svg class="icon" role="presentation">
-                                            <use href="#copy-icon"></use>
-                                        </svg>
-                                    </button>
-                                </div>
+                        <section id="patterns">
+                            <h1 class="page-title">Pattern syntax</h1>
+                            <div class="table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Character</th>
+                                            <th>Matches</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><code>9</code></td>
+                                            <td>
+                                                Digit
+                                                (<code>0</code>–<code>9</code>)
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>Z</code></td>
+                                            <td>
+                                                ASCII letter
+                                                (<code>a</code>–<code>z</code>,
+                                                <code>A</code>–<code>Z</code>)
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>A</code></td>
+                                            <td>
+                                                ASCII alphanumeric (digit or letter)
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Custom token</td>
+                                            <td>Its local matcher and optional transform</td>
+                                        </tr>
+                                        <tr>
+                                            <td><code>\</code></td>
+                                            <td>Escapes a token or another backslash</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Anything else</td>
+                                            <td>
+                                                Literal — inserted as the user
+                                                fills slots
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
-
-                            <div
-                                class="hero-demo"
-                                aria-label="Live mask preview"
-                            >
-                                <div class="demo-toolbar">
-                                    <span>Live preview</span>
-                                    <code>bind()</code>
-                                </div>
-                                <label class="hero-field">
-                                    <span>Phone</span>
-                                    <input
-                                        id="hero-phone"
-                                        placeholder="(000) 000-0000"
-                                        inputmode="tel"
-                                        value="(555) 123-4567"
-                                    />
-                                </label>
-                                <div class="hero-code">
-                                    <code>bind(input, '(999) 999-9999')</code>
-                                </div>
-                                <div class="hero-demo-footer">
-                                    <span id="hero-phone-hint">10 digits</span>
-                                    <span>paste-safe</span>
-                                </div>
-                            </div>
-                        </section>
-
-                        <section
-                            id="overview"
-                            aria-labelledby="overview-heading"
-                        >
-                            <h2 id="overview-heading">
-                                Lightweight JavaScript input masking
-                            </h2>
-                            <p class="section-sub">
-                                mother-mask formats form fields as people type,
-                                paste, select, and replace text. Use it in plain
-                                browser apps or alongside any UI framework
-                                because the package only needs an
-                                <code>HTMLInputElement</code>.
+                            <p style="margin-top: 12px">
+                                Array masks: pass patterns
+                                <strong>shortest → longest by data capacity</strong>; the active
+                                one is picked from how many data characters are
+                                accepted, not a prefix or card network. Use
+                                <a href="advanced-patterns.html"><code>resolveMask</code></a>
+                                to choose a layout from content instead.
                             </p>
-
-                            <div class="feature-grid">
-                                <div class="feature">
-                                    <h3>Pattern masks</h3>
-                                    <p>
-                                        Add phone, date, CPF, CNPJ, CEP, SSN,
-                                        ZIP+4, postal code, IBAN, VAT ID,
-                                        license plate, credit card, and custom
-                                        input masks with <code>bind()</code>.
-                                        Add custom tokens, case transforms,
-                                        Unicode letters, and layouts chosen
-                                        from the input value.
-                                    </p>
-                                </div>
-
-                                <div class="feature">
-                                    <h3>Decimal and currency masks</h3>
-                                    <p>
-                                        Format money, quantities, localized
-                                        separators, prefixes, suffixes, and
-                                        negative values with
-                                        <code>bindDecimal()</code> and decimal
-                                        helper exports.
-                                    </p>
-                                </div>
-
-                                <div class="feature">
-                                    <h3>Small browser package</h3>
-                                    <p>
-                                        Ships with zero runtime dependencies,
-                                        TypeScript types, ESM, CJS, and UMD
-                                        builds for npm installs or direct CDN
-                                        usage.
-                                    </p>
-                                </div>
-                            </div>
+                            <h2>Escaped literals</h2>
+                            <pre><code class="language-ts">bind(input, '\\A-999999') // '123456' → 'A-123456'
+bind(input, '\\9-99')     // '12' → '9-12'
+bind(input, '\\Z-99')     // '12' → 'Z-12'
+bind(input, '\\\\99')      // a literal backslash, then two digits</code></pre>
+                            <p>
+                                Backslash escapes a built-in or custom token, or another
+                                backslash. Before any other character, or at the end of
+                                a pattern, it remains literal. JavaScript string literals
+                                need an extra backslash as shown above. Older patterns
+                                using backslash immediately before a token must double
+                                it to keep the backslash in the output.
+                            </p>
+                            <p>
+                                Complete literal runs are formatting at their boundaries;
+                                escaped runs remain formatting after a segment shrinks.
+                                If a literal also matches the data alphabet, raw and
+                                formatted values can be ambiguous. Use a distinct
+                                separator, such as <code>'\\9-99'</code>, and avoid
+                                resolver literals that look like data but are absent
+                                from the fallback pattern.
+                            </p>
                         </section>
                     
                         <nav class="page-nav" aria-label="Docs pages">
-                            <span></span>
-                            <a class="page-nav-link page-nav-next" href="quick-start.html"><span class="page-nav-label">Next &rarr;</span><span class="page-nav-title">Quick start</span></a>
+                            <a class="page-nav-link page-nav-prev" href="regional.html"><span class="page-nav-label">&larr; Previous</span><span class="page-nav-title">Regional</span></a>
+                            <a class="page-nav-link page-nav-next" href="cdn.html"><span class="page-nav-label">Next &rarr;</span><span class="page-nav-title">CDN</span></a>
                         </nav>
                     </main>
 
@@ -432,6 +372,6 @@
             </div>
         </div>
 
-        <script type="module" src="./src/pages/index.ts"></script>
+        <script type="module" src="./src/pages/patterns.ts"></script>
     </body>
 </html>

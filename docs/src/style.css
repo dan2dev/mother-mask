@@ -87,6 +87,45 @@
   }
 }
 
+/* ── Cross-document view transitions ─────────────────────────────────────
+   Opt in to the browser's native transition for full-page navigations
+   between docs pages. This is what removes the blank/white flash: the
+   outgoing page's last frame stays on screen until the incoming page has
+   loaded its CSS and is ready to paint, then the two cross-fade. Browsers
+   without support just ignore the rule and navigate normally. */
+@view-transition {
+  navigation: auto;
+}
+
+/* The header, sidebar, and footer are pixel-identical across every docs
+   page. Naming them pulls them out of the default root cross-fade so they
+   read as continuous, stable chrome instead of flashing along with the
+   page content that's actually changing. */
+header {
+  view-transition-name: site-header;
+}
+
+.sidebar {
+  view-transition-name: site-sidebar;
+}
+
+footer {
+  view-transition-name: site-footer;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.18s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -125,6 +164,18 @@ h2 {
 h3 {
   font-size: 15.5px;
   letter-spacing: 0;
+}
+
+/* Every docs page has exactly one <h1> for SEO/a11y (the page's own topic —
+   "Quick start", "Examples", etc.), but only the homepage hero should look
+   hero-sized. This restyles the rest to match the old section-heading size. */
+.page-title {
+  font-size: 26px;
+  line-height: 120%;
+  font-weight: 600;
+  @media (max-width: 1024px) {
+    font-size: 22px;
+  }
 }
 
 p {
@@ -338,6 +389,12 @@ nav.primary-nav a:hover {
   background: var(--accent-bg);
 }
 
+nav.primary-nav a[aria-current='page'] {
+  color: var(--accent);
+  font-weight: 700;
+  background: var(--accent-bg);
+}
+
 /* Desktop: nav lives in the left sidebar, stacked vertically. */
 nav.primary-nav.sidebar-nav {
   flex-direction: column;
@@ -409,6 +466,11 @@ nav.primary-nav.sidebar-nav a {
 
   .mobile-menu-nav a:hover {
     color: var(--text-h);
+    background: var(--accent-bg);
+  }
+
+  .mobile-menu-nav a[aria-current='page'] {
+    color: var(--accent);
     background: var(--accent-bg);
   }
 }
@@ -824,6 +886,61 @@ td {
 
 .api-block:last-child {
   margin-bottom: 0;
+}
+
+/* Prev/next links between docs pages */
+
+.page-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 48px;
+}
+
+.page-nav-link {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-raised);
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.page-nav-link:hover {
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+  background: var(--accent-bg);
+}
+
+.page-nav-next {
+  grid-column: 2;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.page-nav-label {
+  color: var(--text-dim);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.page-nav-title {
+  color: var(--text-h);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .page-nav {
+    grid-template-columns: 1fr;
+  }
+  .page-nav-next {
+    grid-column: 1;
+  }
 }
 
 /* Footer */
