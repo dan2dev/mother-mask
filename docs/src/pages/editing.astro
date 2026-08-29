@@ -50,14 +50,12 @@ const caretSnippet = `// | marks the caret after the edit.
     </p>
     <p>
       Repeated separators can make an edited value ambiguous: <code>1/2025</code> with <code>99/99/9999</code> resolves to the earliest fields that
-      fit. Distinct separators give more precise anchors. For a continuous value where all following characters should shift, set
-      <code>segmented: false</code>.
+      fit. Distinct separators give more precise anchors. For a continuous value where all following characters should shift, set the mask's <code>segmented: false</code>.
     </p>
     <p>
-      Eager mode reveals the next literal when a segment fills: typing <code>25</code> into a date shows <code>25/</code>. Set
-      <code>eager: false</code> to wait for the next digit. <code>bind()</code> does not immediately restore an eager literal removed with
-      Backspace/Delete. Pure helpers have no edit history and apply the configured eager option on every call. Arrow keys, Home/End, and selection
-      shortcuts retain native behavior.
+      Eager mode reveals the next literal when a segment fills: typing <code>25</code> into a date shows <code>25/</code>. Set <code>eager: false</code> to
+      wait for the next digit. <code>bind()</code> does not immediately restore an eager literal removed with Backspace/Delete. Pure helpers have no edit
+      history and apply the configured eager option on every call. Arrow keys, Home/End, and selection shortcuts retain native behavior.
     </p>
   </section>
 </Layout>

@@ -60,8 +60,8 @@ import ExampleCard from '../components/ExampleCard.astro'
     </p>
     <p>
       A transform must return exactly one code point; otherwise the engine throws a <code>RangeError</code>. Use an idempotent transform whose output
-      still matches the token. Uppercasing <code>ß</code> to <code>SS</code> is not supported. Normalize with tokens instead of assigning to
-      <code>input.value</code> in a callback so the engine can map the caret through the transformation.
+      still matches the token. Uppercasing <code>ß</code> to <code>SS</code> is not supported.
+      Normalize with tokens instead of assigning to <code>input.value</code> in a callback so the engine can map the caret through the transformation.
     </p>
 
     <h2>Content-dependent masks</h2>
@@ -72,9 +72,9 @@ import ExampleCard from '../components/ExampleCard.astro'
       ordered array; arrays still select by capacity. Resolution is not recursive.
     </p>
     <p>
-      Resolvers always format one continuous identifier, removing old separators before applying the new layout, even with
-      <code>segmented: true</code>. Use static masks or arrays when fields must remain independently editable. <code>eager</code> still applies, and
-      the caret follows the logical data when a layout changes.
+      Resolvers always format one continuous identifier, removing old separators before applying the new layout, even with <code>segmented: true</code>.
+      Use static masks or arrays when fields must remain independently editable. <code>eager</code> still applies, and the caret follows the logical
+      data when a layout changes.
     </p>
 
     <h2>Unicode, composition, and length</h2>
@@ -84,9 +84,9 @@ import ExampleCard from '../components/ExampleCard.astro'
     </p>
     <p>
       Custom-token bindings leave provisional IME text and selection untouched until composition commits, including when the matcher only accepts
-      ASCII. Built-in-only masks keep live formatting during Android autocorrect composition. Bindings with custom tokens or a resolver do not add
-      <code>maxlength</code>; the engine still caps slots. Author-supplied limits remain in place. Disposal removes only attributes added by the
-      binding.
+      ASCII. Built-in-only masks keep live formatting during Android autocorrect composition.
+      Bindings with custom tokens or a resolver do not add <code>maxlength</code>; the engine still caps slots. Author-supplied limits remain in place.
+      Disposal removes only attributes added by the binding.
     </p>
   </section>
 </Layout>

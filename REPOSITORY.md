@@ -7,7 +7,6 @@ and [`packages/mother-mask/README.md`](packages/mother-mask/README.md). Keep the
 identical so GitHub and npm show the same guidance. The website lives in [`docs/`](docs/README.md).
 
 ## Layout
-
 ```
 mother-mask/
 ├── packages/mother-mask/   # published npm package (source + build)
