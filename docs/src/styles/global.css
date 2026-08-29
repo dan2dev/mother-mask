@@ -17,6 +17,8 @@
   --cta-text: #fdfbf8;
   --ok: #12946a;
   --error: #d6335a;
+  --input-selection-bg: #5942b4;
+  --input-selection-text: #ffffff;
 
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --mono: ui-monospace, 'SF Mono', Consolas, monospace;
@@ -874,6 +876,14 @@ input {
   transition: border-color 0.15s;
 }
 
+/* Keep selected input text readable in both themes. Browser defaults can
+   combine a pale selection tint with white text under dark color-scheme. */
+input::selection,
+textarea::selection {
+  color: var(--input-selection-text);
+  background: var(--input-selection-bg);
+}
+
 input:focus {
   border-color: var(--accent);
 }
@@ -1404,11 +1414,13 @@ nav.primary-nav.sidebar-nav a[aria-current='page']::before {
 
 .home-page .hero {
   position: relative;
+  left: 50%;
+  display: block;
+  width: min(1400px, calc(100vw - 32px));
+  max-width: none;
   min-height: 680px;
   margin-top: 28px;
-  padding: 64px;
-  grid-template-columns: minmax(0, 0.94fr) minmax(430px, 0.9fr);
-  gap: 58px;
+  padding: 0;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 30px;
@@ -1417,7 +1429,19 @@ nav.primary-nav.sidebar-nav a[aria-current='page']::before {
     radial-gradient(circle at 88% 2%, rgba(255, 176, 145, 0.34), transparent 27%),
     linear-gradient(135deg, #4d3d91 0%, #7652c5 47%, #c84f9f 76%, #f37262 100%);
   box-shadow: 0 26px 70px rgba(55, 36, 105, 0.18);
+  transform: translateX(-50%);
   isolation: isolate;
+}
+
+.hero-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 0.94fr) minmax(430px, 0.9fr);
+  align-items: center;
+  gap: 58px;
+  width: min(1192px, calc(100% - 44px));
+  min-height: 680px;
+  margin: 0 auto;
+  padding: 64px 0;
 }
 
 .home-page .hero::before {
@@ -2035,7 +2059,11 @@ footer {
 
   .home-page .hero {
     min-height: auto;
-    padding: 52px 44px;
+  }
+
+  .home-page .hero-inner {
+    min-height: auto;
+    padding: 52px 0;
     grid-template-columns: minmax(0, 1fr) minmax(380px, 0.88fr);
     gap: 36px;
   }
@@ -2065,9 +2093,9 @@ footer {
 }
 
 @media (max-width: 820px) {
-  .home-page .hero {
+  .home-page .hero-inner {
     grid-template-columns: 1fr;
-    padding: 52px;
+    padding: 52px 0;
   }
 
   .hero-copy {
@@ -2118,8 +2146,11 @@ footer {
 
   .home-page .hero {
     margin-top: 16px;
-    padding: 36px 22px 24px;
     border-radius: 20px;
+  }
+
+  .home-page .hero-inner {
+    padding: 36px 0 24px;
   }
 
   .hero-glow {
