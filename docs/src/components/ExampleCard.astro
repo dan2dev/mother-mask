@@ -4,6 +4,7 @@
 // default slot. Used on examples, regional, decimals, editing, and
 // advanced-patterns.
 import CodeBlock from './CodeBlock.astro'
+import { demoInputAttributes } from '../data/demo-input-attributes'
 
 interface Props {
   snippet: string
@@ -21,6 +22,6 @@ const { snippet, inputId, ariaLabel, placeholder, inputmode, value, wide = false
 <div class={wide ? 'example example-wide' : 'example'}>
   <h2><slot name="title" /></h2>
   <CodeBlock code={snippet} lang="ts" inline class="snippet" />
-  <input id={inputId} aria-label={ariaLabel} placeholder={placeholder} inputmode={inputmode} value={value} />
+  <input {...demoInputAttributes} id={inputId} aria-label={ariaLabel} placeholder={placeholder} inputmode={inputmode} value={value} />
   <slot />
 </div>

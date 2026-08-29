@@ -4,6 +4,7 @@ import InstallBox from '../components/InstallBox.astro'
 import CodeBlock from '../components/CodeBlock.astro'
 import { navHref } from '../data/nav'
 import { bundleArtifact, bundleGzipBytes, bundleGzipSize } from '../data/package-meta'
+import { demoInputAttributes } from '../data/demo-input-attributes'
 
 const playgroundCode = `import { bind, bindDecimal } from 'mother-mask'
 
@@ -46,10 +47,10 @@ bindDecimal(amount, {
           <div class="hero-input-wrap">
             <svg class="icon" role="presentation"><use href="#phone-icon"></use></svg>
             <input
+              {...demoInputAttributes}
               id="hero-live-phone"
               aria-describedby="hero-live-phone-hint"
               inputmode="tel"
-              autocomplete="tel"
               value="(11) 98765-4321"
             />
           </div>
@@ -108,25 +109,25 @@ bindDecimal(amount, {
         <label class="playground-field">
           <svg class="icon" role="presentation"><use href="#phone-icon"></use></svg>
           <span>Phone number</span>
-          <input id="hero-phone" aria-describedby="hero-phone-hint" inputmode="tel" value="(11) 98765-4321" />
+          <input {...demoInputAttributes} id="hero-phone" aria-describedby="hero-phone-hint" inputmode="tel" value="(11) 98765-4321" />
           <small id="hero-phone-hint">11 digits</small>
         </label>
         <label class="playground-field">
           <svg class="icon" role="presentation"><use href="#card-icon"></use></svg>
           <span>Card number</span>
-          <input id="hero-card" inputmode="numeric" value="1234 5678 9012 3456" />
+          <input {...demoInputAttributes} id="hero-card" inputmode="numeric" value="1234 5678 9012 3456" />
           <small>16 digits</small>
         </label>
         <label class="playground-field">
           <svg class="icon" role="presentation"><use href="#calendar-icon"></use></svg>
           <span>Date</span>
-          <input id="hero-date" inputmode="numeric" value="28/08/2026" />
+          <input {...demoInputAttributes} id="hero-date" inputmode="numeric" value="28/08/2026" />
           <small>DD / MM / YYYY</small>
         </label>
         <label class="playground-field">
           <svg class="icon" role="presentation"><use href="#currency-icon"></use></svg>
           <span>Currency</span>
-          <input id="hero-currency" inputmode="decimal" value="R$ 1.234,56" />
+          <input {...demoInputAttributes} id="hero-currency" inputmode="decimal" value="R$ 1.234,56" />
           <small>Brazilian real</small>
         </label>
         <a class="more-examples" href={navHref('examples.html')}>
