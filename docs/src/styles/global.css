@@ -794,29 +794,6 @@ nav.primary-nav.sidebar-nav a {
   font-size: 12px;
 }
 
-.demo-dots {
-  display: flex;
-  gap: 6px;
-}
-
-.demo-dots span {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.demo-dots span:nth-child(1) {
-  background: #ff5f57;
-}
-
-.demo-dots span:nth-child(2) {
-  background: #febc2e;
-}
-
-.demo-dots span:nth-child(3) {
-  background: #28c840;
-}
-
 .hero-field {
   display: block;
 }
@@ -1782,7 +1759,7 @@ nav.primary-nav.sidebar-nav a[aria-current='page']::before {
 .window-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   height: 54px;
   padding: 0 22px;
   border-bottom: 1px solid var(--border);
