@@ -63,13 +63,20 @@ bindDecimal(amount, {
   </section>
 
   <section class="feature-strip" aria-label="Why mother-mask">
+    <div class="feature-intro">
+      <span class="section-kicker">Why mother-mask</span>
+      <h2>Small API. Thoughtful behavior.</h2>
+      <p>Mask the value without getting in the user’s way—from the first keystroke to the final submit.</p>
+    </div>
+
+    <div class="feature-grid">
     <article class="feature">
       <div class="icon-badge icon-badge-orange">
         <svg class="icon" role="presentation"><use href="#bolt-icon"></use></svg>
       </div>
       <div>
-        <h2>Tiny &amp; fast</h2>
-        <p title={`${bundleArtifact}: ${bundleGzipBytes.toLocaleString('en-US')} bytes gzipped`}><strong>{bundleGzipSize}</strong> min+gz, with no runtime dependencies.</p>
+        <h2>Ship less</h2>
+        <p title={`${bundleArtifact}: ${bundleGzipBytes.toLocaleString('en-US')} bytes gzipped`}><strong>{bundleGzipSize}</strong> min+gz. No runtime baggage.</p>
       </div>
     </article>
 
@@ -77,22 +84,23 @@ bindDecimal(amount, {
       <div class="icon-badge icon-badge-purple">
         <svg class="icon" role="presentation"><use href="#code-icon"></use></svg>
       </div>
-      <div><h2>Framework agnostic</h2><p>Works with vanilla JS, React, Vue, and more.</p></div>
+      <div><h2>Meet users anywhere</h2><p>One API for vanilla JS, React, Vue, and more.</p></div>
     </article>
 
     <article class="feature">
       <div class="icon-badge icon-badge-teal">
         <svg class="icon" role="presentation"><use href="#puzzle-icon"></use></svg>
       </div>
-      <div><h2>Flexible by design</h2><p>Compose patterns, tokens, transforms, and locales.</p></div>
+      <div><h2>Model real formats</h2><p>Compose tokens, transforms, locales, and dynamic patterns.</p></div>
     </article>
 
     <article class="feature">
       <div class="icon-badge icon-badge-pink">
         <svg class="icon" role="presentation"><use href="#heart-icon"></use></svg>
       </div>
-      <div><h2>Editing that feels right</h2><p>Built for typing, pasting, selection, and replacement.</p></div>
+      <div><h2>Respect the caret</h2><p>Typing, pasting, selection, and replacement stay predictable.</p></div>
     </article>
+    </div>
   </section>
 
   <section class="playground-section" id="overview" aria-labelledby="playground-heading">
