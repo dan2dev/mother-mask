@@ -1598,13 +1598,14 @@ nav.primary-nav.sidebar-nav a[aria-current='page']::before {
   display: grid;
   grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
   gap: 56px;
-  padding: 76px 0 82px;
+  padding: 58px 0 64px;
   border: 0;
 }
 
 .feature-intro {
   align-self: start;
   max-width: 300px;
+  padding-top: 4px;
 }
 
 .feature-intro h2 {
@@ -1622,14 +1623,14 @@ nav.primary-nav.sidebar-nav a[aria-current='page']::before {
 .feature-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 28px;
+  gap: 6px 40px;
 }
 
 .feature-strip .feature {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 14px;
-  padding: 22px 0;
+  padding: 18px 0;
   border: 0;
   border: 0;
   border-radius: 0;
@@ -1665,7 +1666,7 @@ nav.primary-nav.sidebar-nav a[aria-current='page']::before {
 }
 
 .playground-section {
-  padding: 96px 0 80px;
+  padding: 72px 0 80px;
 }
 
 .section-heading-row {
