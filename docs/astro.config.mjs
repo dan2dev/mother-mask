@@ -10,6 +10,12 @@ export default defineConfig({
   // ('ignore') means `astro dev` matches both `/mother-mask` and
   // `/mother-mask/`, matching how any static host (GitHub Pages included)
   // actually resolves a directory URL to its index.html.
+  server: {
+    // Accept any Host header. `astro dev`/`astro preview` otherwise reject
+    // requests from the ephemeral *.trycloudflare.com tunnel hostnames, which
+    // change on every run and so can't be listed individually.
+    allowedHosts: true,
+  },
   build: {
     // One `<name>.html` file per page (src/pages/api.astro -> /api.html),
     // matching every URL already indexed by public/sitemap.xml.
