@@ -215,16 +215,94 @@ pre code {
   overflow-wrap: normal;
 }
 
-/* Astro's <Code> component (Shiki) ships both a light and a dark palette per
-   token as `--shiki-light`/`--shiki-dark` custom properties (configured in
-   astro.config.mjs). Shiki's own default color is the light theme; this
-   override swaps to the dark variant when the site's manual toggle — not
-   just OS preference — sets data-theme="dark", keeping code blocks in sync
-   with the same toggle everything else on the page follows. */
-:root[data-theme='dark'] .astro-code,
-:root[data-theme='dark'] .astro-code span {
-  color: var(--shiki-dark) !important;
-  background-color: var(--shiki-dark-bg) !important;
+/* Linkable section headings. `scroll-margin-top` clears the sticky header, so
+   following an anchor lands with the heading visible rather than tucked
+   underneath it — the same offset `section` already uses. */
+.section-heading,
+.example {
+  scroll-margin-top: 96px;
+}
+
+.heading-anchor {
+  margin-left: 0.35em;
+  color: var(--text-dim);
+  font-weight: 400;
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.section-heading:hover .heading-anchor,
+.heading-anchor:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  /* No hover to reveal it, and a tap target that small is not worth offering. */
+  .heading-anchor {
+    display: none;
+  }
+}
+
+/* The 404 page's list of every documentation page. */
+.route-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  margin-top: 20px;
+}
+
+.route-list a {
+  padding: 8px 12px;
+  border-radius: 7px;
+  color: var(--text);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+
+.route-list a:hover {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* The <symbol> definitions the rest of the page draws icons from. Present in
+   the document but never painted. */
+.icon-sprite {
+  display: none;
+}
+
+/* Syntax highlighting. Shiki tokenizes every sample at build time (see
+   vite/plugin-snippets.ts) and emits one of these classes per token instead of
+   a baked-in hex color, so code follows the same palette as the rest of the
+   page — and the theme toggle needs no second set of token colors, because
+   these variables have already flipped by the time the rules apply. Plain
+   identifiers get no class at all and inherit `pre`'s --code-text.
+   The scope-group-to-class mapping lives in src/styles/code-theme.ts. */
+.tk-com {
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.tk-key {
+  color: var(--accent-3);
+}
+
+.tk-pun {
+  color: var(--text-dim);
+}
+
+.tk-str {
+  color: var(--accent-2);
+}
+
+.tk-acc {
+  color: var(--accent);
+}
+
+.tk-bad {
+  color: #ff7f97;
 }
 
 .code-block {
@@ -977,7 +1055,7 @@ input:focus {
 }
 
 .example .snippet,
-.example .astro-code.snippet {
+.example .shiki.snippet {
   display: block;
   font-size: 12.5px;
   margin: 4px 0 12px;
@@ -1245,7 +1323,8 @@ footer {
   color: var(--text-dim);
 }
 
-.footer-brand .footer-author {
+.footer-brand .footer-author,
+.footer-brand .footer-tech {
   color: var(--accent);
   font-weight: 700;
   white-space: nowrap;
@@ -1395,15 +1474,21 @@ header {
   gap: 56px;
 }
 
-.layout-home {
+/* The home page runs full width with no sidebar; every docs page is the
+   two-column grid above. `body.home-page` — not a class on .layout itself —
+   is what selects between them: .layout is created once and survives every
+   client-side navigation, and Nuclo treats the class a hydrated element
+   arrives with as permanent, so a class toggled there could never come off.
+   The router sets this one on <body> directly. */
+.home-page .layout {
   display: block;
 }
 
-.layout:not(.layout-home) .content {
+body:not(.home-page) .content {
   max-width: 920px;
 }
 
-.layout:not(.layout-home) main > section:first-child {
+body:not(.home-page) main > .page > section:first-child {
   border-top: 0;
   padding-top: 64px;
 }

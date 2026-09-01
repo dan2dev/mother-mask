@@ -1,16 +1,38 @@
-// Custom Shiki themes, derived from this site's own brand palette (see the
-// `:root` / `:root[data-theme='dark']` variables in ./global.css) instead of
-// a stock theme like github-dark. Shiki bakes each token's color in as a
-// static hex value at build time, so these mirror the CSS variables' current
-// values by hand — if the brand palette in global.css changes, update the
-// matching hex here too.
-//
-// Palette used (3 accent hues + neutrals), consistent across both themes:
-//   pink   (--accent-3) -> keywords / control flow / storage
-//   orange (--accent-2) -> strings
-//   purple (--accent)   -> numbers, regexp, functions, types
-//   dim    (--text-dim) -> comments, punctuation
-//   default (--code-text) -> plain identifiers, object keys, everything else
+/**
+ * The Shiki theme used to highlight every sample in src/content/snippets.ts.
+ *
+ * Highlighting happens once, at build time, in vite/plugin-snippets.ts. Rather
+ * than baking this site's palette into the theme as hex — which would have to
+ * be kept in sync with global.css by hand, twice, once per color scheme — each
+ * scope group is given a unique *sentinel* color that means nothing on its own.
+ * The plugin maps every sentinel back to the class in `TOKEN_CLASS`, and
+ * global.css points those classes at the site's CSS custom properties.
+ *
+ * The upshot: light and dark code colors come from the same `--accent`,
+ * `--text-dim`, `--code-text` variables as the rest of the page, so the
+ * palette is defined in exactly one place and the theme toggle needs no
+ * second set of token colors.
+ */
+
+/** Sentinel -> class name. The classes are styled in global.css (`.shiki .tk-*`). */
+export const TOKEN_CLASS = {
+  '#000001': 'tk-com', // comments
+  '#000002': 'tk-key', // keywords, storage, control flow, tags
+  '#000003': 'tk-pun', // punctuation, operators, separators
+  '#000004': 'tk-str', // strings
+  '#000005': 'tk-acc', // numbers, regexp, constants, functions, types
+  '#000006': 'tk-bad', // invalid / illegal
+} as const
+
+const COMMENT = '#000001'
+const KEYWORD_COLOR = '#000002'
+const PUNCTUATION_COLOR = '#000003'
+const STRING_COLOR = '#000004'
+const ACCENT_COLOR = '#000005'
+const INVALID_COLOR = '#000006'
+
+/** Plain identifiers inherit `pre`'s own `--code-text`, so they get no class. */
+const PLAIN_COLOR = '#000000'
 
 const KEYWORD = [
   'keyword',
@@ -38,6 +60,9 @@ const PUNCTUATION = [
   'punctuation.separator',
   'punctuation.terminator',
   'punctuation.accessor',
+  'punctuation.definition.block',
+  'punctuation.definition.parameters',
+  'punctuation.section',
   'meta.brace',
   'keyword.operator',
   'keyword.operator.assignment',
@@ -45,6 +70,11 @@ const PUNCTUATION = [
   'keyword.operator.comparison',
   'keyword.operator.logical',
   'keyword.operator.relational',
+  'keyword.operator.ternary',
+  'keyword.operator.optional',
+  'keyword.operator.type.annotation',
+  'keyword.operator.arrow',
+  'keyword.operator.spread',
 ]
 
 const STRING = [
@@ -52,9 +82,13 @@ const STRING = [
   'string.quoted',
   'string.quoted.single',
   'string.quoted.double',
-  'string.quoted.template',
   'string.template',
   'punctuation.definition.string',
+  'punctuation.definition.string.begin',
+  'punctuation.definition.string.end',
+  'string.other.link',
+  'meta.attribute string',
+  'string.unquoted',
 ]
 
 const REGEXP_AND_CONST = [
@@ -95,56 +129,27 @@ const PLAIN = [
   'support.variable.property',
 ]
 
-function tokenColors(colors: {
-  keyword: string
-  punctuation: string
-  string: string
-  accent: string
-  escape: string
-  plain: string
-}) {
-  return [
-    { scope: ['comment', 'punctuation.definition.comment'], settings: { foreground: colors.punctuation, fontStyle: 'italic' } },
-    { scope: KEYWORD, settings: { foreground: colors.keyword } },
-    { scope: PUNCTUATION, settings: { foreground: colors.punctuation } },
-    { scope: STRING, settings: { foreground: colors.string } },
-    { scope: REGEXP_AND_CONST, settings: { foreground: colors.accent } },
-    { scope: ESCAPE, settings: { foreground: colors.keyword } },
-    { scope: PLAIN, settings: { foreground: colors.plain } },
-    { scope: ['invalid', 'invalid.illegal'], settings: { foreground: '#ff7f97' } },
-  ]
-}
-
-export const codeThemeDark = {
-  name: 'mother-mask-dark',
-  type: 'dark',
-  colors: {
-    'editor.background': '#191529',
-    'editor.foreground': '#ded9ec',
-  },
-  tokenColors: tokenColors({
-    keyword: '#ff7ec4', // --accent-3 (dark)
-    punctuation: '#837e97', // --text-dim (dark)
-    string: '#ff9678', // --accent-2 (dark)
-    accent: '#a496ff', // --accent (dark)
-    escape: '#ff7ec4',
-    plain: '#ded9ec', // --code-text (dark)
-  }),
-} as const
-
-export const codeThemeLight = {
-  name: 'mother-mask-light',
+/**
+ * A Shiki `ThemeRegistrationRaw`. Typed structurally rather than imported from
+ * shiki so this module stays importable from anywhere without pulling in the
+ * highlighter.
+ */
+export const codeTheme = {
+  name: 'mother-mask',
   type: 'light',
   colors: {
-    'editor.background': '#f3f0f8',
-    'editor.foreground': '#2c2740',
+    // Both are overridden in CSS; Shiki only needs them to resolve defaults.
+    'editor.background': '#ffffff',
+    'editor.foreground': PLAIN_COLOR,
   },
-  tokenColors: tokenColors({
-    keyword: '#d94ed7', // --accent-3 (light)
-    punctuation: '#817c94', // --text-dim (light)
-    string: '#ff745f', // --accent-2 (light)
-    accent: '#7257f5', // --accent (light)
-    escape: '#d94ed7',
-    plain: '#2c2740', // --code-text (light)
-  }),
+  tokenColors: [
+    { scope: ['comment', 'punctuation.definition.comment'], settings: { foreground: COMMENT, fontStyle: 'italic' } },
+    { scope: KEYWORD, settings: { foreground: KEYWORD_COLOR } },
+    { scope: PUNCTUATION, settings: { foreground: PUNCTUATION_COLOR } },
+    { scope: STRING, settings: { foreground: STRING_COLOR } },
+    { scope: REGEXP_AND_CONST, settings: { foreground: ACCENT_COLOR } },
+    { scope: ESCAPE, settings: { foreground: KEYWORD_COLOR } },
+    { scope: PLAIN, settings: { foreground: PLAIN_COLOR } },
+    { scope: ['invalid', 'invalid.illegal'], settings: { foreground: INVALID_COLOR } },
+  ],
 } as const

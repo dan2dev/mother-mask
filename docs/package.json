@@ -4,16 +4,19 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "astro dev --host",
-    "build": "astro check && astro build",
-    "preview": "astro preview"
+    "dev": "vite --host",
+    "build": "vite build && vite build --ssr src/entry-server.ts --outDir .ssr && tsc --noEmit && bun run prerender.ts",
+    "preview": "vite preview",
+    "clean": "rm -rf dist .ssr"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.10",
-    "typescript": "~6.0.3"
+    "@types/bun": "^1.3.14",
+    "shiki": "^4.4.3",
+    "typescript": "~7.0.2",
+    "vite": "^8.2.2"
   },
   "dependencies": {
-    "astro": "^7.2.9",
-    "mother-mask": "file:../packages/mother-mask"
+    "mother-mask": "file:../packages/mother-mask",
+    "nuclo": "0.2.30"
   }
 }

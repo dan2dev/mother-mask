@@ -8,10 +8,13 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+
+# Build output: dist/ is the deployable site, .ssr/ is the server build the
+# prerenderer renders it with.
 dist
-dist-ssr
+.ssr
+
 *.local
-.astro
 
 # Editor directories and files
 .vscode/*
