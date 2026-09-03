@@ -44,3 +44,4 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+docs/.astro/
