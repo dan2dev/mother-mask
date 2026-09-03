@@ -154,18 +154,32 @@ describe('maxlength sizing with the binding’s own compiler', () => {
     input.remove()
   })
 
-  it('sets maxlength for an ASCII-only custom token, reserving two UTF-16 units per slot', () => {
+  it('sets maxlength for an ASCII-only custom token at one UTF-16 unit per slot', () => {
+    // A BMP-only alphabet (here, hex digits) can never need a surrogate pair,
+    // so it's sized like a built-in slot — not padded for a case it can't
+    // reach. Padding every custom slot regardless of its alphabet let typing
+    // continue past the mask's real capacity instead of being blocked (see
+    // the "typing past a full custom-token mask" suite below).
     const dispose = bind(input, 'HH-HH', { tokens: { H: /[0-9a-f]/i } })
     expect(input.getAttribute('maxlength')).toBe(String(getMaxLength('HH-HH', { tokens: { H: /[0-9a-f]/i } })))
-    expect(input.getAttribute('maxlength')).toBe('9')
+    expect(input.getAttribute('maxlength')).toBe('5')
     dispose()
     expect(input.hasAttribute('maxlength')).toBe(false)
+  })
+
+  it('reserves two UTF-16 units only for a custom token whose alphabet can accept a non-BMP code point', () => {
+    // An emoji-accepting alphabet can hand a slot a genuine surrogate pair,
+    // so the padding this class of token actually needs is preserved.
+    const dispose = bind(input, 'HH-HH', { tokens: { H: /\p{Emoji}/u } })
+    expect(input.getAttribute('maxlength')).toBe(String(getMaxLength('HH-HH', { tokens: { H: /\p{Emoji}/u } })))
+    expect(input.getAttribute('maxlength')).toBe('9')
+    dispose()
   })
 
   it('sizes an ordered array by its longest member under custom tokens', () => {
     const tokens = { X: /[0-9]/ }
     const dispose = bind(input, ['XX', 'XX-XX'], { tokens })
-    expect(input.getAttribute('maxlength')).toBe('9')
+    expect(input.getAttribute('maxlength')).toBe('5')
     dispose()
   })
 

@@ -59,6 +59,36 @@ function mayAcceptComposedScript(match: TokenMatcher): boolean {
   })
 }
 
+/**
+ * Representative non-BMP code points spanning the general categories a
+ * class-based alphabet (`\p{L}`, `\p{N}`, `\p{Emoji}`, a bespoke character
+ * class, ...) is typically built from — one letter, one number, one symbol.
+ * Each needs a UTF-16 surrogate pair (two code units) to encode, unlike
+ * every BMP character (Latin, digits, and even the composing-risk scripts
+ * above), which fits in one.
+ *
+ * A token whose alphabet accepts none of these can't produce a two-unit slot
+ * either: it can't match one directly, and per `MaskTokenDefinition.transform`'s
+ * documented match-preserving contract, a conforming transform can't turn a
+ * one-unit input into a two-unit output that would no longer match. Plain
+ * ASCII/BMP alphabets (e.g. an uppercase-transforming hex or alphanumeric
+ * token) fall in this safe case — see {@link Slot.maxLength} sizing below.
+ */
+const ASTRAL_PROBES = ['𐐀', '𝟎', '😀']
+
+/** Whether a token's alphabet could ever accept one of {@link ASTRAL_PROBES}. */
+function mayAcceptAstral(match: TokenMatcher): boolean {
+  const test = matcher(match)
+  return ASTRAL_PROBES.some((ch) => {
+    try {
+      return test(ch)
+    } catch {
+      // A predicate that throws on ordinary input isn't provably safe either way.
+      return true
+    }
+  })
+}
+
 export function transformChar(char: string, slot: Slot): string {
   if (!slot.transform) return char
   const output = slot.transform(char)
@@ -316,8 +346,17 @@ export class PatternCompiler {
       const object = typeof definition === 'object' && 'match' in definition
         ? definition : { match: definition }
       if (mayAcceptComposedScript(object.match)) composingRisk = true
+      // Reserving 2 UTF-16 units for every custom slot regardless of its
+      // alphabet over-sizes `maxLength` (the DOM `maxlength` attribute and
+      // `bind()`'s "block insert when full" gate share this number) whenever
+      // a mask has more than a couple of such slots. That slack lets typing
+      // continue past the field's real capacity instead of being blocked,
+      // which corrupts a segmented mask's boundaries instead of just
+      // refusing the keystroke — reserve the extra unit only where a slot
+      // could actually need it.
       this.definitions.set(key, {
-        match: matcher(object.match), transform: object.transform, maxLength: 2,
+        match: matcher(object.match), transform: object.transform,
+        maxLength: mayAcceptAstral(object.match) ? 2 : 1,
       })
     }
     this.hasComposingRisk = composingRisk

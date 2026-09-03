@@ -119,7 +119,7 @@ for (const segmented of [true, false]) {
       const input = field('\\A-HH\\Z-HH', opts)
       edit(input, 'ab')
       state(input, eager ? 'A-abZ-' : 'A-ab', eager ? 6 : 4)
-      expect(getMaxLength('\\A-HH\\Z-HH', opts)).toBe(12)
+      expect(getMaxLength('\\A-HH\\Z-HH', opts)).toBe(8)
     })
   })
 }
