@@ -4,17 +4,17 @@
  */
 
 /**
- * Path the site is deployed under, always with both slashes. GitHub Pages
- * serves a project site from a subdirectory, so this is not `/`.
+ * Path the site is deployed under, always with both slashes. The site is
+ * deployed at the root of its own custom domain, so this is `/`.
  *
  * Read by vite.config.ts (as Vite's `base`, which is what fills
  * `import.meta.env.BASE_URL` for the client) and by prerender.ts. One value,
  * so a move to another path or another host is a one-line change.
  */
-export const BASE_PATH = '/mother-mask/'
+export const BASE_PATH = '/'
 
-/** Production origin + project path. Always ends in a slash. */
-export const SITE_URL = 'https://dan2dev.github.io/mother-mask/'
+/** Production origin. Always ends in a slash. */
+export const SITE_URL = 'https://mother-mask.dan2.dev/'
 
 export const SITE_NAME = 'mother-mask'
 

@@ -2,7 +2,7 @@
 
 Lightweight input masks for browser forms. Zero runtime dependencies, written in TypeScript, and published with ESM, CJS, and UMD builds.
 
-[npm](https://www.npmjs.com/package/mother-mask) | [Documentation and live examples](https://dan2dev.github.io/mother-mask/)
+[npm](https://www.npmjs.com/package/mother-mask) | [Documentation and live examples](https://mother-mask.dan2.dev/)
 
 Format phone numbers, dates, identifiers, and decimal inputs with static patterns,
 custom tokens, or a mask chosen from the value. Formatting does **not** validate

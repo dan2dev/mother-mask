@@ -1,6 +1,6 @@
 # Documentation website
 
-The [mother-mask documentation and live examples](https://dan2dev.github.io/mother-mask/)
+The [mother-mask documentation and live examples](https://mother-mask.dan2.dev/)
 are built with [Nuclo](https://nuclo.dev) and Vite. Every page is prerendered
 to a real HTML file at build time and then hydrated in the browser, so the site
 is a single-page app for anyone browsing it and a plain folder of static files
@@ -169,12 +169,24 @@ including the package's own main entry.
 
 [Publish to NPM](../.github/workflows/publish.yml) passes its newly published tag
 to [Deploy docs](../.github/workflows/deploy-docs.yml), which builds the library
-and website from that exact tag, uploads `docs/dist`, and deploys it to GitHub
-Pages. The docs workflow can also be run manually for a selected ref. Do not
-commit generated `dist/` files.
+and website from that exact tag and deploys `docs/dist` to Cloudflare with
+[wrangler-action](https://github.com/cloudflare/wrangler-action). The docs
+workflow can also be run manually for a selected ref. Do not commit generated
+`dist/` files.
 
-Nothing in the output needs a server or a rewrite rule: the deployed folder is
-one HTML file per URL, plus `404.html` for anything else. A host that serves
-`404.html` for unknown paths (GitHub Pages does) also gets working deep links
-for the extensionless spelling of a page — the router resolves `…/api` to the
-API page and corrects the address bar to `…/api.html`.
+The site is a static-assets Worker (`docs/wrangler.jsonc`), not a Pages
+project — Cloudflare's Pages product always redirects `…/api.html` to `…/api`,
+which fights this site's canonical URLs (see SEO above), so the config sets
+`html_handling: "none"` instead and gets the exact-file serving GitHub Pages
+gave it for free. `not_found_handling: "404-page"` keeps the extensionless-URL
+trick working (see the next paragraph). Deploying needs a
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` set as repository secrets,
+and — once — the `mother-mask.dan2.dev` custom domain attached to the
+`mother-mask` Worker; `routes` in `wrangler.jsonc` provisions the DNS record
+automatically as long as `dan2.dev` is already a Cloudflare-managed zone.
+
+Nothing in the output needs a server or a rewrite rule beyond that config: the
+deployed folder is one HTML file per URL, plus `404.html` for anything else. A
+host that falls back to `404.html` for unknown paths also gets working deep
+links for the extensionless spelling of a page — the router resolves `…/api`
+to the API page and corrects the address bar to `…/api.html`.

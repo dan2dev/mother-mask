@@ -7,7 +7,7 @@ import { snippetsPlugin } from './vite/plugin-snippets.ts'
 import { BASE_PATH } from './src/site.ts'
 
 export default defineConfig({
-  // GitHub Pages serves this project from a subdirectory, and the same value
+  // The site is deployed at its own domain's root, and the same value
   // reaches the client as `import.meta.env.BASE_URL`.
   base: BASE_PATH,
 

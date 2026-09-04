@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://dan2dev.github.io/mother-mask/sitemap.xml
+Sitemap: https://mother-mask.dan2.dev/sitemap.xml

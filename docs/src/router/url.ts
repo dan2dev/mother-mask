@@ -1,7 +1,7 @@
 /**
  * URL shapes, in one place.
  *
- * The site is deployed to a project path (`/mother-mask/`) on a host that only
+ * The site is deployed at the root of its own domain, on a host that only
  * serves files, so every page is a real `<name>.html` sitting at the site root:
  * `quick-start.html`, `api.html`, and `index.html` for the home page. A route's
  * `path` is exactly that filename — `''` for home — which means one string
@@ -12,7 +12,7 @@
 
 import { SITE_URL } from '../site.ts'
 
-/** Deploy path, always with a trailing slash — `/mother-mask/`, or `/`. */
+/** Deploy path, always with a trailing slash — `/` today, or a project path if that ever changes. */
 export const BASE: string = normalizeBase(import.meta.env.BASE_URL)
 
 function normalizeBase(base: string | undefined): string {
@@ -35,18 +35,19 @@ export function absoluteUrl(path: string): string {
  * URL is outside this deployment.
  *
  * Accepts every spelling a person or another site might produce for the same
- * page — `/mother-mask/api.html`, `/mother-mask/api`, `/mother-mask/api/` —
- * and returns the one canonical form (`api.html`). The extensionless forms
- * only ever reach the client through a host 404 fallback; resolving them
- * anyway means such a link still lands on the right page instead of an error.
+ * page — `/api.html`, `/api`, `/api/` — and returns the one canonical form
+ * (`api.html`). The extensionless forms only ever reach the client through a
+ * host 404 fallback; resolving them anyway means such a link still lands on
+ * the right page instead of an error.
  */
 export function routePathFromPathname(pathname: string): string | null {
   const decoded = safeDecode(pathname)
   const withBase = decoded.startsWith('/') ? decoded : `/${decoded}`
 
   if (!withBase.startsWith(BASE)) {
-    // Tolerate the base without its trailing slash: `/mother-mask` is the
-    // directory itself, which every host resolves to `/mother-mask/`.
+    // Tolerate the base without its trailing slash — relevant if BASE is ever
+    // a subdirectory again, e.g. `/mother-mask` is the directory itself, which
+    // every host resolves to `/mother-mask/`.
     if (`${withBase}/` !== BASE) return null
     return ''
   }

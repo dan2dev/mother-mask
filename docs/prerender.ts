@@ -16,9 +16,9 @@
  * stylesheet already in it — is the template, so asset names never have to be
  * reconstructed from the manifest by hand.
  *
- * Also emits `404.html`, which is what most static hosts (GitHub Pages
- * included) serve for a path with no file behind it, and `sitemap.xml`,
- * generated from the same route table as the pages.
+ * Also emits `404.html`, which is what most static hosts (Cloudflare's
+ * static-asset serving included) serve for a path with no file behind it, and
+ * `sitemap.xml`, generated from the same route table as the pages.
  */
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
