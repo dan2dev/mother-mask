@@ -665,3 +665,27 @@ describe('advanced pattern seeded editing stress', () => {
     } finally { dispose(); input.remove() }
   })
 })
+
+describe('large pasted values format in roughly linear time', () => {
+  // Regression guard for a quadratic hot spot in `findAnchor`/
+  // `remainingDataChars`: a value containing many characters that read as a
+  // separator by text but fail the capacity check re-scanned the shrinking
+  // tail of `value` on every one of them, an O(n²) blowup on ordinary large
+  // pastes (a URL or file path pasted into a date field, say). Generous
+  // thresholds keep this stable across slow CI machines while still failing
+  // hard if the scan regresses back to quadratic (it took ~2.3s at this size
+  // before the fix, and takes low single-digit milliseconds after it).
+  it('handles a URL-shaped paste into a slash-separated date mask', () => {
+    const value = 'https://example.com/' + 'path/'.repeat(8000) + '01/02/2024'
+    const start = performance.now()
+    applyMask(value, '99/99/9999', 0)
+    expect(performance.now() - start).toBeLessThan(500)
+  })
+
+  it('handles a value that is mostly the mask\'s own separator character', () => {
+    const value = '-'.repeat(32000) + '999'
+    const start = performance.now()
+    applyMask(value, '9-9-9-9-9-9', 0)
+    expect(performance.now() - start).toBeLessThan(500)
+  })
+})

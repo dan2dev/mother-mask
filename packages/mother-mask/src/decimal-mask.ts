@@ -353,6 +353,16 @@ export function processDecimal(value: string, options?: DecimalMaskOptions): str
  * Parse a raw or already-masked decimal value back into a JS number.
  * Ignores prefix/suffix/thousands separator; returns `0` for an empty or
  * digit-less value.
+ *
+ * @remarks IEEE-754 doubles represent integers exactly only up to
+ * `Number.MAX_SAFE_INTEGER` (2^53 - 1, 16 digits). A masked value whose
+ * integer part is longer — reachable whenever `numberPlaces` is left unset,
+ * which is the default — parses back silently rounded (e.g. a typed
+ * "...345678" can read back as "...345680"). The masked *string* stays
+ * exact; only this numeric conversion loses digits. Fields that must not
+ * lose one (money, identifiers) should either set `numberPlaces`, or check
+ * {@link isDecimalValueSafe} first and fall back to parsing the masked
+ * string with `BigInt`/a decimal library when it returns `false`.
  */
 export function unmaskDecimal(value: string, options?: DecimalMaskOptions): number {
   const opts = resolveDecimalOptions(options)
@@ -360,6 +370,21 @@ export function unmaskDecimal(value: string, options?: DecimalMaskOptions): numb
   const n = Number(fracDigits ? `${intDigits || '0'}.${fracDigits}` : intDigits || '0')
   // Never `-0`: a lone "-" with no digits is documented to parse as plain 0.
   return isNegative && n !== 0 ? -n : n
+}
+
+/**
+ * Whether {@link unmaskDecimal}`(value, options)` can represent `value`'s
+ * integer part exactly as a JS number, per the precision limit documented
+ * there. Cheap enough to call on every change for a field where an
+ * imprecise number would matter (money, account/ID-shaped fields).
+ */
+export function isDecimalValueSafe(value: string, options?: DecimalMaskOptions): boolean {
+  const opts = resolveDecimalOptions(options)
+  const { intDigits } = computeDecimalParts(value, opts)
+  // 15 digits is always safe regardless of leading-digit magnitude; 16
+  // sometimes is (up to 9,007,199,254,740,991) and sometimes isn't, so it's
+  // deliberately treated as unsafe rather than checked digit-by-digit.
+  return stripLeadingZeros(intDigits || '0').length <= 15
 }
 
 /**

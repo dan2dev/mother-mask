@@ -4,6 +4,7 @@ import {
   applyDecimalMaskReplacingLoneZero,
   applyDecimalMaskUnmergingSeparator,
   formatDecimalValue,
+  isDecimalValueSafe,
   processDecimal,
   unmaskDecimal,
 } from '../src/decimal-mask'
@@ -505,6 +506,35 @@ describe('unmaskDecimal() — masked string to number', () => {
 
   it('respects decimalPlaces: 0 (no fractional part)', () => {
     expect(unmaskDecimal('1,234', { decimalPlaces: 0 })).toBe(1234)
+  })
+
+  it('display stays exact but the parsed number silently loses precision past 2^53', () => {
+    // Without a `numberPlaces` cap the integer part grows unbounded, but a
+    // JS `number` can only represent integers exactly up to 16 digits.
+    const raw = '123456789012345678' // 18 digits
+    const masked = processDecimal(raw, { decimalPlaces: 2 })
+    expect(masked).toBe('123,456,789,012,345,678.00') // the displayed string is exact
+    expect(unmaskDecimal(masked, { decimalPlaces: 2 })).toBe(123456789012345680) // the number is not
+    expect(isDecimalValueSafe(masked, { decimalPlaces: 2 })).toBe(false) // callers can detect it
+  })
+})
+
+describe('isDecimalValueSafe() — precision guard for unmaskDecimal()', () => {
+  it('is true for a value within Number.MAX_SAFE_INTEGER-safe width', () => {
+    expect(isDecimalValueSafe('123,456,789,012,345')).toBe(true) // 15 digits
+  })
+
+  it('is false once the integer part exceeds the always-safe width', () => {
+    expect(isDecimalValueSafe('1,234,567,890,123,456')).toBe(false) // 16 digits
+    expect(isDecimalValueSafe('123,456,789,012,345,678')).toBe(false) // 18 digits
+  })
+
+  it('ignores leading zeros, prefix/suffix, and the fractional part', () => {
+    expect(isDecimalValueSafe('$0,000,000,001.999999', { prefix: '$' })).toBe(true)
+  })
+
+  it('is true for the empty/digit-less value (parses as 0)', () => {
+    expect(isDecimalValueSafe('')).toBe(true)
   })
 })
 

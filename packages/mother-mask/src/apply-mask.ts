@@ -142,15 +142,38 @@ function separatorBefore(plan: CompiledMask, run: number): string {
   return (plan.tokens[plan.literalBeforeRun[run]] as LiteralToken).text
 }
 
-/** Count of remaining slot-matchable (digit/letter) characters in `value` from `fromIdx` onward. */
-function remainingDataChars(value: string, fromIdx: number, compiler: PatternCompiler, plan: CompiledMask): number {
+/**
+ * Running count of data (digit/letter) characters in `value` up to each
+ * UTF-16 offset; `counts[value.length]` is the total. Built once per
+ * {@link assignToSlots} call so {@link remainingDataChars} is an O(1)
+ * lookup instead of an O(remaining length) rescan.
+ *
+ * Without this table, a value containing many characters that read as a
+ * separator by text but fail `findAnchor`'s capacity check below — a URL's
+ * "/" pasted into a "99/99/9999" field, say — re-scans the shrinking tail
+ * of `value` on every one of those characters: each individual rescan is
+ * cheap, but repeating it at every position sums to O(n²) on an ordinary
+ * large paste. One O(n) pass here replaces all of them.
+ */
+function buildDataPrefixCounts(value: string, compiler: PatternCompiler, plan: CompiledMask): Uint32Array {
+  const counts = new Uint32Array(value.length + 1)
   let count = 0
-  for (let i = fromIdx; i < value.length;) {
+  for (let i = 0; i < value.length;) {
     const ch = String.fromCodePoint(value.codePointAt(i)!)
+    counts[i] = count
+    // A surrogate pair's second code unit must see the same "before" count
+    // its first unit does — neither is a valid rescan start on its own.
+    if (ch.length === 2) counts[i + 1] = count
     i += ch.length
     if (compiler.isData(ch, plan)) count++
   }
-  return count
+  counts[value.length] = count
+  return counts
+}
+
+/** Count of remaining slot-matchable (digit/letter) characters in `value` from `fromIdx` onward — O(1) via a precomputed prefix table. */
+function remainingDataChars(fromIdx: number, prefixCounts: Uint32Array): number {
+  return prefixCounts[prefixCounts.length - 1] - prefixCounts[fromIdx]
 }
 
 /** Where each character of `value` ended up, as produced by {@link assignToSlots}. */
@@ -282,14 +305,14 @@ function findAnchor(
   valueIdx: number,
   plan: CompiledMask,
   fromRun: number,
-  compiler: PatternCompiler,
   committable: boolean,
   intent: boolean,
+  prefixCounts: Uint32Array,
 ): Anchor | undefined {
   const runCount = plan.runChars.length
   const fits = (run: number, length: number): boolean =>
     (committable && run === fromRun + 1) ||
-    remainingDataChars(value, valueIdx + length, compiler, plan) <= plan.capacityFromRun[run]
+    remainingDataChars(valueIdx + length, prefixCounts) <= plan.capacityFromRun[run]
   // A stand-in can only mean the divider that closes the segment being typed
   // — which of the ones further along was meant would be pure guesswork — and
   // only where `committable` says that divider is the user's call to make.
@@ -349,6 +372,10 @@ function assignToSlots(
   let slotIdx = 0
   let valueIdx = 0
   let caretBoundaryUsed = false
+  // Built once so `findAnchor`'s capacity check below is O(1) per call
+  // instead of rescanning the shrinking tail of `value` every time it's
+  // asked and fails — see `buildDataPrefixCounts`.
+  const prefixCounts = buildDataPrefixCounts(value, compiler, plan)
   const leading = plan.tokens[0]
   if (readLiterals && leading?.kind === 'literal' && value.startsWith(leading.text)) {
     literalSource[0] = 0
@@ -371,8 +398,8 @@ function assignToSlots(
     // run, whose minimum equals its maximum (see `CompiledMask.runMin`).
     const committable = runFilled[runIdx] >= plan.runMin[runIdx] && runFilled[runIdx] < chars.length
     const anchor = readLiterals && (!matches || plan.hasEscapes)
-      ? findAnchor(value, valueIdx, plan, runIdx, compiler, committable,
-          !matches && isSeparatorIntent(ch, compiler, plan))
+      ? findAnchor(value, valueIdx, plan, runIdx, committable,
+          !matches && isSeparatorIntent(ch, compiler, plan), prefixCounts)
       : undefined
     if (anchor) {
       // The run's *own* closing separator, sitting right where the run stops:
@@ -419,7 +446,7 @@ function assignToSlots(
       !caretBoundaryUsed && slotIdx > 0 && valueIdx === inputCaret && runIdx + 1 < runCount &&
       (!matches || plan.runChars[runIdx + 1][0].match(ch)) &&
       value.indexOf(separatorBefore(plan, runIdx + 1), valueIdx) < 0 &&
-      remainingDataChars(value, valueIdx, compiler, plan) === plan.capacityFromRun[runIdx + 1]
+      remainingDataChars(valueIdx, prefixCounts) === plan.capacityFromRun[runIdx + 1]
     ) {
       caretBoundaryUsed = true
       runIdx++

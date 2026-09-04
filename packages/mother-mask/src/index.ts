@@ -17,6 +17,7 @@ export { bindDecimal } from './bind-decimal'
 export {
   applyDecimalMask,
   formatDecimalValue,
+  isDecimalValueSafe,
   processDecimal,
   unmaskDecimal,
 } from './decimal-mask'

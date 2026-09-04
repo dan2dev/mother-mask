@@ -43,9 +43,9 @@
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {
-    "@types/node": "^26.4.0",
+    "@types/node": "^26.4.1",
     "@vitest/coverage-v8": "^4.1.11",
-    "bumpp": "^12.2.2",
+    "bumpp": "^12.3.0",
     "jsdom": "^29.1.1",
     "tsdown": "^0.22.14",
     "typescript": "^7.0.2",
