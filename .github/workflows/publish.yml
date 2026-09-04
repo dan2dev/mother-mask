@@ -114,3 +114,7 @@ jobs:
     uses: ./.github/workflows/deploy-docs.yml
     with:
       ref: ${{ needs.publish.outputs.release_ref }}
+    # Repository secrets are not forwarded into a called reusable workflow by
+    # default — deploy-docs.yml needs CLOUDFLARE_API_TOKEN and
+    # CLOUDFLARE_ACCOUNT_ID, so the caller has to pass its secrets context on.
+    secrets: inherit
