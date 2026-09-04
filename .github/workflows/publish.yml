@@ -110,8 +110,7 @@ jobs:
     needs: publish
     permissions:
       contents: read
-      pages: write
-      id-token: write
+      deployments: write
     uses: ./.github/workflows/deploy-docs.yml
     with:
       ref: ${{ needs.publish.outputs.release_ref }}
