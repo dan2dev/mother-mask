@@ -13,6 +13,7 @@ mother-mask/
 ├── docs/                   # Nuclo documentation website and live demos (prerendered)
 ├── e2e/                    # real-browser tests and fixtures
 ├── examples/basic-examples/ # standalone examples (optional)
+├── examples/react-simple/   # React InputMask and InputDecimal components
 ├── Makefile                # workspace-level commands
 └── package.json            # private workspace root
 ```
@@ -55,6 +56,12 @@ make build
 cd docs
 bun run build
 ```
+
+### React example
+
+See [`examples/react-simple/README.md`](examples/react-simple/README.md) for a
+standalone React app with `InputMask` and `InputDecimal` wrappers, setup
+instructions, and usage.
 
 ### Browser tests
 
