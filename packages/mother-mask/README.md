@@ -486,6 +486,267 @@ Preact's footprint advantage intact.
 See the [Preact example](https://github.com/dan2dev/mother-mask/tree/main/examples/preact-simple)
 for a runnable app.
 
+## Lit
+
+Import the `<lit-mask-input>` and `<lit-mask-decimal>` custom elements from
+the separate `mother-mask/lit` entry — importing the module registers both
+elements as a side effect:
+
+```html
+<script type="module">
+  import 'mother-mask/lit'
+</script>
+
+<label for="phone">Phone</label>
+<lit-mask-input id="phone" name="phone" mask="(99) 99999-9999" input-mode="tel"></lit-mask-input>
+
+<label for="amount">Amount</label>
+<lit-mask-decimal id="amount" name="amount"></lit-mask-decimal>
+
+<script type="module">
+  const phone = document.getElementById('phone')
+  phone.addEventListener('value-change', (e) => console.log(e.detail))
+
+  const amount = document.getElementById('amount')
+  amount.options = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+  amount.addEventListener('numeric-value-change', (e) => console.log(e.detail))
+</script>
+```
+
+`mother-mask/lit` re-exports every core function, class, and type as well as
+the `LitMaskInput` and `LitMaskDecimal` classes (for `instanceof` checks or
+subclassing). Its core exports are aliases to `mother-mask`, sharing the
+same implementation and caches. The core ESM, CommonJS, and UMD builds
+remain independent of Lit. Lit is an optional peer dependency required only
+when importing `mother-mask/lit`; the supported version range is `^3.0.0`.
+Lit is not bundled.
+
+- Both elements render into **light DOM** (`createRenderRoot()` returns
+  `this`, not a shadow root), so a page's own `<label for>` and global CSS
+  reach the native `<input>` directly, the same as any other text field.
+- `<lit-mask-input>` accepts `mask` (a plain string works as an HTML
+  attribute; assign an array/function `MaskPattern` as a JS property) and an
+  `options` object (JS property only — objects can't be expressed as plain
+  attributes). It emits `value-change` (`detail: string`).
+  `<lit-mask-decimal>` accepts an `options` object and emits both
+  `value-change` and `numeric-value-change` (`detail: number`), and always
+  sets `inputmode="decimal"`.
+- Binding happens in `firstUpdated` (Lit's DOM-is-ready hook) and disposes
+  in `disconnectedCallback` — both fire only on the browser, so there's no
+  `typeof window` guard to write. `updated` reactively rebinds whenever
+  `mask`/`options` change or `value` is set externally; an echo of the
+  element's own `value-change` event is ignored.
+- A curated set of native attributes forward to the inner `<input>`: `name`,
+  `placeholder`, `disabled`, `readonly`, `required`, `input-mode`, and
+  `autocomplete`. `id` is a special case: `<lit-mask-input id="phone">`
+  writes `id="phone"` onto the custom element itself, not the `<input>` it
+  renders — a `<label for="phone">` would then resolve to the (unfocusable)
+  host instead of the actual control. After first render, the element moves
+  its own `id` onto the rendered `<input>` and removes it from itself, so
+  `<label for="phone">` keeps working exactly as if `<lit-mask-input>`
+  weren't there.
+
+## Stencil
+
+Import the `<stencil-mask-input>` and `<stencil-mask-decimal>` custom
+elements from their own `mother-mask/stencil/mask-input` and
+`mother-mask/stencil/mask-decimal` entries — each registers its element as
+an import side effect:
+
+```html
+<script type="module">
+  import 'mother-mask/stencil/mask-input'
+  import 'mother-mask/stencil/mask-decimal'
+</script>
+
+<label for="phone">Phone</label>
+<stencil-mask-input id="phone" name="phone" mask="(99) 99999-9999" input-mode="tel"></stencil-mask-input>
+
+<label for="amount">Amount</label>
+<stencil-mask-decimal id="amount" name="amount"></stencil-mask-decimal>
+
+<script type="module">
+  const phone = document.getElementById('phone')
+  phone.addEventListener('value-change', (e) => console.log(e.detail))
+
+  const amount = document.getElementById('amount')
+  amount.options = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+  amount.addEventListener('numeric-value-change', (e) => console.log(e.detail))
+</script>
+```
+
+Stencil components are fundamentally a compiled artifact — `@Component`,
+`@Prop`, `@Event`, and friends are erased by the Stencil compiler at build
+time and have no meaningful runtime implementation on their own, so (unlike
+every other integration in this README) `mother-mask/stencil` is **not**
+built by the same tsdown pipeline as the rest of this package; it's a
+separate Stencil project ([`stencil-src/`](../../packages/mother-mask/stencil-src))
+compiled with the Stencil CLI's `dist-custom-elements` output target and
+copied into `dist/stencil` as part of `bun run build`. Two consequences
+follow from that:
+
+- **No `mother-mask/stencil` barrel re-exporting core helpers or a
+  `@stencil/core` peer dependency.** The Stencil compiler bundles
+  `mother-mask`'s core logic directly into each component (there's no
+  shared module identity/cache with a page's own `mother-mask` import, the
+  way the other framework entries alias `export * from 'mother-mask'`), and
+  bundles its own tiny runtime too (`externalRuntime: false`) — so
+  `<stencil-mask-input>`/`<stencil-mask-decimal>` have **zero runtime
+  dependencies** at all, usable on any page. Import core helpers like
+  `formatDecimalValue` from `mother-mask` directly.
+- Each component is its own tree-shakeable module (`mask-input`,
+  `mask-decimal`) rather than one combined entry, matching how Stencil's
+  own `dist-custom-elements` output is meant to be consumed.
+
+- `<stencil-mask-input>` accepts `mask`, `options` (JS property only), and
+  a curated set of forwarded attributes: `name`, `placeholder`, `disabled`,
+  `readonly`, `required`, and `input-mode` (exposed as the `inputModeAttr`
+  JS property — not `inputMode`, since this class is a real `HTMLElement`
+  at runtime and already declares its own incompatible `inputMode`). It
+  emits `value-change` (`detail: string`). `<stencil-mask-decimal>` accepts
+  `options` and emits both `value-change` and `numeric-value-change`
+  (`detail: number`), and always sets `inputmode="decimal"`.
+- The ref to the native `<input>` is grabbed via `render()`'s `ref`
+  callback — the only point Stencil hands back a real DOM node. Binding
+  itself happens in `connectedCallback` when that ref is already available
+  (true on every *re*-connection — the element was moved or re-appended —
+  since the ref from the first render still exists) and otherwise in
+  `componentDidLoad`, which fires exactly once, right after the very first
+  render actually creates that ref. Either way, both only ever run in the
+  browser — Stencil's SSR/hydration path never calls them, so there's no
+  `typeof window` guard to write. `@Watch('mask')`/`@Watch('options')`/
+  `@Watch('value')` reactively rebind; `disconnectedCallback` always
+  disposes.
+- Same `id`-transfer behavior as Lit's elements (both render into light
+  DOM): after first render, a host `id` moves onto the rendered `<input>`
+  so `<label for>` keeps resolving to the actual control.
+- Because raw `.tsx` Stencil source can't run outside the Stencil compiler,
+  [`tests/stencil.test.ts`](../../packages/mother-mask/tests/stencil.test.ts)
+  exercises the *built* `dist/stencil` output directly rather than the
+  source — run `bun run build` before `bun run test` if you're working on
+  this entry locally.
+
+## Alpine.js
+
+Register the `x-mask` directive from the separate `mother-mask/alpine`
+entry with `Alpine.plugin(...)`:
+
+```html
+<script type="module">
+  import Alpine from 'alpinejs'
+  import motherMaskPlugin from 'mother-mask/alpine'
+
+  Alpine.plugin(motherMaskPlugin)
+  Alpine.start()
+</script>
+
+<div x-data="{ phone: '', amount: '' }">
+  <label for="phone">Phone</label>
+  <input
+    id="phone"
+    name="phone"
+    inputmode="tel"
+    x-mask="{ mask: '(99) 99999-9999', value: phone }"
+    x-on:mask-change="phone = $event.detail"
+  />
+
+  <label for="amount">Amount</label>
+  <input
+    id="amount"
+    name="amount"
+    x-mask.decimal="{ options: { decimalPlaces: 2, prefix: '$', allowNegative: true }, value: amount }"
+    x-on:mask-change="amount = $event.detail"
+  />
+</div>
+```
+
+`mother-mask/alpine` re-exports every core function, class, and type as well
+as `motherMaskPlugin` (both a named export and the module's default export,
+matching Alpine's own documented plugin convention — `export default
+function (Alpine) { ... }`). Its core exports are aliases to `mother-mask`,
+sharing the same implementation and caches. The core ESM, CommonJS, and UMD
+builds remain independent of Alpine. Alpine is an optional peer dependency
+required only when importing `mother-mask/alpine`; the supported version
+range is `^3.0.0`. Alpine is not bundled.
+
+- `x-mask` takes an expression evaluating to `{ mask, options?, value? }`;
+  `x-mask.decimal` takes `{ options?, value? }`. Reading a reactive value
+  inside that expression (e.g. `value: phone`) is what makes it reactive —
+  Alpine's own `effect()` re-runs the directive whenever a dependency read
+  while evaluating the expression changes, rebinding only if the mask,
+  options, or an externally-set value actually changed.
+- **Two-way binding goes through a DOM event, not `x-model`.** The
+  directive dispatches `mask-change` (`detail: string`, and for
+  `.decimal`, also `mask-numeric-change` with `detail: number`) — bind
+  those with `x-on:mask-change`, as shown above. Combining `x-mask` with
+  `x-model` on the same element isn't supported: both would independently
+  react to the native `input` event with no defined ordering between them,
+  and could fight over the field's live value on every keystroke.
+- The directive's callback runs when Alpine walks the live DOM tree —
+  Alpine has no server-rendering step, so there's no `typeof window` guard
+  to write. `cleanup()` guarantees `dispose()` runs exactly once, both
+  before every rebind and when the element is removed from the DOM.
+
+## Native Web Components
+
+Import the `<mm-mask-input>` and `<mm-mask-decimal>` custom elements from
+the separate `mother-mask/web-components` entry — no framework at all,
+plain `customElements`. Importing the module registers both elements as a
+side effect:
+
+```html
+<script type="module">
+  import 'mother-mask/web-components'
+</script>
+
+<label for="phone">Phone</label>
+<mm-mask-input id="phone" name="phone" mask="(99) 99999-9999" input-mode="tel"></mm-mask-input>
+
+<label for="amount">Amount</label>
+<mm-mask-decimal id="amount" name="amount"></mm-mask-decimal>
+
+<script type="module">
+  const phone = document.getElementById('phone')
+  phone.addEventListener('value-change', (e) => console.log(e.detail))
+
+  const amount = document.getElementById('amount')
+  amount.options = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+  amount.addEventListener('numeric-value-change', (e) => console.log(e.detail))
+</script>
+```
+
+`mother-mask/web-components` re-exports every core function, class, and
+type as well as the `MotherMaskInputElement` and `MotherMaskDecimalElement`
+classes (for `instanceof` checks or subclassing). Its core exports are
+aliases to `mother-mask`, sharing the same implementation and caches. The
+core ESM, CommonJS, and UMD builds remain independent of this entry, and it
+has **zero runtime dependencies** of its own — it's the one integration in
+this README usable with no framework, no build step, and no peer
+dependency at all; drop the `<script type="module">` tag on any page.
+
+- Both elements render into **light DOM** (a single `<input>` appended as a
+  real child, no shadow root), so a page's own `<label for>` and global CSS
+  reach it directly, the same as Lit's and Stencil's entries.
+- `<mm-mask-input>` accepts `mask` and `options` as either a plain
+  attribute (`mask`, string patterns only) or a JS property (any
+  `MaskPattern`, including arrays/functions, plus `options` objects, which
+  can't be expressed as attributes at all). A curated set of other
+  attributes forward to the inner `<input>`: `name`, `placeholder`,
+  `disabled`, `readonly`, `required`, `input-mode`, and `autocomplete`. It
+  emits `value-change` (`detail: string`). `<mm-mask-decimal>` accepts
+  `options` (JS property only) and emits both `value-change` and
+  `numeric-value-change` (`detail: number`), and always sets
+  `inputmode="decimal"`.
+- Binding happens in `connectedCallback` and disposes in
+  `disconnectedCallback` — both fire only when a real document actually
+  connects/disconnects the element, so there's no `typeof window` guard to
+  write. `attributeChangedCallback` and the `mask`/`options`/`value`
+  property setters reactively rebind; an echo of the element's own
+  `value-change` event is ignored.
+- Same `id`-transfer behavior as Lit's and Stencil's elements: after
+  connecting, a host `id` moves onto the rendered `<input>` so
+  `<label for>` keeps resolving to the actual control.
+
 ## Decimal Inputs
 
 Use `bindDecimal` for numbers, currency fields, and values where the integer part should grow freely.

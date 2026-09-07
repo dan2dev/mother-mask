@@ -69,4 +69,34 @@ export default defineConfig([{
   sourcemap: true,
   // Preact is an optional peer, and core exports must retain their identity.
   deps: { neverBundle: ['mother-mask', 'preact', /^preact\//] },
+}, {
+  entry: { lit: 'src/lit/index.ts' },
+  format: ['esm', 'cjs'],
+  outDir: 'dist',
+  clean: false,
+  dts: { tsgo: true },
+  minify: true,
+  sourcemap: true,
+  // Lit is an optional peer, and core exports must retain their identity.
+  deps: { neverBundle: ['mother-mask', 'lit', /^lit\//] },
+}, {
+  entry: { alpine: 'src/alpine/index.ts' },
+  format: ['esm', 'cjs'],
+  outDir: 'dist',
+  clean: false,
+  dts: { tsgo: true },
+  minify: true,
+  sourcemap: true,
+  // Alpine is an optional peer, and core exports must retain their identity.
+  deps: { neverBundle: ['mother-mask', 'alpinejs'] },
+}, {
+  entry: { 'web-components': 'src/web-components/index.ts' },
+  format: ['esm', 'cjs'],
+  outDir: 'dist',
+  clean: false,
+  dts: { tsgo: true },
+  minify: true,
+  sourcemap: true,
+  // No framework dependency at all — plain customElements.
+  deps: { neverBundle: ['mother-mask'] },
 }])

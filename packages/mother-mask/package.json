@@ -86,6 +86,48 @@
         "default": "./dist/preact.cjs"
       }
     },
+    "./lit": {
+      "import": {
+        "types": "./dist/lit.d.mts",
+        "default": "./dist/lit.mjs"
+      },
+      "require": {
+        "types": "./dist/lit.d.cts",
+        "default": "./dist/lit.cjs"
+      }
+    },
+    "./stencil": {
+      "types": "./dist/stencil/index.d.ts",
+      "default": "./dist/stencil/index.js"
+    },
+    "./stencil/mask-input": {
+      "types": "./dist/stencil/stencil-mask-input.d.ts",
+      "default": "./dist/stencil/stencil-mask-input.js"
+    },
+    "./stencil/mask-decimal": {
+      "types": "./dist/stencil/stencil-mask-decimal.d.ts",
+      "default": "./dist/stencil/stencil-mask-decimal.js"
+    },
+    "./alpine": {
+      "import": {
+        "types": "./dist/alpine.d.mts",
+        "default": "./dist/alpine.mjs"
+      },
+      "require": {
+        "types": "./dist/alpine.d.cts",
+        "default": "./dist/alpine.cjs"
+      }
+    },
+    "./web-components": {
+      "import": {
+        "types": "./dist/web-components.d.mts",
+        "default": "./dist/web-components.mjs"
+      },
+      "require": {
+        "types": "./dist/web-components.d.cts",
+        "default": "./dist/web-components.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -93,6 +135,8 @@
   ],
   "peerDependencies": {
     "@angular/core": "^19.0.0 || ^20.0.0",
+    "alpinejs": "^3.0.0",
+    "lit": "^3.0.0",
     "preact": "^10.0.0",
     "react": "^19.2.0",
     "solid-js": "^1.9.0",
@@ -113,13 +157,20 @@
     },
     "preact": {
       "optional": true
+    },
+    "lit": {
+      "optional": true
+    },
+    "alpinejs": {
+      "optional": true
     }
   },
   "scripts": {
-    "build": "tsdown",
+    "build": "tsdown && bun run build:stencil",
+    "build:stencil": "stencil build --config \"$(cd stencil-src && pwd)/stencil.config.ts\" && cp stencil-src/types/*.d.ts dist/stencil/",
     "build:watch": "tsdown --watch",
     "dev": "tsdown --watch",
-    "clean": "rm -rf dist *.tsbuildinfo",
+    "clean": "rm -rf dist stencil-src/dist stencil-src/.stencil *.tsbuildinfo",
     "test": "vitest run --coverage",
     "test:watch": "vitest --watch --coverage",
     "test:package": "bun run build && node --test tests/package.test.mjs",
@@ -132,13 +183,17 @@
     "@angular/compiler": "^20.3.30",
     "@angular/core": "^20.3.30",
     "@angular/platform-browser": "^20.3.30",
+    "@stencil/core": "^4.44.2",
+    "@types/alpinejs": "^3.13.11",
     "@types/node": "^26.4.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitest/coverage-v8": "^4.1.11",
     "@vue/test-utils": "^2.5.0",
+    "alpinejs": "^3.17.2",
     "bumpp": "^12.3.0",
     "jsdom": "^29.1.1",
+    "lit": "^3.3.3",
     "preact": "^10.29.8",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

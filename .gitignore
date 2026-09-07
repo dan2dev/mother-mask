@@ -8,6 +8,7 @@ dist/
 build/
 out/
 *.tsbuildinfo
+.stencil/
 
 # ── Test & Coverage ───────────────────────────────────────────────────────────
 coverage/

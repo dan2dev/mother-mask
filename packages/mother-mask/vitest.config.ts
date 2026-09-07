@@ -18,7 +18,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['node_modules/**', 'dist/**', '**/*.d.ts', 'src/index.ts', 'src/react/index.ts', 'src/vue/index.ts', 'src/angular/index.ts', 'src/svelte/index.ts', 'src/solid/index.ts', 'src/preact/index.ts', 'src/types.ts'],
+      exclude: ['node_modules/**', 'dist/**', '**/*.d.ts', 'src/index.ts', 'src/react/index.ts', 'src/vue/index.ts', 'src/angular/index.ts', 'src/svelte/index.ts', 'src/solid/index.ts', 'src/preact/index.ts', 'src/lit/index.ts', 'src/alpine/index.ts', 'src/web-components/index.ts', 'src/types.ts'],
       reporter: ['text', 'html', 'json-summary'],
       reportsDirectory: './coverage',
       thresholds: {
@@ -73,6 +73,27 @@ export default defineConfig({
           perFile: true,
           lines: 95,
           branches: 85,
+          functions: 100,
+          statements: 95,
+        },
+        'src/lit/*.ts': {
+          perFile: true,
+          lines: 95,
+          branches: 80,
+          functions: 100,
+          statements: 95,
+        },
+        'src/alpine/*.ts': {
+          perFile: true,
+          lines: 95,
+          branches: 80,
+          functions: 100,
+          statements: 95,
+        },
+        'src/web-components/*.ts': {
+          perFile: true,
+          lines: 95,
+          branches: 80,
           functions: 100,
           statements: 95,
         },
