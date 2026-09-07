@@ -90,6 +90,85 @@ Binding does not format the initial value or fire an initial callback. Use the
 Assignments to `input.value` do not dispatch an input event, so format programmatic
 updates yourself as well.
 
+## React
+
+Import the React 19.2 components from the separate `mother-mask/react` entry:
+
+```tsx
+import { useState } from 'react'
+import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/react'
+
+// Keep option objects and mask arrays stable across renders.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+export function Form() {
+  const [phone, setPhone] = useState('')
+  const [amount, setAmount] = useState('')
+
+  return (
+    <>
+      <label htmlFor="phone">Phone</label>
+      <InputMask
+        id="phone"
+        name="phone"
+        mask="(99) 99999-9999"
+        inputMode="tel"
+        value={phone}
+        onValueChange={setPhone}
+      />
+      <label htmlFor="amount">Amount</label>
+      <InputDecimal
+        id="amount"
+        name="amount"
+        options={currency}
+        value={amount}
+        onValueChange={setAmount}
+      />
+      <button type="button" onClick={() => setAmount(formatDecimalValue(1234.5, currency))}>
+        Set amount
+      </button>
+    </>
+  )
+}
+```
+
+`mother-mask/react` re-exports every core function, class, and type as well as
+`InputMask`, `InputDecimal`, `InputMaskProps`, and `InputDecimalProps`. Its core
+exports are aliases to `mother-mask`, sharing the same implementation and caches.
+The core ESM, CommonJS, and UMD builds remain independent of React. React is an
+optional peer dependency required only when importing `mother-mask/react`;
+the supported version range is `^19.2.0`. React is not bundled.
+
+- Both components accept controlled string `value` or uncontrolled string
+  `defaultValue`. Update controlled state synchronously in `onValueChange`;
+  assigning `''` clears the input. Use `formatDecimalValue` to convert JS numbers
+  to decimal strings using the same options as the field.
+- `InputMask` accepts `mask` and optional `BindOptions` (without `onChange`).
+  `onValueChange(value)` reports the formatted string.
+- `InputDecimal` accepts optional `BindDecimalOptions` (without `onChange`).
+  `onValueChange(value, numericValue)` reports the formatted string and parsed
+  JS number; empty input reports `('', 0)`. Decimal strings use the configured
+  decimal separator. Preserve the string in state so intermediate edits work.
+- Native input props and `ref` are forwarded. Both use `type="text"`;
+  `InputDecimal` defaults to `inputMode="decimal"`. Use `onValueChange` instead
+  of React's `onChange`. Initial formatting and parent updates do not fire it.
+- The components dispose listeners and pending frames on replacement, unmount,
+  and Activity hide. Controlled echoes preserve the mask's caret and editing
+  state. Keep options and mask arrays stable to avoid unnecessary rebinding.
+- IME composition drafts survive unrelated renders. Configuration changes made
+  while an Activity is hidden are applied when it becomes visible again.
+  Native attributes supplied through React are preserved across rebinding.
+- Native form reset keeps a controlled field's current value. An uncontrolled
+  field resets to its original `defaultValue`, formatted with its current
+  options. Canceled resets are respected; reset does not fire `onValueChange`.
+  This also works for inputs associated with a form through the `form` prop.
+  Readonly and disabled fields do not emit change callbacks.
+
+The React entry preserves a `use client` directive for React Server Components;
+server-only code can continue importing pure helpers from `mother-mask`.
+See the [React example](https://github.com/dan2dev/mother-mask/tree/main/examples/react-simple)
+for a runnable app and browser lifecycle/memory tests.
+
 ## Decimal Inputs
 
 Use `bindDecimal` for numbers, currency fields, and values where the integer part should grow freely.
@@ -207,6 +286,34 @@ The user decides how wide a ranged segment is, using the separator:
 
 Reaching `min` alone never inserts anything: after `"3"` the value is `"3"`,
 because the next keystroke could still be a second digit.
+
+**Any separator ends the segment, and the mask prints its own.** A ranged
+segment is the one place a mask cannot work out its own boundary, so a person
+saying "this field is done" gets to say it with whichever divider is under
+their thumb — a keypad `.`, a `-`, a space — not only the one the pattern
+happens to spell:
+
+```ts
+bind(date, '9{1,2}/9{1,2}/9{4}')
+// type "3.4.1986" → "3/4/1986"
+// type "3-4-1986" → "3/4/1986"
+// type "3 4 1986" → "3/4/1986"
+```
+
+Any Unicode punctuation, symbol, or space works, and each one behaves exactly
+as the mask's own separator does — same value, same caret. Letters, digits,
+and other scripts do not: a mistyped `"a"` in a date field is a typo, not a
+decision, so it stays the noise it always was. Neither does a character this
+mask's own alphabet accepts — a custom token matching `"."` makes `"."` content
+in that mask, never a boundary.
+
+The rule reaches exactly as far as the ambiguity it resolves. A segment only
+reads a separator this way once it is at or past its `min` and still short of
+its `max`; everywhere else the mask owns where its dividers go, and a segment
+that reaches its width reveals the next divider by itself (see
+[Eager Mode](#eager-mode)). So a pattern with no `{min,max}` segment is
+completely unaffected — under `'99/99/9999'`, `"4."` and `"4/"` alike give
+`"4"`, since one digit is short of the day's width either way.
 
 Closing a segment early retires the slots it did not use, so a finished value
 can be shorter than the pattern's maximum: `"3/4/1986"` is complete at eight

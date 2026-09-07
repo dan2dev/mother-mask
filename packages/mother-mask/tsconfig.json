@@ -5,6 +5,10 @@
     "moduleDetection": "force",
     "module": "preserve",
     "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "paths": {
+      "mother-mask": ["./src/index.ts"]
+    },
     "resolveJsonModule": true,
     "types": ["node"],
     "strict": true,

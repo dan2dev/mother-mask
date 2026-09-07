@@ -26,11 +26,29 @@
         "default": "./dist/mother-mask.cjs"
       }
     },
+    "./react": {
+      "import": {
+        "types": "./dist/react.d.mts",
+        "default": "./dist/react.mjs"
+      },
+      "require": {
+        "types": "./dist/react.d.cts",
+        "default": "./dist/react.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "dist"
   ],
+  "peerDependencies": {
+    "react": "^19.2.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
   "scripts": {
     "build": "tsdown",
     "build:watch": "tsdown --watch",
@@ -38,15 +56,20 @@
     "clean": "rm -rf dist *.tsbuildinfo",
     "test": "vitest run --coverage",
     "test:watch": "vitest --watch --coverage",
+    "test:package": "bun run build && node --test tests/package.test.mjs",
     "typecheck": "tsc --noEmit",
     "release": "bumpp",
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "@vitest/coverage-v8": "^4.1.11",
     "bumpp": "^12.3.0",
     "jsdom": "^29.1.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "tsdown": "^0.22.14",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11"

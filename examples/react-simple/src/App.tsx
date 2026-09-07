@@ -1,7 +1,5 @@
 import { useState } from 'react'
-import { formatDecimalValue } from 'mother-mask'
-import { InputDecimal } from './InputDecimal'
-import { InputMask } from './InputMask'
+import { formatDecimalValue, InputDecimal, InputMask } from 'mother-mask/react'
 
 // Keep arrays and options stable so state updates don't recreate the binding.
 const phoneMasks = ['(99) 9999-9999', '(99) 99999-9999']

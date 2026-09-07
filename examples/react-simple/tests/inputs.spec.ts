@@ -44,10 +44,12 @@ for (const kind of ['pattern', 'decimal'] as const) {
     await page.evaluate(() => window.maskFixture.update({ hidden: true }))
     const hidden = await page.evaluate(() => window.maskFixture.stats())
     expect(hidden.added).toBe(hidden.removed)
+    expect(hidden.resetsAdded).toBe(hidden.resetsRemoved)
     expect(hidden.refCleared).toBe(true)
     await page.evaluate(() => window.maskFixture.update({ hidden: false, acceptEdits: true }))
     const shown = await page.evaluate(() => window.maskFixture.stats())
-    expect(shown.added - shown.removed).toBe(5)
+    expect(shown.added - shown.removed).toBe(7)
+    expect(shown.resetsAdded - shown.resetsRemoved).toBe(1)
     await page.evaluate(() => window.maskFixture.focus())
     await expect(input).toBeFocused()
     await input.pressSequentially('12')
@@ -55,6 +57,7 @@ for (const kind of ['pattern', 'decimal'] as const) {
     await page.evaluate(() => window.maskFixture.unmount())
     const unmounted = await page.evaluate(() => window.maskFixture.stats())
     expect(unmounted.added).toBe(unmounted.removed)
+    expect(unmounted.resetsAdded).toBe(unmounted.resetsRemoved)
     expect(unmounted.refCleared).toBe(true)
     expect(errors).toEqual([])
   })
@@ -73,10 +76,11 @@ for (const kind of ['pattern', 'decimal'] as const) {
     await input.fill('42')
     expect(await page.evaluate(() => window.maskFixture.events.at(-1)?.value)).toBe(await input.inputValue())
     const current = await page.evaluate(() => window.maskFixture.stats())
-    expect(current.added - current.removed).toBe(5)
+    expect(current.added - current.removed).toBe(7)
   })
 
-  test(`${kind}: queued frames and detached inputs are released on unmount`, async ({ page }) => {
+  test(`${kind}: queued frames and detached inputs are released on unmount`, async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'Forced garbage collection uses Chromium CDP')
     await page.evaluate(kind => {
       window.maskFixture.parkFrames()
       window.maskFixture.mount({ kind, defaultValue: '123', options: {}, probe: true })
@@ -87,6 +91,7 @@ for (const kind of ['pattern', 'decimal'] as const) {
     const disposed = await page.evaluate(() => window.maskFixture.stats())
     expect(disposed.pending).toBe(0)
     expect(disposed.added).toBe(disposed.removed)
+    expect(disposed.resetsAdded).toBe(disposed.resetsRemoved)
     expect(disposed.refCleared).toBe(true)
     expect(await page.evaluate(() => window.maskFixture.events)).toEqual([])
     await page.evaluate(() => window.maskFixture.flushDeletionHistory())
@@ -97,9 +102,76 @@ for (const kind of ['pattern', 'decimal'] as const) {
     expect(await page.evaluate(() => window.maskFixture.retained()), 'inputs, callbacks or options retained after GC').toBe(0)
     await cdp.detach()
   })
+
+  test(`${kind}: native form reset honors current values, configuration and cancellation`, async ({ page }) => {
+    await page.evaluate(kind => window.maskFixture.mount({ kind, value: '123456' }), kind)
+    const input = page.getByRole('textbox', { name: 'Test input' })
+    await page.evaluate(() => window.maskFixture.update({ value: '654321' }))
+    await page.evaluate(() => (document.querySelector('#test-form') as HTMLFormElement).reset())
+    await expect(input).toHaveValue(kind === 'pattern' ? '654-321' : '654,321')
+    expect(await page.evaluate(() => window.maskFixture.events)).toEqual([])
+    await page.evaluate(kind => {
+      window.maskFixture.unmount()
+      window.maskFixture.mount({ kind, defaultValue: '123456' })
+      window.maskFixture.update({ mask: '99/99/99', options: { segmented: false } })
+    }, kind)
+    await input.fill('42')
+    const edited = await input.inputValue()
+    await page.evaluate(() => {
+      const form = document.querySelector('#test-form') as HTMLFormElement
+      form.addEventListener('reset', event => event.preventDefault(), { once: true })
+      form.reset()
+    })
+    await expect(input).toHaveValue(edited)
+    await page.evaluate(() => (document.querySelector('#test-form') as HTMLFormElement).reset())
+    await expect(input).toHaveValue(kind === 'pattern' ? '12/34/56' : '123456')
+    await input.press('ControlOrMeta+a')
+    await input.pressSequentially('78')
+    await expect(input).toHaveValue(kind === 'pattern' ? '78/' : '78')
+  })
+
+  test(`${kind}: IME drafts survive rerenders and native attributes survive rebinding`, async ({ page }) => {
+    await page.evaluate(kind => window.maskFixture.mount({
+      kind, value: '', mask: 'UUUU',
+      options: kind === 'pattern' ? { tokens: { U: { match: /\p{L}/u } } } : undefined,
+    }), kind)
+    const input = page.getByRole('textbox', { name: 'Test input' })
+    const draft = kind === 'pattern' ? 'に' : '12.'
+    await input.evaluate((node, draft) => {
+      const input = node as HTMLInputElement
+      input.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }))
+      input.value = draft
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, isComposing: true, inputType: 'insertCompositionText', data: draft }))
+    }, draft)
+    await page.evaluate(() => window.maskFixture.update({ callbackVersion: 'updated', inputProps: { autoComplete: 'email', spellCheck: true, maxLength: 20 } }))
+    await expect(input).toHaveValue(draft)
+    await input.dispatchEvent('compositionend', { data: draft })
+    await expect(input).toHaveValue(draft)
+    await page.evaluate(() => window.maskFixture.update({ value: '', mask: '999-999', options: { segmented: false } }))
+    await expect(input).toHaveAttribute('autocomplete', 'email')
+    await expect(input).toHaveAttribute('spellcheck', 'true')
+    await expect(input).toHaveAttribute('maxlength', '20')
+  })
+
+  test(`${kind}: readOnly and disabled fields reject keyboard edits`, async ({ page }) => {
+    await page.evaluate(kind => window.maskFixture.mount({ kind, value: '123456', inputProps: { readOnly: true } }), kind)
+    const input = page.getByRole('textbox', { name: 'Test input' })
+    await input.focus()
+    await input.press('Home')
+    // Backspace in a readonly field navigates history in desktop WebKit.
+    // Forward Delete exercises the mask's fallback without leaving the page.
+    await input.press('Delete')
+    // Wait through the library's keyboard fallback frame.
+    await page.evaluate(() => new Promise(requestAnimationFrame))
+    await expect(input).toHaveValue(kind === 'pattern' ? '123-456' : '123,456')
+    expect(await page.evaluate(() => window.maskFixture.events)).toEqual([])
+    await page.evaluate(() => window.maskFixture.update({ inputProps: { disabled: true } }))
+    await expect(input).toBeDisabled()
+  })
 }
 
-test('repeated mounts, rebinding and unmounts do not accumulate retained memory', async ({ page }) => {
+test('repeated mounts, rebinding and unmounts do not accumulate retained memory', async ({ page, browserName }) => {
+  test.skip(browserName !== 'chromium', 'Forced garbage collection uses Chromium CDP')
   const cdp = await page.context().newCDPSession(page)
   await cdp.send('Performance.enable')
   await page.evaluate(() => {
@@ -117,6 +189,7 @@ test('repeated mounts, rebinding and unmounts do not accumulate retained memory'
   const stats = await page.evaluate(() => window.maskFixture.stats())
   expect(stats.pending).toBe(0)
   expect(stats.added).toBe(stats.removed)
+  expect(stats.resetsAdded).toBe(stats.resetsRemoved)
   expect(await page.evaluate(() => window.maskFixture.retained())).toBe(0)
   expect(after.listeners - before.listeners).toBeLessThanOrEqual(0)
   expect(after.nodes - before.nodes).toBeLessThanOrEqual(0)

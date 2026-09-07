@@ -13,7 +13,7 @@ mother-mask/
 ├── docs/                   # Nuclo documentation website and live demos (prerendered)
 ├── e2e/                    # real-browser tests and fixtures
 ├── examples/basic-examples/ # standalone examples (optional)
-├── examples/react-simple/   # React InputMask and InputDecimal components
+├── examples/react-simple/   # consumer of the mother-mask/react entry point
 ├── Makefile                # workspace-level commands
 └── package.json            # private workspace root
 ```
@@ -62,6 +62,19 @@ bun run build
 See [`examples/react-simple/README.md`](examples/react-simple/README.md) for a
 standalone React app with `InputMask` and `InputDecimal` wrappers, setup
 instructions, and usage.
+
+The wrappers live in `packages/mother-mask/src/react/`. `mother-mask/react`
+re-exports the core API and adds the wrappers; the core entry never imports React.
+`make test` covers the wrapper source with per-file coverage thresholds. To check
+the packed ESM/CJS exports, types, and core imports without React installed:
+
+```bash
+cd packages/mother-mask
+bun run test:package
+```
+
+The example's `bun run test` runs browser lifecycle and memory regressions against
+the built package; rebuild the library before running it after source changes.
 
 ### Browser tests
 

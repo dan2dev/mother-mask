@@ -1,9 +1,8 @@
 import { Activity, StrictMode, createRef } from 'react'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
-import type { BindDecimalOptions, BindOptions } from 'mother-mask'
-import { InputDecimal } from '../src/InputDecimal'
-import { InputMask } from '../src/InputMask'
+import type { BindDecimalOptions, BindOptions, InputMaskProps } from 'mother-mask/react'
+import { InputDecimal, InputMask } from 'mother-mask/react'
 
 type Options = Omit<BindOptions & BindDecimalOptions, 'onChange'>
 interface Settings {
@@ -16,6 +15,7 @@ interface Settings {
   callbackVersion?: string
   hidden?: boolean
   probe?: boolean
+  inputProps?: Pick<InputMaskProps, 'readOnly' | 'disabled' | 'autoComplete' | 'spellCheck' | 'maxLength'>
 }
 
 const root = createRoot(document.getElementById('root')!)
@@ -27,6 +27,8 @@ const pending = new Map<number, FrameRequestCallback>()
 let nextFrame = 1
 let added = 0
 let removed = 0
+let resetsAdded = 0
+let resetsRemoved = 0
 
 // Count only the mask's listeners on test inputs, not React's delegated root
 // listeners. Counters and WeakRefs deliberately do not retain DOM elements.
@@ -35,10 +37,12 @@ const realAdd = EventTarget.prototype.addEventListener
 const realRemove = EventTarget.prototype.removeEventListener
 EventTarget.prototype.addEventListener = function (type, listener, options) {
   if (this instanceof HTMLInputElement && listenerNames.has(type)) added++
+  if (this === document && type === 'reset') resetsAdded++
   return realAdd.call(this, type, listener, options)
 }
 EventTarget.prototype.removeEventListener = function (type, listener, options) {
   if (this instanceof HTMLInputElement && listenerNames.has(type)) removed++
+  if (this === document && type === 'reset') resetsRemoved++
   return realRemove.call(this, type, listener, options)
 }
 
@@ -56,8 +60,10 @@ function render() {
     if (settings.options) probes.push(new WeakRef(settings.options))
   }
   const props = {
+    ...settings.inputProps,
     ref: inputRef,
     'aria-label': 'Test input',
+    form: 'test-form',
     value: settings.value,
     defaultValue: settings.defaultValue,
     options: settings.options,
@@ -91,7 +97,7 @@ const fixture = {
   },
   focus() { inputRef.current?.focus() },
   stats() {
-    return { added, removed, pending: pending.size, refCleared: inputRef.current === null }
+    return { added, removed, resetsAdded, resetsRemoved, pending: pending.size, refCleared: inputRef.current === null }
   },
   parkFrames() {
     // Keep this registry reachable, as a browser would while a tab is hidden.
@@ -108,6 +114,8 @@ const fixture = {
     probes.push(new WeakRef(input))
     input.dispatchEvent(new Event('paste', { bubbles: true }))
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true }))
+    // Leave a reset microtask pending as well as the binder's frame callbacks.
+    input.form?.reset()
     const queued = pending.size
     this.unmount()
     // Retaining the detached node temporarily must not leave active listeners.

@@ -1,7 +1,7 @@
 # React simple example
 
-A small React + TypeScript + Vite app with reusable [`InputMask`](src/InputMask.tsx)
-and [`InputDecimal`](src/InputDecimal.tsx) wrappers around native `<input>` elements.
+A small React + TypeScript + Vite app using `InputMask` and `InputDecimal` from
+`mother-mask/react`. The components live in the [library's React entry point](../../packages/mother-mask/src/react/index.ts).
 Includes controlled phone, date, and currency masks, live React state, and buttons
 that fill or clear the fields programmatically.
 
@@ -24,7 +24,7 @@ then `bun run preview` to preview the production build.
 
 ```tsx
 import { useState } from 'react'
-import { InputMask } from './InputMask'
+import { InputMask } from 'mother-mask/react'
 
 export function PhoneField() {
   const [phone, setPhone] = useState('')
@@ -84,6 +84,13 @@ rewrite the DOM. Each replaced or unmounted binding runs its disposer, releasing
 listeners and pending animation frames, and clears the stored handle. React also
 clears the forwarded ref during unmount or Activity hide.
 
+Composition drafts are preserved during unrelated renders. Configuration
+changes made while hidden apply when the field returns. React-provided native
+attributes survive rebinding. A native form reset keeps controlled values and
+restores uncontrolled fields to the original `defaultValue` using the current
+mask/options; canceled resets are respected. Resets, readonly fields, and
+disabled fields do not emit `onValueChange`.
+
 See React's [effect guidance](https://react.dev/reference/react/useEffect#connecting-to-an-external-system)
 for integrating external libraries this way.
 
@@ -95,8 +102,7 @@ and ref support as `InputMask`. It uses `type="text"` and defaults to
 
 ```tsx
 import { useState } from 'react'
-import { formatDecimalValue } from 'mother-mask'
-import { InputDecimal } from './InputDecimal'
+import { formatDecimalValue, InputDecimal } from 'mother-mask/react'
 
 const options = { decimalPlaces: 2, prefix: '$', allowNegative: true }
 
@@ -145,16 +151,19 @@ export function AmountField() {
 After the setup above, run these commands from this example's directory:
 
 ```bash
-bunx playwright install chromium
+bunx playwright install chromium firefox webkit
 bun run test
 ```
 
-The browser suite covers both wrappers in Strict Mode: controlled and
+The browser suite imports the built `mother-mask/react` entry and runs functional
+tests in Chromium, Firefox, and WebKit. It covers both wrappers in Strict Mode: controlled and
 uncontrolled values, current callbacks without extra bindings, native refs,
-Activity hide/show, rebinding, caret behavior, and queued-frame cancellation.
-It also forces Chromium garbage collection and checks WeakRefs to detached
+Activity hide/show, rebinding, caret behavior, IME drafts, native form reset,
+readonly/disabled fields, and queued-frame cancellation.
+Memory tests run only in Chromium, where forced garbage collection is available.
+They check WeakRefs to detached
 inputs, callbacks, and options. A stress test performs 600 additional mounts
-with option changes and queued work after warm-up, checking retained DOM nodes,
+with option changes, queued reset microtasks, and pending frames after warm-up, checking retained DOM nodes,
 event listeners, and heap growth. Listener/frame assertions run immediately
 after unmount; heap checks advance React's bounded development deletion history
 with a native-element commit before measuring. These tests guard the exercised lifecycle
