@@ -169,6 +169,323 @@ server-only code can continue importing pure helpers from `mother-mask`.
 See the [React example](https://github.com/dan2dev/mother-mask/tree/main/examples/react-simple)
 for a runnable app and browser lifecycle/memory tests.
 
+## Vue
+
+Import the Vue 3.5 Composition API components from the separate `mother-mask/vue` entry:
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue'
+import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/vue'
+
+// Keep option objects stable across renders.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+const phone = ref('')
+const amount = ref('')
+</script>
+
+<template>
+  <label for="phone">Phone</label>
+  <InputMask id="phone" name="phone" mask="(99) 99999-9999" inputmode="tel" v-model="phone" />
+
+  <label for="amount">Amount</label>
+  <InputDecimal id="amount" name="amount" :options="currency" v-model="amount" />
+
+  <button type="button" @click="amount = formatDecimalValue(1234.5, currency)">
+    Set amount
+  </button>
+</template>
+```
+
+`mother-mask/vue` re-exports every core function, class, and type as well as
+`InputMask` and `InputDecimal`. Its core exports are aliases to `mother-mask`,
+sharing the same implementation and caches. The core ESM, CommonJS, and UMD
+builds remain independent of Vue. Vue is an optional peer dependency required
+only when importing `mother-mask/vue`; the supported version range is
+`^3.5.0`. Vue is not bundled.
+
+- Both components support `v-model` (a `modelValue` prop plus an
+  `update:modelValue` emit). `InputMask` accepts `mask` and optional
+  `BindOptions` (without `onChange`); `InputDecimal` accepts optional
+  `BindDecimalOptions` and emits `(value, numericValue)`.
+- Binding happens in `onMounted` — a lifecycle hook that Vue never invokes
+  during SSR — so these components render safely on the server without a
+  manual `typeof window` check; hydration binds on the client as usual.
+  `onBeforeUnmount` disposes the binding, and it is disposed and recreated
+  whenever `mask`/`options` change or `modelValue` is updated externally.
+- Native attributes (`id`, `name`, `class`, ...) fall through via
+  `inheritAttrs: false` plus `v-bind="$attrs"` semantics; `InputDecimal`
+  always sets `inputmode="decimal"`. Both expose their `inputRef` via
+  `defineExpose` for `useTemplateRef` access to the underlying `<input>`.
+
+See the [Vue example](https://github.com/dan2dev/mother-mask/tree/main/examples/vue-simple)
+for a runnable app.
+
+## Angular
+
+Import the standalone directives from the separate `mother-mask/angular` entry:
+
+```ts
+import { Component } from '@angular/core'
+import { MotherMaskDecimalDirective, MotherMaskDirective, formatDecimalValue } from 'mother-mask/angular'
+
+// Keep option objects stable across change detection cycles.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+@Component({
+  standalone: true,
+  imports: [MotherMaskDirective, MotherMaskDecimalDirective],
+  template: `
+    <label for="phone">Phone</label>
+    <input id="phone" name="phone" motherMask="(99) 99999-9999" inputmode="tel" [(value)]="phone" />
+
+    <label for="amount">Amount</label>
+    <input id="amount" name="amount" motherMaskDecimal [motherMaskDecimalOptions]="currency" [(value)]="amount" />
+
+    <button type="button" (click)="amount = formatDecimalValue(1234.5, currency)">Set amount</button>
+  `,
+})
+export class FormComponent {
+  readonly currency = currency
+  // Plain fields, not signals: the directives below bind `value` through
+  // classic @Input/@Output (see why in the notes under this example), so
+  // `[(value)]` assigns to this property directly on each change.
+  phone = ''
+  amount = ''
+}
+```
+
+`mother-mask/angular` re-exports every core function, class, and type as well
+as `MotherMaskDirective` and `MotherMaskDecimalDirective`. Its core exports
+are aliases to `mother-mask`, sharing the same implementation and caches. The
+core ESM, CommonJS, and UMD builds remain independent of Angular. Angular is
+an optional peer dependency required only when importing
+`mother-mask/angular`; the supported version range is `^19.0.0 || ^20.0.0`.
+Angular is not bundled.
+
+- Both directives are attribute selectors (`input[motherMask]` and
+  `input[motherMaskDecimal]`) and support `[(value)]` two-way binding.
+  `MotherMaskDirective` accepts `motherMask` (a `MaskPattern`) and optional
+  `[motherMaskOptions]`; `MotherMaskDecimalDirective` accepts optional
+  `[motherMaskDecimalOptions]` and additionally emits `(numericValueChange)`.
+- The binding lifecycle is Signals-driven: `ngOnChanges` pushes the current
+  mask/options/value into an internal `signal`, and `afterRenderEffect` —
+  which Angular runs only on the browser, never during server-side
+  rendering, so no manual `typeof window` check is needed — reactively
+  (re)binds whenever that signal changes. `ngOnDestroy` disposes the
+  binding, and it is disposed and recreated whenever the mask/options change
+  or `value` is updated externally.
+- `value`/`valueChange` (and `numericValueChange`) use classic
+  `@Input`/`@Output` rather than the functional `input()`/`model()` API,
+  since Angular only wires signal-based inputs to template bindings through
+  the ngtsc compiler's static analysis — unavailable without the Angular CLI
+  build toolchain. Both forms compile to the same `[(value)]` template
+  syntax for consumers.
+- `MotherMaskDecimalDirective` always sets `inputmode="decimal"` via a host
+  binding.
+
+See the [Angular example](https://github.com/dan2dev/mother-mask/tree/main/examples/angular-simple)
+for a runnable app.
+
+## Svelte
+
+Import the Svelte 5 actions from the separate `mother-mask/svelte` entry:
+
+```svelte
+<script lang="ts">
+  import { motherMask, motherMaskDecimal, formatDecimalValue } from 'mother-mask/svelte'
+
+  // Keep the options object stable across renders.
+  const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+  let phone = $state('')
+  let amount = $state('')
+</script>
+
+<label for="phone">Phone</label>
+<input
+  id="phone"
+  name="phone"
+  inputmode="tel"
+  use:motherMask={{ mask: '(99) 99999-9999', value: phone, onValueChange: (v) => (phone = v) }}
+/>
+
+<label for="amount">Amount</label>
+<input
+  id="amount"
+  name="amount"
+  use:motherMaskDecimal={{ options: currency, value: amount, onValueChange: (v) => (amount = v) }}
+/>
+
+<button type="button" onclick={() => (amount = formatDecimalValue(1234.5, currency))}>
+  Set amount
+</button>
+```
+
+`mother-mask/svelte` re-exports every core function, class, and type as well
+as the `motherMask` and `motherMaskDecimal` actions. Its core exports are
+aliases to `mother-mask`, sharing the same implementation and caches. The
+core ESM, CommonJS, and UMD builds remain independent of Svelte, and this
+entry has no runtime dependency on the `svelte` package at all — it's plain
+TypeScript, usable from any Svelte 5 (or 4) component via `use:`.
+
+- Actions run only once Svelte mounts the element to the live DOM, and are
+  torn down when it leaves — Svelte never invokes `use:` directives during
+  server-side rendering, so this is SSR-safe with no `typeof window` guard.
+  `destroy()` guarantees `dispose()` runs exactly once.
+- `update(params)` is Svelte's own reactivity hook: whenever a `$state`
+  value read inside the `use:motherMask={...}` expression changes — `mask`,
+  `options`, or `value` — Svelte re-invokes it with the new params, and the
+  action rebinds only if the mask/options changed or `value` was set
+  externally (an echo of the action's own `onValueChange` is ignored).
+- `motherMask` takes `{ mask, options?, value?, onValueChange? }`;
+  `motherMaskDecimal` takes `{ options?, value?, onValueChange? }` and calls
+  `onValueChange(value, numericValue)`. `motherMaskDecimal` always sets
+  `inputmode="decimal"` on mount.
+
+See the [Svelte example](https://github.com/dan2dev/mother-mask/tree/main/examples/svelte-simple)
+for a runnable app.
+
+## SolidJS
+
+Import the custom directives from the separate `mother-mask/solid` entry:
+
+```tsx
+import { createSignal } from 'solid-js'
+import { motherMask, motherMaskDecimal, formatDecimalValue } from 'mother-mask/solid'
+
+// Keep the options object stable across renders.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+export function Form() {
+  const [phone, setPhone] = createSignal('')
+  const [amount, setAmount] = createSignal('')
+
+  return (
+    <>
+      <label for="phone">Phone</label>
+      <input
+        id="phone"
+        name="phone"
+        inputmode="tel"
+        use:motherMask={{ mask: '(99) 99999-9999', value: phone(), onValueChange: setPhone }}
+      />
+
+      <label for="amount">Amount</label>
+      <input
+        id="amount"
+        name="amount"
+        use:motherMaskDecimal={{ options: currency, value: amount(), onValueChange: setAmount }}
+      />
+
+      <button type="button" onClick={() => setAmount(formatDecimalValue(1234.5, currency))}>
+        Set amount
+      </button>
+    </>
+  )
+}
+```
+
+Directive props are typed via `declare module 'solid-js' { namespace JSX { interface Directives { ... } } }`,
+so `use:motherMask`/`use:motherMaskDecimal` type-check without extra setup once
+`mother-mask/solid` is imported anywhere in your project.
+
+`mother-mask/solid` re-exports every core function, class, and type as well
+as the `motherMask` and `motherMaskDecimal` directives. Its core exports are
+aliases to `mother-mask`, sharing the same implementation and caches. The
+core ESM, CommonJS, and UMD builds remain independent of Solid. Solid is an
+optional peer dependency required only when importing `mother-mask/solid`;
+the supported version range is `^1.9.0`. Solid is not bundled.
+
+- Directives run when Solid mounts the element to the live DOM. Solid's
+  server-rendering path never instantiates real elements or invokes `use:`
+  callbacks, so this is SSR-safe with no `typeof window` guard needed.
+- `createEffect` gives fine-grained reactivity: it tracks only the signals
+  actually read while building the params object passed to `use:motherMask`
+  (e.g. `value: phone()`), and reruns exactly when those change — rebinding
+  only if the mask, options, or an externally-set value actually changed
+  (an echo of the directive's own `onValueChange` is ignored). `onCleanup`
+  guarantees `dispose()` runs exactly once, both before every rebind and
+  when the element unmounts.
+- `motherMask` takes `{ mask, options?, value?, onValueChange? }`;
+  `motherMaskDecimal` takes `{ options?, value?, onValueChange? }` and calls
+  `onValueChange(value, numericValue)`, and always sets `inputmode="decimal"`.
+
+See the [SolidJS example](https://github.com/dan2dev/mother-mask/tree/main/examples/solid-simple)
+for a runnable app.
+
+## Preact
+
+Import the Preact components from the separate `mother-mask/preact` entry:
+
+```tsx
+import { useState } from 'preact/hooks'
+import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/preact'
+
+// Keep option objects and mask arrays stable across renders.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+export function Form() {
+  const [phone, setPhone] = useState('')
+  const [amount, setAmount] = useState('')
+
+  return (
+    <>
+      <label htmlFor="phone">Phone</label>
+      <InputMask
+        id="phone"
+        name="phone"
+        mask="(99) 99999-9999"
+        inputMode="tel"
+        value={phone}
+        onValueChange={setPhone}
+      />
+      <label htmlFor="amount">Amount</label>
+      <InputDecimal
+        id="amount"
+        name="amount"
+        options={currency}
+        value={amount}
+        onValueChange={setAmount}
+      />
+      <button type="button" onClick={() => setAmount(formatDecimalValue(1234.5, currency))}>
+        Set amount
+      </button>
+    </>
+  )
+}
+```
+
+`mother-mask/preact` re-exports every core function, class, and type as well
+as `InputMask`, `InputDecimal`, `InputMaskProps`, and `InputDecimalProps`.
+Its core exports are aliases to `mother-mask`, sharing the same
+implementation and caches. The core ESM, CommonJS, and UMD builds remain
+independent of Preact. Preact is an optional peer dependency required only
+when importing `mother-mask/preact`; the supported version range is
+`^10.0.0`. Preact is not bundled, and this entry never imports
+`preact/compat` — it's built directly on `preact` + `preact/hooks` to keep
+Preact's footprint advantage intact.
+
+- Both components accept controlled string `value` or uncontrolled string
+  `defaultValue`, same as the React version. `InputMask` accepts `mask` and
+  optional `BindOptions`; `InputDecimal` accepts optional
+  `BindDecimalOptions` and reports `(value, numericValue)`.
+- Access to the underlying `<input>` is via an `inputRef` prop, not `ref`:
+  Preact passes `ref` on a function component straight through to the
+  built-in element/instance ref rather than forwarding it as a normal prop
+  (unlike React 19), so reusing `ref` here would require `preact/compat`'s
+  `forwardRef` — extra weight this entry deliberately avoids.
+- This is a leaner port than the React version: it drops the IME
+  composition and native-`reset` edge-case handling built for React-DOM's
+  synthetic event layer (which doesn't exist in Preact), keeping to
+  `useLayoutEffect`/`useRef`/`useState` from `preact/hooks`. The dispose
+  guarantee is identical — every rebind and unmount releases the previous
+  binding first.
+
+See the [Preact example](https://github.com/dan2dev/mother-mask/tree/main/examples/preact-simple)
+for a runnable app.
+
 ## Decimal Inputs
 
 Use `bindDecimal` for numbers, currency fields, and values where the integer part should grow freely.

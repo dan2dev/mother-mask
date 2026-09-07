@@ -1,0 +1,20 @@
+{
+  "name": "mother-mask-vue-simple",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "mother-mask": "file:../../packages/mother-mask",
+    "vue": "^3.5.42"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "typescript": "~7.0.2",
+    "vite": "^8.2.2"
+  }
+}

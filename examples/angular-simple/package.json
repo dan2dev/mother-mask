@@ -1,0 +1,22 @@
+{
+  "name": "mother-mask-angular-simple",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "mother-mask": "file:../../packages/mother-mask",
+    "@angular/common": "^20.3.30",
+    "@angular/compiler": "^20.3.30",
+    "@angular/core": "^20.3.30",
+    "@angular/platform-browser": "^20.3.30"
+  },
+  "devDependencies": {
+    "typescript": "~7.0.2",
+    "vite": "^8.2.2"
+  }
+}

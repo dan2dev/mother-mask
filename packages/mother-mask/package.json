@@ -36,16 +36,82 @@
         "default": "./dist/react.cjs"
       }
     },
+    "./vue": {
+      "import": {
+        "types": "./dist/vue.d.mts",
+        "default": "./dist/vue.mjs"
+      },
+      "require": {
+        "types": "./dist/vue.d.cts",
+        "default": "./dist/vue.cjs"
+      }
+    },
+    "./angular": {
+      "import": {
+        "types": "./dist/angular.d.mts",
+        "default": "./dist/angular.mjs"
+      },
+      "require": {
+        "types": "./dist/angular.d.cts",
+        "default": "./dist/angular.cjs"
+      }
+    },
+    "./svelte": {
+      "import": {
+        "types": "./dist/svelte.d.mts",
+        "default": "./dist/svelte.mjs"
+      },
+      "require": {
+        "types": "./dist/svelte.d.cts",
+        "default": "./dist/svelte.cjs"
+      }
+    },
+    "./solid": {
+      "import": {
+        "types": "./dist/solid.d.mts",
+        "default": "./dist/solid.mjs"
+      },
+      "require": {
+        "types": "./dist/solid.d.cts",
+        "default": "./dist/solid.cjs"
+      }
+    },
+    "./preact": {
+      "import": {
+        "types": "./dist/preact.d.mts",
+        "default": "./dist/preact.mjs"
+      },
+      "require": {
+        "types": "./dist/preact.d.cts",
+        "default": "./dist/preact.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "dist"
   ],
   "peerDependencies": {
-    "react": "^19.2.0"
+    "@angular/core": "^19.0.0 || ^20.0.0",
+    "preact": "^10.0.0",
+    "react": "^19.2.0",
+    "solid-js": "^1.9.0",
+    "vue": "^3.5.0"
   },
   "peerDependenciesMeta": {
     "react": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    },
+    "@angular/core": {
+      "optional": true
+    },
+    "solid-js": {
+      "optional": true
+    },
+    "preact": {
       "optional": true
     }
   },
@@ -62,17 +128,26 @@
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {
+    "@angular/common": "^20.3.30",
+    "@angular/compiler": "^20.3.30",
+    "@angular/core": "^20.3.30",
+    "@angular/platform-browser": "^20.3.30",
     "@types/node": "^26.4.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitest/coverage-v8": "^4.1.11",
+    "@vue/test-utils": "^2.5.0",
     "bumpp": "^12.3.0",
     "jsdom": "^29.1.1",
+    "preact": "^10.29.8",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "rxjs": "^7.8.2",
+    "solid-js": "^1.9.15",
     "tsdown": "^0.22.14",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "vue": "^3.5.42"
   },
   "packageManager": "pnpm@10.33.0",
   "repository": {

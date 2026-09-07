@@ -12,6 +12,8 @@
     "resolveJsonModule": true,
     "types": ["node"],
     "strict": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
     "noUnusedLocals": true,
     "declaration": true,
     "emitDeclarationOnly": true,
