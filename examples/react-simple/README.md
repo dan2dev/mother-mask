@@ -2,8 +2,10 @@
 
 A small React + TypeScript + Vite app using `InputMask` and `InputDecimal` from
 `mother-mask/react`. The components live in the [library's React entry point](../../packages/mother-mask/src/react/index.ts).
-Includes controlled phone, date, and currency masks, live React state, and buttons
-that fill or clear the fields programmatically.
+Includes simple phone and date masks plus seven decimal formats: US dollars
+(including negatives), Brazilian real, percentages, weights, whole quantities,
+flexible precision, and numbers without thousands grouping. Each field shows its
+React state. The buttons fill or clear all fields programmatically.
 
 ## Run
 
@@ -46,9 +48,9 @@ export function PhoneField() {
 }
 ```
 
-- `mask` accepts a pattern string or an ordered array of patterns, shortest first.
+- Use a single pattern string, such as `mask="(99) 99999-9999"` for an 11-digit phone number.
 - `options` forwards `mother-mask` binding options, such as `{ eager: false }`.
-  Keep option objects and mask arrays outside the component, or memoize them,
+  Keep option objects outside the component, or memoize them,
   to avoid rebinding on every render.
 - `onValueChange` receives the formatted string from the library's callback.
   Use it instead of React's `onChange`, and update controlled state synchronously.
@@ -95,6 +97,20 @@ See React's [effect guidance](https://react.dev/reference/react/useEffect#connec
 for integrating external libraries this way.
 
 ## Decimal input
+
+The examples in [`App.tsx`](src/App.tsx) use these options:
+
+| Example | Options | Sample value |
+| --- | --- | --- |
+| US dollars | `{ decimalPlaces: 2, prefix: '$', allowNegative: true }` | `$1,234.50` |
+| Brazilian real | `{ decimalPlaces: 2, separator: '.', decimalSeparator: ',', prefix: 'R$ ' }` | `R$ 1.234,50` |
+| Percentage | `{ decimalPlaces: 2, suffix: '%', segmented: false }` | `12.50%` |
+| Weight | `{ decimalPlaces: 3, suffix: ' kg' }` | `2.375 kg` |
+| Whole quantities | `{ decimalPlaces: 0, suffix: ' units' }` | `1,250 units` |
+| Flexible decimals | No options | `1,234.56789` |
+| No thousands separator | `{ decimalPlaces: 4, segmented: false }` | `1234.5678` |
+
+Suffixes are display text: `%` does not divide the value by 100 or impose a range.
 
 `InputDecimal` wraps `bindDecimal` with the same controlled/uncontrolled behavior
 and ref support as `InputMask`. It uses `type="text"` and defaults to

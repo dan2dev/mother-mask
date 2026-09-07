@@ -8,10 +8,12 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; }
-main { max-width: 40rem; margin: 4rem auto; padding: 0 1.25rem; }
+main { max-width: 64rem; margin: 4rem auto; padding: 0 1.25rem; }
 h1 { line-height: 1.15; font-size: clamp(2rem, 6vw, 3rem); }
+h2 { margin: 2rem 0 1rem; font-size: 1.25rem; }
 .eyebrow { color: #326c57; font-weight: 700; }
-section { margin-top: 1.5rem; padding: 1.5rem; background: white; border: 1px solid #d4dfd9; border-radius: .75rem; }
+.examples { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: 1rem; }
+section { min-width: 0; padding: 1.5rem; background: white; border: 1px solid #d4dfd9; border-radius: .75rem; }
 label { display: block; margin-bottom: .5rem; font-weight: 600; }
 input { width: 100%; padding: .75rem; border: 1px solid #72897d; border-radius: .35rem; font: inherit; }
 input:focus-visible { outline: 3px solid #367d61; outline-offset: 2px; }
