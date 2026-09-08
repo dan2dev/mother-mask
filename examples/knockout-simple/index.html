@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mother-mask · Knockout.js example</title>
+  </head>
+  <body>
+    <main id="app">
+      <p class="eyebrow">mother-mask + Knockout.js</p>
+      <h1>Simple input examples</h1>
+      <p>Type, paste, or fill both examples below.</p>
+
+      <div class="actions">
+        <button type="button" data-bind="click: fill">Fill example values</button>
+        <button type="button" data-bind="click: clear">Clear</button>
+      </div>
+
+      <div class="examples">
+        <section>
+          <label for="phone">Phone number</label>
+          <input
+            id="phone"
+            name="phone"
+            inputmode="tel"
+            autocomplete="tel"
+            placeholder="(11) 98765-4321"
+            data-bind="mask: { mask: '(99) 99999-9999', value: phone, onValueChange: phone }"
+          />
+          <p>Knockout state: <output data-bind="text: phone() || 'Empty'"></output></p>
+        </section>
+
+        <section>
+          <label for="amount">Amount</label>
+          <input
+            id="amount"
+            name="amount"
+            placeholder="$1,234.50"
+            data-bind="maskDecimal: { options: amountOptions, value: amount, onValueChange: setAmount }"
+          />
+          <p>Knockout state: <output data-bind="text: amount() || 'Empty'"></output></p>
+          <p>Numeric value: <output data-bind="text: amountNumeric"></output></p>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

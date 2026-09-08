@@ -128,17 +128,80 @@
         "default": "./dist/web-components.cjs"
       }
     },
+    "./qwik": {
+      "types": "./dist/qwik/index.d.ts",
+      "default": "./dist/qwik/index.qwik.mjs"
+    },
+    "./inferno": {
+      "import": {
+        "types": "./dist/inferno.d.mts",
+        "default": "./dist/inferno.mjs"
+      },
+      "require": {
+        "types": "./dist/inferno.d.cts",
+        "default": "./dist/inferno.cjs"
+      }
+    },
+    "./octane": "./src/octane/index.ts",
+    "./mithril": {
+      "import": {
+        "types": "./dist/mithril.d.mts",
+        "default": "./dist/mithril.mjs"
+      },
+      "require": {
+        "types": "./dist/mithril.d.cts",
+        "default": "./dist/mithril.cjs"
+      }
+    },
+    "./ember": {
+      "import": {
+        "types": "./dist/ember.d.mts",
+        "default": "./dist/ember.mjs"
+      },
+      "require": {
+        "types": "./dist/ember.d.cts",
+        "default": "./dist/ember.cjs"
+      }
+    },
+    "./knockout": {
+      "import": {
+        "types": "./dist/knockout.d.mts",
+        "default": "./dist/knockout.mjs"
+      },
+      "require": {
+        "types": "./dist/knockout.d.cts",
+        "default": "./dist/knockout.cjs"
+      }
+    },
+    "./riot": {
+      "import": {
+        "types": "./dist/riot.d.mts",
+        "default": "./dist/riot.mjs"
+      },
+      "require": {
+        "types": "./dist/riot.d.cts",
+        "default": "./dist/riot.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "src/octane"
   ],
   "peerDependencies": {
     "@angular/core": "^19.0.0 || ^20.0.0",
+    "@builder.io/qwik": "^1.0.0",
     "alpinejs": "^3.0.0",
+    "ember-modifier": "^4.0.0",
+    "inferno": "^9.0.0",
+    "knockout": "^3.5.0",
     "lit": "^3.0.0",
+    "mithril": "^2.0.0",
+    "octane": "^0.2.0",
     "preact": "^10.0.0",
     "react": "^19.2.0",
+    "riot": "^10.0.0",
     "solid-js": "^1.9.0",
     "vue": "^3.5.0"
   },
@@ -155,6 +218,9 @@
     "solid-js": {
       "optional": true
     },
+    "@builder.io/qwik": {
+      "optional": true
+    },
     "preact": {
       "optional": true
     },
@@ -163,16 +229,37 @@
     },
     "alpinejs": {
       "optional": true
+    },
+    "inferno": {
+      "optional": true
+    },
+    "octane": {
+      "optional": true
+    },
+    "mithril": {
+      "optional": true
+    },
+    "ember-modifier": {
+      "optional": true
+    },
+    "knockout": {
+      "optional": true
+    },
+    "riot": {
+      "optional": true
     }
   },
   "scripts": {
-    "build": "tsdown && bun run build:stencil",
+    "build": "tsdown && bun run build:stencil && bun run build:qwik",
     "build:stencil": "stencil build --config \"$(cd stencil-src && pwd)/stencil.config.ts\" && cp stencil-src/types/*.d.ts dist/stencil/",
+    "build:qwik": "vite build --config qwik.vite.config.mjs && tsc --project tsconfig.qwik-dts.json",
     "build:watch": "tsdown --watch",
     "dev": "tsdown --watch",
     "clean": "rm -rf dist stencil-src/dist stencil-src/.stencil *.tsbuildinfo",
-    "test": "vitest run --coverage",
+    "test": "vitest run --coverage && vitest run --coverage --config vitest.qwik.config.ts && vitest run --coverage --config vitest.octane.config.ts",
     "test:watch": "vitest --watch --coverage",
+    "test:qwik": "vitest run --coverage --config vitest.qwik.config.ts",
+    "test:octane": "vitest run --coverage --config vitest.octane.config.ts",
     "test:package": "bun run build && node --test tests/package.test.mjs",
     "typecheck": "tsc --noEmit",
     "release": "bumpp",
@@ -183,8 +270,12 @@
     "@angular/compiler": "^20.3.30",
     "@angular/core": "^20.3.30",
     "@angular/platform-browser": "^20.3.30",
+    "@builder.io/qwik": "^1.20.0",
+    "@octanejs/vite-plugin": "^0.1.53",
+    "@riotjs/compiler": "^10.0.4",
     "@stencil/core": "^4.44.2",
     "@types/alpinejs": "^3.13.11",
+    "@types/mithril": "^2.2.9",
     "@types/node": "^26.4.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
@@ -192,15 +283,22 @@
     "@vue/test-utils": "^2.5.0",
     "alpinejs": "^3.17.2",
     "bumpp": "^12.3.0",
+    "ember-modifier": "^4.3.0",
+    "inferno": "^9.1.0",
     "jsdom": "^29.1.1",
+    "knockout": "^3.5.3",
     "lit": "^3.3.3",
+    "mithril": "^2.3.8",
+    "octane": "^0.2.6",
     "preact": "^10.29.8",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "riot": "^10.1.6",
     "rxjs": "^7.8.2",
     "solid-js": "^1.9.15",
     "tsdown": "^0.22.14",
     "typescript": "^7.0.2",
+    "vite": "^6.4.3",
     "vitest": "^4.1.11",
     "vue": "^3.5.42"
   },

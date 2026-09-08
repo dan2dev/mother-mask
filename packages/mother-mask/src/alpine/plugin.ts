@@ -49,7 +49,11 @@ export function motherMaskPlugin(Alpine: Alpine): void {
     let dispose: (() => void) | null = null
     let lastEmitted: string | null = null
     let lastMask: MaskPattern | undefined
-    let lastOptions: unknown
+    // Whichever of the two shapes actually applies for the lifetime of this
+    // directive instance — decided once above by `isDecimal` and never
+    // mixed, since a single `x-mask`/`x-mask.decimal` element only ever
+    // takes one branch below.
+    let lastOptions: Omit<BindOptions, 'onChange'> | Omit<BindDecimalOptions, 'onChange'> | undefined
 
     const release = () => {
       dispose?.()

@@ -1,0 +1,23 @@
+{
+  "name": "mother-mask-inferno-simple",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "inferno": "^9.1.0",
+    "mother-mask": "file:../../packages/mother-mask"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@babel/preset-typescript": "^7.29.7",
+    "babel-plugin-inferno": "^6.9.0",
+    "typescript": "~7.0.2",
+    "vite": "^8.2.2",
+    "vite-plugin-babel": "^1.7.3"
+  }
+}

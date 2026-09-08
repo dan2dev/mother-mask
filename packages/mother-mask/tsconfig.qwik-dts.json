@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "emitDeclarationOnly": true,
+    "declaration": true,
+    "outDir": "dist/qwik",
+    "rootDir": "src/qwik",
+    "jsxImportSource": "@builder.io/qwik",
+    "noUnusedLocals": false,
+    // Without this, declaration emission traces `import ... from
+    // 'mother-mask'` back through the core build's declaration source maps
+    // to the original .ts sources and mirrors that whole tree (plus local
+    // machine paths) into dist/qwik — point it at the already-built,
+    // self-contained core declaration file instead (see the matching
+    // stencil-src/tsconfig.json note).
+    "paths": {
+      "mother-mask": ["./dist/mother-mask.d.mts"]
+    }
+  },
+  "include": ["src/qwik/**/*.ts", "src/qwik/**/*.tsx"]
+}

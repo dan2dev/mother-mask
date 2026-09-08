@@ -1,0 +1,20 @@
+{
+  "name": "mother-mask-mithril-simple",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "mother-mask": "file:../../packages/mother-mask",
+    "mithril": "^2.3.8"
+  },
+  "devDependencies": {
+    "@types/mithril": "^2.2.9",
+    "typescript": "~7.0.2",
+    "vite": "^8.2.2"
+  }
+}

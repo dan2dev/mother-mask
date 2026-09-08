@@ -747,6 +747,570 @@ dependency at all; drop the `<script type="module">` tag on any page.
   connecting, a host `id` moves onto the rendered `<input>` so
   `<label for>` keeps resolving to the actual control.
 
+## Qwik
+
+Import the `InputMask` and `InputDecimal` components from the separate
+`mother-mask/qwik` entry:
+
+```tsx
+import { component$, useSignal } from '@builder.io/qwik'
+import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/qwik'
+
+// Keep option objects outside the component so they stay stable across renders.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+export default component$(() => {
+  const phone = useSignal('')
+  const amount = useSignal('')
+
+  return (
+    <>
+      <label for="phone">Phone</label>
+      <InputMask
+        id="phone"
+        name="phone"
+        mask="(99) 99999-9999"
+        inputMode="tel"
+        value={phone.value}
+        onValueChange$={(v) => (phone.value = v)}
+      />
+
+      <label for="amount">Amount</label>
+      <InputDecimal
+        id="amount"
+        name="amount"
+        options={currency}
+        value={amount.value}
+        onValueChange$={(v) => (amount.value = v)}
+      />
+
+      <button type="button" onClick$={() => (amount.value = formatDecimalValue(1234.5, currency))}>
+        Set amount
+      </button>
+    </>
+  )
+})
+```
+
+`mother-mask/qwik` re-exports every core function, class, and type as well
+as `InputMask`, `InputDecimal`, `InputMaskProps`, and `InputDecimalProps`.
+The core ESM, CommonJS, and UMD builds remain independent of Qwik. Qwik is
+an optional peer dependency required only when importing `mother-mask/qwik`;
+the supported version range is `^1.0.0`. Qwik's own components are not
+bundled here — see below for why this entry, alone among the ones in this
+README, ships close to raw source.
+
+- Both components accept `value` and `onValueChange$` (a QRL — inline
+  arrow functions work; the Qwik Optimizer converts them for you). `mask`
+  and `options` work the same as the React version.
+- Binding happens in `useVisibleTask$`, a hook Qwik only ever runs on the
+  client once the element is visible — Qwik's SSR renderer never executes
+  it, so this is safe to render on the server with no `typeof window`
+  guard. `track()` makes it reactive: it reruns whenever `mask`, `options`,
+  or `value` change, rebinding only if the mask, options, or an
+  externally-set value actually changed (an echo of the component's own
+  `onValueChange$` is ignored). `cleanup()` — called both before every
+  re-run and when the component unmounts — guarantees `dispose()` runs
+  exactly once per binding.
+- `InputDecimal` defaults to `inputMode="decimal"` and reports
+  `onValueChange$(value, numericValue)`.
+
+**Why this entry isn't built like the others.** `component$`, `useVisibleTask$`,
+and every other `$`-suffixed Qwik API throw at runtime ("Optimizer should
+replace all usages of $() ...") unless the Qwik Optimizer has already
+processed them — there's no plain-JS fallback the way Lit's or Solid's
+reactivity primitives have. So `mother-mask/qwik` is built with Vite's
+documented ["library" mode](https://qwik.dev/docs/advanced/library/)
+(`qwikVite()` + `build.lib`, see `qwik.vite.config.mjs`) rather than
+tsdown, and the output (`dist/qwik/index.qwik.mjs`) deliberately keeps
+`component$`/`useVisibleTask$` **unprocessed** — exactly like Qwik's own
+documented component-library recipe. A consuming Qwik app's own build
+(which always runs through `qwikVite` too) is what finishes optimizing
+these calls into lazy-loaded segments, scoped to that app. This also means
+`mother-mask/qwik` has no shared module identity/cache with a page's own
+`mother-mask` import, unlike every other framework entry's
+`export * from 'mother-mask'` aliasing.
+- Tests for this entry run under a separate config
+  ([`vitest.qwik.config.ts`](../../packages/mother-mask/vitest.qwik.config.ts),
+  `bun run test:qwik`) — Qwik's own `@builder.io/qwik/testing` needs the
+  `node` environment, not `jsdom` (the two DOM implementations collide),
+  and `qwikVite` as a plugin isn't scoped to its own `srcDir`, so adding it
+  to the main config broke every other framework's unrelated JSX.
+
+## Inferno
+
+Import the `InputMask` and `InputDecimal` class components from the
+separate `mother-mask/inferno` entry:
+
+```js
+import { Component, render } from 'inferno'
+import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/inferno'
+
+// Keep option objects outside the component so they stay stable across renders.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+class App extends Component {
+  state = { phone: '', amount: '' }
+
+  render() {
+    return (
+      <>
+        <label for="phone">Phone</label>
+        <InputMask
+          id="phone"
+          name="phone"
+          mask="(99) 99999-9999"
+          inputMode="tel"
+          value={this.state.phone}
+          onValueChange={(phone) => this.setState({ phone })}
+        />
+
+        <label for="amount">Amount</label>
+        <InputDecimal
+          id="amount"
+          name="amount"
+          options={currency}
+          value={this.state.amount}
+          onValueChange={(amount) => this.setState({ amount })}
+        />
+
+        <button type="button" onClick={() => this.setState({ amount: formatDecimalValue(1234.5, currency) })}>
+          Set amount
+        </button>
+      </>
+    )
+  }
+}
+
+render(<App />, document.getElementById('root'))
+```
+
+`mother-mask/inferno` re-exports every core function, class, and type as
+well as `InputMask`, `InputDecimal`, `InputMaskProps`, and
+`InputDecimalProps`. Its core exports are aliases to `mother-mask`, sharing
+the same implementation and caches. The core ESM, CommonJS, and UMD builds
+remain independent of this entry. Inferno is an optional peer dependency
+required only when importing `mother-mask/inferno`; the supported version
+range is `^9.0.0`.
+
+- Both components accept `value` and `onValueChange`. `mask` and `options`
+  work the same as the React version; other props are typed against
+  Inferno's own `InputHTMLAttributes<HTMLInputElement>`, so `name`,
+  `placeholder`, `inputMode`, and friends all get real autocomplete and
+  type-checking. `InputDecimal` always sets `inputmode="decimal"`
+  regardless (its own `inputMode` prop is omitted from its type, since
+  setting it wouldn't do anything).
+- Binding happens in `componentDidMount` and disposes in
+  `componentWillUnmount` — Inferno's server-rendering path
+  (`inferno-server`) never calls either, so this is safe to render on the
+  server with no `typeof window` guard. `componentDidUpdate` reactively
+  rebinds whenever `mask`/`options` change or `value` is set externally; an
+  echo of a component's own `onValueChange` is ignored.
+- `InputDecimal` reports `onValueChange(value, numericValue)`.
+- This entry ships without JSX: Inferno's own JSX support needs
+  `ts-plugin-inferno`/`babel-plugin-inferno` for correct compile-time vnode
+  flags, which isn't worth the extra toolchain for wrapping one leaf
+  `<input>` — internally each component calls Inferno's `createVNode`
+  directly through a small `h()` helper. This only affects the library's
+  own source; consuming apps keep using their own JSX/Babel/TypeScript
+  setup exactly as shown above.
+
+## Octane
+
+Import the `InputMask` and `InputDecimal` function components from the
+separate `mother-mask/octane` entry:
+
+```tsx
+/** @jsxImportSource octane */
+import { useState } from 'octane'
+import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/octane'
+
+// Keep option objects outside the component so they stay stable across renders.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+export function Checkout() {
+  const [phone, setPhone] = useState('')
+  const [amount, setAmount] = useState('')
+
+  return (
+    <>
+      <label for="phone">Phone</label>
+      <InputMask
+        id="phone"
+        name="phone"
+        mask="(99) 99999-9999"
+        inputMode="tel"
+        value={phone}
+        onValueChange={setPhone}
+      />
+
+      <label for="amount">Amount</label>
+      <InputDecimal id="amount" name="amount" options={currency} value={amount} onValueChange={setAmount} />
+
+      <button onClick={() => setAmount(formatDecimalValue(1234.5, currency))}>Set amount</button>
+    </>
+  )
+}
+```
+
+`mother-mask/octane` re-exports every core function, class, and type as
+well as `InputMask`, `InputDecimal`, `InputMaskProps`, and
+`InputDecimalProps`. Its core exports are aliases to `mother-mask`, sharing
+the same implementation and caches. Octane is an optional peer dependency
+required only when importing `mother-mask/octane`; the supported version
+range is `^0.2.0`.
+
+- Both components accept `value` and `onValueChange`. `mask` and `options`
+  work the same as the React version. Access to the underlying `<input>` is
+  through `inputRef` rather than `ref` — see **why this entry ships raw**
+  below for why a plain `ref` would collide.
+- Binding happens in `useLayoutEffect`, a hook Octane's server renderer
+  never executes — this is safe to render on the server with no
+  `typeof window` guard. It reconciles on every commit, rebinding only if
+  the mask, options, or an externally-set value actually changed (an echo
+  of this component's own `onValueChange` is ignored). The registered
+  cleanup guarantees `dispose()` runs exactly once per binding, including
+  on unmount.
+- `InputDecimal` defaults to `inputMode="decimal"` and reports
+  `onValueChange(value, numericValue)`.
+
+**Why this entry ships raw, unlike every other one in this README.**
+Octane compiles function components down to direct DOM-update code keyed to
+compiler-assigned hook slots — there's no virtual DOM diff at runtime, so
+`useState`/`useRef`/`useLayoutEffect` only work correctly once the Octane
+compiler has processed the file. Octane's own publishing guidance for
+component libraries is therefore to distribute source, not a pre-built
+bundle, and let the *consuming app's* own Octane toolchain (Vite, Rspack,
+or Rsbuild, all via an official Octane plugin) compile it — that plugin
+already knows to look inside `node_modules` for Octane-owned files, so no
+extra bundler configuration is needed on the consumer's side. Accordingly,
+`"./octane"` in this package's `exports` map points straight at
+`src/octane/index.ts` (and `src/octane/*.tsx`) rather than at anything in
+`dist/`, and this is the one entry in this README with no `tsdown` build
+step of its own. The `/** @jsxImportSource octane */` pragma at the top of
+each `.tsx` file is what opts a plain-TSX file into Octane's compiler (its
+Vite/Rspack plugins otherwise only claim `.tsrx` files by default).
+Tests for this entry run under a separate config
+([`vitest.octane.config.ts`](../../packages/mother-mask/vitest.octane.config.ts),
+`bun run test:octane`) with the Octane Vite plugin scoped to just that one
+test file, mirroring how Qwik's tests are isolated.
+
+## Mithril.js
+
+Import the `InputMask` and `InputDecimal` closure components from the
+separate `mother-mask/mithril` entry:
+
+```js
+import m from 'mithril'
+import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/mithril'
+
+// Keep option objects outside the view so they stay stable across redraws.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+let phone = ''
+let amount = ''
+
+const Checkout = {
+  view: () =>
+    m('div', [
+      m('label', { for: 'phone' }, 'Phone'),
+      m(InputMask, {
+        id: 'phone',
+        name: 'phone',
+        mask: '(99) 99999-9999',
+        inputmode: 'tel',
+        value: phone,
+        onValueChange: (v) => { phone = v },
+      }),
+
+      m('label', { for: 'amount' }, 'Amount'),
+      m(InputDecimal, {
+        id: 'amount',
+        name: 'amount',
+        options: currency,
+        value: amount,
+        onValueChange: (v) => { amount = v },
+      }),
+
+      m('button', { onclick: () => { amount = formatDecimalValue(1234.5, currency) } }, 'Set amount'),
+    ]),
+}
+
+m.mount(document.body, Checkout)
+```
+
+`mother-mask/mithril` re-exports every core function, class, and type as
+well as `InputMask`, `InputDecimal`, `InputMaskAttrs`, and
+`InputDecimalAttrs`. Its core exports are aliases to `mother-mask`, sharing
+the same implementation and caches. The core ESM, CommonJS, and UMD builds
+remain independent of this entry. Mithril is an optional peer dependency
+required only when importing `mother-mask/mithril`; the supported version
+range is `^2.0.0`.
+
+- Both components accept `value` and `onValueChange`; `mask` and `options`
+  work the same as the React version.
+- Binding happens in `oncreate` and disposes in `onremove` — Mithril's
+  server-side rendering never calls either, so this is safe to render on
+  the server with no `typeof window` guard. `onupdate` reactively rebinds
+  whenever `mask`/`options` change or `value` is set externally, ignoring
+  an echo of this component's own `onValueChange`. Elements with any of
+  these three hooks are exempt from Mithril's DOM-node recycling, so the
+  same `<input>` is reused across redraws for as long as the vnode stays
+  mounted.
+- `value` is deliberately never forwarded as an `m('input', ...)`
+  attribute: Mithril's vdom diff would otherwise reassign `.value` from
+  `vnode.attrs` on every redraw, fighting the mask's own intermediate
+  edits — the wrapper controls the DOM value directly instead, exactly
+  like every other framework entry in this package.
+- `InputDecimal` always sets `inputmode="decimal"` and reports
+  `onValueChange(value, numericValue)`.
+
+## Ember.js
+
+Import the `maskInput` and `maskDecimal` modifiers from the separate
+`mother-mask/ember` entry:
+
+```hbs
+{{! app/components/checkout.gjs / .gts, or a classic template }}
+import { maskInput, maskDecimal } from 'mother-mask/ember';
+import { formatDecimalValue } from 'mother-mask';
+
+<template>
+  <label for="phone">Phone</label>
+  <input
+    id="phone"
+    name="phone"
+    {{maskInput "(99) 99999-9999" value=this.phone onValueChange=this.setPhone}}
+  />
+
+  <label for="amount">Amount</label>
+  <input
+    id="amount"
+    name="amount"
+    {{maskDecimal options=this.currency value=this.amount onValueChange=this.setAmount}}
+  />
+
+  <button type="button" {{on "click" this.setPreset}}>Set amount</button>
+</template>
+```
+
+```js
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
+
+export default class Checkout extends Component {
+  // Keep option objects outside the class body's reactive graph so they
+  // stay stable across renders — a fresh object literal here would read as
+  // a changed `options` argument on every re-render.
+  currency = { decimalPlaces: 2, prefix: '$', allowNegative: true };
+
+  @tracked phone = '';
+  @tracked amount = '';
+
+  @action setPhone(value) { this.phone = value; }
+  @action setAmount(value) { this.amount = value; }
+  @action setPreset() { this.amount = formatDecimalValue(1234.5, this.currency); }
+}
+```
+
+`mother-mask/ember` re-exports every core function, class, and type as well
+as `maskInput`, `maskDecimal`, `maskInputModifier`, `maskDecimalModifier`,
+`MaskInputNamedArgs`, and `MaskDecimalNamedArgs`. Its core exports are
+aliases to `mother-mask`, sharing the same implementation and caches. The
+core ESM, CommonJS, and UMD builds remain independent of this entry.
+`ember-modifier` is an optional peer dependency required only when
+importing `mother-mask/ember`; the supported version range is `^4.0.0`
+(ships in every app generated by current `ember-cli`).
+
+- `maskInput` takes the mask as its one positional argument
+  (`{{maskInput "999-999" ...}}`); `maskDecimal` takes none. Both accept
+  `value` and `onValueChange` as named arguments, plus `options`.
+- Binding happens the first time the element the modifier is attached to is
+  inserted into the document, and only on the client: Ember's server-side
+  rendering (FastBoot) renders to a string and never attaches real elements
+  or runs modifiers, so there is no `typeof window` guard to write.
+  `ember-modifier`'s own auto-tracking reruns the modifier — tearing down
+  the previous binding first — whenever an argument it reads changes,
+  including the mask, `options`, or an externally-set `value`.
+- Unlike every other framework entry in this README, that teardown-then-
+  rerun happens unconditionally on **every** value change, including an
+  echo of the modifier's own `onValueChange` — there's no hook to skip it
+  from inside the modifier, since Ember has already torn down the previous
+  binding by the time it runs again. This stays visually seamless anyway:
+  formatting an already-formatted value is a no-op (the element's `.value`
+  is never reassigned, so the caret never moves), and removing/re-adding
+  the underlying event listeners doesn't touch focus or selection.
+- `maskDecimal` always sets `inputmode="decimal"` and reports
+  `onValueChange(value, numericValue)`.
+- The masking logic lives in `maskInputModifier`/`maskDecimalModifier` —
+  plain functions with the exact `(element, positional, named)` shape
+  `ember-modifier` calls a function-based modifier with, exported
+  separately from the `modifier()`-wrapped `maskInput`/`maskDecimal` so
+  this package's own test suite can exercise them directly against a plain
+  `HTMLInputElement`. That split exists because `ember-modifier` imports
+  Ember framework internals (`@ember/application`, `@ember/modifier`,
+  `@ember/destroyable`) that only resolve inside a real Ember app's build —
+  they aren't separately installable npm packages — so the wrapped
+  `modifier()` exports are verified at the type level (`tsc --noEmit`
+  against `ember-modifier`'s published types) rather than by a runtime
+  test in this repository.
+
+## Knockout.js
+
+Import the separate `mother-mask/knockout` entry once, for its side effect
+of registering the `mask` and `maskDecimal` binding handlers on
+`ko.bindingHandlers`:
+
+```js
+import ko from 'knockout'
+import 'mother-mask/knockout'
+import { formatDecimalValue } from 'mother-mask'
+
+// Keep option objects outside the view model's observables so they stay
+// stable across recomputes.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+function CheckoutViewModel() {
+  this.phone = ko.observable('')
+  this.amount = ko.observable('')
+  this.setPreset = () => this.amount(formatDecimalValue(1234.5, currency))
+}
+
+ko.applyBindings(new CheckoutViewModel(), document.getElementById('app'))
+```
+
+```html
+<div id="app">
+  <label for="phone">Phone</label>
+  <input id="phone" name="phone"
+         data-bind="mask: { mask: '(99) 99999-9999', value: phone, onValueChange: phone }">
+
+  <label for="amount">Amount</label>
+  <input id="amount" name="amount"
+         data-bind="maskDecimal: { options: { decimalPlaces: 2, prefix: '$', allowNegative: true }, value: amount, onValueChange: amount }">
+
+  <button data-bind="click: setPreset">Set amount</button>
+</div>
+```
+
+`mother-mask/knockout` re-exports every core function, class, and type as
+well as `maskBindingHandler`, `maskDecimalBindingHandler`,
+`MaskBindingConfig`, and `MaskDecimalBindingConfig`. Its core exports are
+aliases to `mother-mask`, sharing the same implementation and caches. The
+core ESM, CommonJS, and UMD builds remain independent of this entry.
+Knockout is an optional peer dependency required only when importing
+`mother-mask/knockout`; the supported version range is `^3.5.0`.
+
+- Both bindings take a single object: `value` (a plain string, a Knockout
+  observable/computed, or any accessor `ko.unwrap` understands) and
+  `onValueChange`. `mask` and `options` work the same as the React version
+  — `onValueChange` in the example above is passed directly as the
+  observable itself (`phone`/`amount`), since calling an observable with an
+  argument is how Knockout writes to it.
+- `init` binds once the element is live; `update` re-runs whenever an
+  observable read while evaluating the binding's object literal changes —
+  Knockout's own dependency tracking — rebinding only if the mask, options,
+  or an externally-set value actually changed. An echo of the binding's own
+  `onValueChange` is ignored.
+- `ko.utils.domNodeDisposal.addDisposeCallback` guarantees `dispose()` runs
+  exactly once, both before every rebind and when Knockout removes the
+  element (`ko.removeNode`, `ko.cleanNode`, or an `if`/`foreach`/template
+  removing it). Knockout never touches real DOM nodes during any
+  server-side step, since it has none — `applyBindings` only ever runs
+  against a live document, so there is no `typeof window` guard to write.
+- `maskDecimal` always sets `inputmode="decimal"` and reports
+  `onValueChange(value, numericValue)`.
+- Binding state (the live `dispose()`, the last-emitted value, the last
+  mask/options) lives in a `WeakMap` keyed by the element, not in the
+  handler's own closure: `ko.bindingHandlers.mask` is one object shared
+  across every element that uses the binding, unlike a fresh-per-instance
+  factory (a React hook call, Vue's `setup()`, …) elsewhere in this package.
+
+## Riot.js
+
+Import the `maskInput` and `maskDecimal` pure-component factories from the
+separate `mother-mask/riot` entry:
+
+```js
+import { pure } from 'riot'
+import { maskInput, maskDecimal, formatDecimalValue } from 'mother-mask/riot'
+
+// Keep option objects module-level so they stay stable across updates.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+let phone = ''
+const phoneField = pure(maskInput)({
+  props: {
+    mask: '(99) 99999-9999',
+    name: 'phone',
+    inputMode: 'tel',
+    autocomplete: 'tel',
+    value: phone,
+    onValueChange: (v) => (phone = v),
+  },
+})
+phoneField.mount(document.getElementById('phone'))
+
+let amount = ''
+const amountField = pure(maskDecimal)({
+  props: { options: currency, name: 'amount', value: amount, onValueChange: (v) => (amount = v) },
+})
+amountField.mount(document.getElementById('amount'))
+
+// Later, e.g. from a parent Riot component's onUpdated:
+amountField.update({ options: currency, value: formatDecimalValue(1234.5, currency) })
+```
+
+```html
+<label for="phone">Phone</label>
+<span id="phone"></span>
+
+<label for="amount">Amount</label>
+<span id="amount"></span>
+```
+
+`mother-mask/riot` re-exports every core function, class, and type as well
+as `maskInput`, `maskDecimal`, `MaskInputProps`, and `MaskDecimalProps`. Its
+core exports are aliases to `mother-mask`, sharing the same implementation
+and caches. The core ESM, CommonJS, and UMD builds remain independent of
+this entry. Riot is an optional peer dependency required only when
+importing `mother-mask/riot`; the supported version range is `^10.0.0`.
+
+- Both factories accept `value` and `onValueChange`; `mask` (on `maskInput`
+  only) and `options` work the same as the React version. A curated set of
+  other props forward as plain attributes: `name`, `placeholder`,
+  `inputMode` (rendered as `inputmode`, `maskInput` only — `maskDecimal`
+  always sets it to `"decimal"`), `autocomplete`, `disabled`, `readonly`,
+  and `required`.
+- Renders into light DOM: the `<input>` is appended as a real child of the
+  host element the component mounts onto, so a page's own `<label for>` and
+  global CSS reach it directly, the same as this package's Lit/Stencil/Web
+  Components entries. A host `id` is moved onto the `<input>` once, right
+  after mounting, for the same reason those entries do it.
+- `maskDecimal` always sets `inputmode="decimal"` and reports
+  `onValueChange(value, numericValue)`.
+
+**Why this entry uses Riot's `pure()` instead of a compiled `.riot`
+component.** `pure()` is Riot's own documented escape hatch for
+mounting non-Riot-templated content — third-party libraries, plain DOM —
+as a node in a Riot component tree, bypassing the `.riot`-file/compiler
+pipeline entirely; that's a direct fit here, since this wrapper's only job
+is to own one plain `<input>` imperatively, exactly like every other
+framework entry in this package. `riot.pure`'s own lifecycle names —
+`mount`/`update`/`unmount` — serve the same purpose as a full `.riot`
+component's `onMounted`/`onUnmounted`, with one difference worth calling
+out: `update()` isn't automatically re-invoked by reactive tracking the
+way `onUpdated` is on a full component. A parent must call this
+component's own `update(props)` explicitly (typically from its own
+`onUpdated`, or right after changing props) to reformat for a new
+`mask`/`options`/`value` — `sync()` still rebinds only if the mask,
+options, or an externally-set value actually changed, and still ignores an
+echo of this component's own `onValueChange`, exactly like every other
+framework entry. `mount`/`update`/`unmount` only ever run on the client:
+Riot has no built-in server-side renderer of its own, so there is no
+`typeof window` guard to write.
+
 ## Decimal Inputs
 
 Use `bindDecimal` for numbers, currency fields, and values where the integer part should grow freely.

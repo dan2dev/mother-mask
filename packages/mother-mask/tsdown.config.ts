@@ -99,4 +99,54 @@ export default defineConfig([{
   sourcemap: true,
   // No framework dependency at all — plain customElements.
   deps: { neverBundle: ['mother-mask'] },
+}, {
+  entry: { inferno: 'src/inferno/index.ts' },
+  format: ['esm', 'cjs'],
+  outDir: 'dist',
+  clean: false,
+  dts: { tsgo: true },
+  minify: true,
+  sourcemap: true,
+  // Inferno is an optional peer, and core exports must retain their identity.
+  deps: { neverBundle: ['mother-mask', 'inferno'] },
+}, {
+  entry: { mithril: 'src/mithril/index.ts' },
+  format: ['esm', 'cjs'],
+  outDir: 'dist',
+  clean: false,
+  dts: { tsgo: true },
+  minify: true,
+  sourcemap: true,
+  // Mithril is an optional peer, and core exports must retain their identity.
+  deps: { neverBundle: ['mother-mask', 'mithril'] },
+}, {
+  entry: { ember: 'src/ember/index.ts' },
+  format: ['esm', 'cjs'],
+  outDir: 'dist',
+  clean: false,
+  dts: { tsgo: true },
+  minify: true,
+  sourcemap: true,
+  // ember-modifier is an optional peer, and core exports must retain their identity.
+  deps: { neverBundle: ['mother-mask', 'ember-modifier'] },
+}, {
+  entry: { knockout: 'src/knockout/index.ts' },
+  format: ['esm', 'cjs'],
+  outDir: 'dist',
+  clean: false,
+  dts: { tsgo: true },
+  minify: true,
+  sourcemap: true,
+  // Knockout is an optional peer, and core exports must retain their identity.
+  deps: { neverBundle: ['mother-mask', 'knockout'] },
+}, {
+  entry: { riot: 'src/riot/index.ts' },
+  format: ['esm', 'cjs'],
+  outDir: 'dist',
+  clean: false,
+  dts: { tsgo: true },
+  minify: true,
+  sourcemap: true,
+  // Riot is an optional peer, and core exports must retain their identity.
+  deps: { neverBundle: ['mother-mask', 'riot'] },
 }])

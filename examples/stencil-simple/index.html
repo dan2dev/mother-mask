@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mother-mask · Stencil example</title>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">mother-mask + Stencil</p>
+      <h1>Simple input examples</h1>
+      <p>Type, paste, or fill both examples below.</p>
+
+      <div class="actions">
+        <button type="button" id="fill">Fill example values</button>
+        <button type="button" id="clear">Clear</button>
+      </div>
+
+      <div class="examples">
+        <section>
+          <label for="phone">Phone number</label>
+          <stencil-mask-input
+            id="phone"
+            name="phone"
+            mask="(99) 99999-9999"
+            input-mode="tel"
+            autocomplete="tel"
+            placeholder="(11) 98765-4321"
+          ></stencil-mask-input>
+          <p>Value: <output id="phone-value">Empty</output></p>
+        </section>
+
+        <section>
+          <label for="amount">Amount</label>
+          <stencil-mask-decimal id="amount" name="amount" placeholder="$1,234.50"></stencil-mask-decimal>
+          <p>Value: <output id="amount-value">Empty</output></p>
+          <p>Numeric value: <output id="amount-numeric">0</output></p>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

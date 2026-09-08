@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mother-mask · Alpine.js example</title>
+  </head>
+  <body>
+    <main x-data="checkout()">
+      <p class="eyebrow">mother-mask + Alpine.js</p>
+      <h1>Simple input examples</h1>
+      <p>Type, paste, or fill both examples below.</p>
+
+      <div class="actions">
+        <button type="button" x-on:click="fill()">Fill example values</button>
+        <button type="button" x-on:click="clear()">Clear</button>
+      </div>
+
+      <div class="examples">
+        <section aria-labelledby="phone-title">
+          <label id="phone-title" for="phone">Phone number</label>
+          <input
+            id="phone"
+            name="phone"
+            inputmode="tel"
+            autocomplete="tel"
+            placeholder="(11) 98765-4321"
+            x-mask="{ mask: '(99) 99999-9999', value: phone }"
+            x-on:mask-change="phone = $event.detail"
+          />
+          <p>Alpine state: <output x-text="phone || 'Empty'"></output></p>
+        </section>
+
+        <section aria-labelledby="amount-title">
+          <label id="amount-title" for="amount">Amount</label>
+          <input
+            id="amount"
+            name="amount"
+            placeholder="$1,234.50"
+            x-mask.decimal="{ options: amountOptions, value: amount }"
+            x-on:mask-change="amount = $event.detail"
+            x-on:mask-numeric-change="amountNumeric = $event.detail"
+          />
+          <p>Alpine state: <output x-text="amount || 'Empty'"></output></p>
+          <p>Numeric value: <output x-text="amountNumeric"></output></p>
+        </section>
+      </div>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

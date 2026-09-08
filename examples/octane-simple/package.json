@@ -1,0 +1,20 @@
+{
+  "name": "mother-mask-octane-simple",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "mother-mask": "file:../../packages/mother-mask",
+    "octane": "^0.2.6"
+  },
+  "devDependencies": {
+    "@octanejs/vite-plugin": "^0.1.53",
+    "typescript": "~7.0.2",
+    "vite": "^6.4.3"
+  }
+}

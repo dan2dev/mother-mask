@@ -1,0 +1,18 @@
+{
+  "name": "mother-mask-stencil-simple",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "mother-mask": "file:../../packages/mother-mask"
+  },
+  "devDependencies": {
+    "typescript": "~7.0.2",
+    "vite": "^8.2.2"
+  }
+}

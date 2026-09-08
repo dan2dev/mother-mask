@@ -1,0 +1,19 @@
+{
+  "name": "mother-mask-qwik-simple",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "mother-mask": "file:../../packages/mother-mask",
+    "@builder.io/qwik": "^1.20.0"
+  },
+  "devDependencies": {
+    "typescript": "~7.0.2",
+    "vite": "^6.4.3"
+  }
+}
