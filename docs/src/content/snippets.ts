@@ -22,7 +22,7 @@
  * backslash a reader sees — mask patterns are full of them.
  */
 
-export type SnippetLang = 'ts' | 'html' | 'bash'
+export type SnippetLang = 'ts' | 'tsx' | 'vue' | 'svelte' | 'html' | 'bash'
 
 export interface RawSnippet {
   lang: SnippetLang
@@ -78,6 +78,570 @@ const dispose = bind(input, mask, {
 
 // Later, during cleanup, before rebinding or removing the input:
 // dispose()`,
+  },
+
+  // Framework integrations adapted from packages/mother-mask/README.md.
+  'framework-install': { lang: 'bash', code: 'npm install mother-mask' },
+
+  'framework-react': {
+    lang: 'tsx',
+    code: `import { useState } from 'react'
+import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/react'
+
+// Keep option objects and mask arrays stable across renders.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+export function Form() {
+  const [phone, setPhone] = useState('')
+  const [amount, setAmount] = useState('')
+
+  return (
+    <>
+      <label htmlFor="phone">Phone</label>
+      <InputMask
+        id="phone"
+        name="phone"
+        mask="(99) 99999-9999"
+        inputMode="tel"
+        value={phone}
+        onValueChange={setPhone}
+      />
+      <label htmlFor="amount">Amount</label>
+      <InputDecimal
+        id="amount"
+        name="amount"
+        options={currency}
+        value={amount}
+        onValueChange={setAmount}
+      />
+      <button type="button" onClick={() => setAmount(formatDecimalValue(1234.5, currency))}>
+        Set amount
+      </button>
+    </>
+  )
+}`,
+  },
+
+  'framework-vue': {
+    lang: 'vue',
+    code: `<script setup lang="ts">
+import { ref } from 'vue'
+import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/vue'
+
+// Keep option objects stable across renders.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+const phone = ref('')
+const amount = ref('')
+</script>
+
+<template>
+  <label for="phone">Phone</label>
+  <InputMask id="phone" name="phone" mask="(99) 99999-9999" inputmode="tel" v-model="phone" />
+
+  <label for="amount">Amount</label>
+  <InputDecimal id="amount" name="amount" :options="currency" v-model="amount" />
+
+  <button type="button" @click="amount = formatDecimalValue(1234.5, currency)">
+    Set amount
+  </button>
+</template>`,
+  },
+
+  'framework-angular': {
+    lang: 'ts',
+    code: `import { Component } from '@angular/core'
+import { MotherMaskDecimalDirective, MotherMaskDirective, formatDecimalValue } from 'mother-mask/angular'
+
+// Keep option objects stable across change detection cycles.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+@Component({
+  standalone: true,
+  imports: [MotherMaskDirective, MotherMaskDecimalDirective],
+  template: \`
+    <label for="phone">Phone</label>
+    <input id="phone" name="phone" motherMask="(99) 99999-9999" inputmode="tel" [(value)]="phone" />
+
+    <label for="amount">Amount</label>
+    <input id="amount" name="amount" motherMaskDecimal [motherMaskDecimalOptions]="currency" [(value)]="amount" />
+
+    <button type="button" (click)="amount = formatDecimalValue(1234.5, currency)">Set amount</button>
+  \`,
+})
+export class FormComponent {
+  readonly currency = currency
+  readonly formatDecimalValue = formatDecimalValue
+  phone = ''
+  amount = ''
+}`,
+  },
+
+  'framework-svelte': {
+    lang: 'svelte',
+    code: `<script lang="ts">
+  import { motherMask, motherMaskDecimal, formatDecimalValue } from 'mother-mask/svelte'
+
+  // Keep the options object stable across renders.
+  const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+  let phone = $state('')
+  let amount = $state('')
+</script>
+
+<label for="phone">Phone</label>
+<input
+  id="phone"
+  name="phone"
+  inputmode="tel"
+  use:motherMask={{ mask: '(99) 99999-9999', value: phone, onValueChange: (v) => (phone = v) }}
+/>
+
+<label for="amount">Amount</label>
+<input
+  id="amount"
+  name="amount"
+  use:motherMaskDecimal={{ options: currency, value: amount, onValueChange: (v) => (amount = v) }}
+/>
+
+<button type="button" onclick={() => (amount = formatDecimalValue(1234.5, currency))}>
+  Set amount
+</button>`,
+  },
+
+  'framework-solid': {
+    lang: 'tsx',
+    code: `import { createSignal } from 'solid-js'
+import { motherMask, motherMaskDecimal, formatDecimalValue } from 'mother-mask/solid'
+
+// Keep the options object stable across renders.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+export function Form() {
+  const [phone, setPhone] = createSignal('')
+  const [amount, setAmount] = createSignal('')
+
+  return (
+    <>
+      <label for="phone">Phone</label>
+      <input
+        id="phone"
+        name="phone"
+        inputmode="tel"
+        use:motherMask={{ mask: '(99) 99999-9999', value: phone(), onValueChange: setPhone }}
+      />
+
+      <label for="amount">Amount</label>
+      <input
+        id="amount"
+        name="amount"
+        use:motherMaskDecimal={{ options: currency, value: amount(), onValueChange: setAmount }}
+      />
+
+      <button type="button" onClick={() => setAmount(formatDecimalValue(1234.5, currency))}>
+        Set amount
+      </button>
+    </>
+  )
+}`,
+  },
+
+  'framework-preact': {
+    lang: 'tsx',
+    code: `import { useState } from 'preact/hooks'
+import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/preact'
+
+// Keep option objects and mask arrays stable across renders.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+export function Form() {
+  const [phone, setPhone] = useState('')
+  const [amount, setAmount] = useState('')
+
+  return (
+    <>
+      <label htmlFor="phone">Phone</label>
+      <InputMask
+        id="phone"
+        name="phone"
+        mask="(99) 99999-9999"
+        inputMode="tel"
+        value={phone}
+        onValueChange={setPhone}
+      />
+      <label htmlFor="amount">Amount</label>
+      <InputDecimal
+        id="amount"
+        name="amount"
+        options={currency}
+        value={amount}
+        onValueChange={setAmount}
+      />
+      <button type="button" onClick={() => setAmount(formatDecimalValue(1234.5, currency))}>
+        Set amount
+      </button>
+    </>
+  )
+}`,
+  },
+
+  'framework-lit': {
+    lang: 'html',
+    code: `<label for="phone">Phone</label>
+<lit-mask-input id="phone" name="phone" mask="(99) 99999-9999" input-mode="tel"></lit-mask-input>
+
+<label for="amount">Amount</label>
+<lit-mask-decimal id="amount" name="amount"></lit-mask-decimal>
+
+<script type="module">
+  const phone = document.getElementById('phone')
+  phone.addEventListener('value-change', (e) => console.log(e.detail))
+
+  const amount = document.getElementById('amount')
+  amount.addEventListener('numeric-value-change', (e) => console.log(e.detail))
+
+  // Register after capturing the hosts; registration transfers ids to the inputs.
+  await import('mother-mask/lit')
+
+  amount.options = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+</script>`,
+  },
+
+  'framework-stencil': {
+    lang: 'html',
+    code: `<label for="phone">Phone</label>
+<stencil-mask-input id="phone" name="phone" mask="(99) 99999-9999" input-mode="tel"></stencil-mask-input>
+
+<label for="amount">Amount</label>
+<stencil-mask-decimal id="amount" name="amount"></stencil-mask-decimal>
+
+<script type="module">
+  const phone = document.getElementById('phone')
+  phone.addEventListener('value-change', (e) => console.log(e.detail))
+
+  const amount = document.getElementById('amount')
+  amount.addEventListener('numeric-value-change', (e) => console.log(e.detail))
+
+  // Register after capturing the hosts; registration transfers ids to the inputs.
+  await import('mother-mask/stencil/mask-input')
+  await import('mother-mask/stencil/mask-decimal')
+
+  amount.options = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+</script>`,
+  },
+
+  'framework-alpine': {
+    lang: 'html',
+    code: `<script type="module">
+  import Alpine from 'alpinejs'
+  import motherMaskPlugin from 'mother-mask/alpine'
+
+  Alpine.plugin(motherMaskPlugin)
+  Alpine.start()
+</script>
+
+<div x-data="{ phone: '', amount: '' }">
+  <label for="phone">Phone</label>
+  <input
+    id="phone"
+    name="phone"
+    inputmode="tel"
+    x-mask="{ mask: '(99) 99999-9999', value: phone }"
+    x-on:mask-change="phone = $event.detail"
+  />
+
+  <label for="amount">Amount</label>
+  <input
+    id="amount"
+    name="amount"
+    x-mask.decimal="{ options: { decimalPlaces: 2, prefix: '$', allowNegative: true }, value: amount }"
+    x-on:mask-change="amount = $event.detail"
+  />
+</div>`,
+  },
+
+  'framework-web-components': {
+    lang: 'html',
+    code: `<label for="phone">Phone</label>
+<mm-mask-input id="phone" name="phone" mask="(99) 99999-9999" input-mode="tel"></mm-mask-input>
+
+<label for="amount">Amount</label>
+<mm-mask-decimal id="amount" name="amount"></mm-mask-decimal>
+
+<script type="module">
+  const phone = document.getElementById('phone')
+  phone.addEventListener('value-change', (e) => console.log(e.detail))
+
+  const amount = document.getElementById('amount')
+  amount.addEventListener('numeric-value-change', (e) => console.log(e.detail))
+
+  // Register after capturing the hosts; registration transfers ids to the inputs.
+  await import('mother-mask/web-components')
+
+  amount.options = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+</script>`,
+  },
+
+  'framework-qwik': {
+    lang: 'tsx',
+    code: `import { component$, useSignal } from '@builder.io/qwik'
+import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/qwik'
+
+// Keep option objects outside the component so they stay stable across renders.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+export default component$(() => {
+  const phone = useSignal('')
+  const amount = useSignal('')
+
+  return (
+    <>
+      <label for="phone">Phone</label>
+      <InputMask
+        id="phone"
+        name="phone"
+        mask="(99) 99999-9999"
+        inputMode="tel"
+        value={phone.value}
+        onValueChange$={(v) => (phone.value = v)}
+      />
+
+      <label for="amount">Amount</label>
+      <InputDecimal
+        id="amount"
+        name="amount"
+        options={currency}
+        value={amount.value}
+        onValueChange$={(v) => (amount.value = v)}
+      />
+
+      <button type="button" onClick$={() => (amount.value = formatDecimalValue(1234.5, currency))}>
+        Set amount
+      </button>
+    </>
+  )
+})`,
+  },
+
+  'framework-inferno': {
+    lang: 'tsx',
+    code: `import { Component, render } from 'inferno'
+import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/inferno'
+
+// Keep option objects outside the component so they stay stable across renders.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+class App extends Component {
+  state = { phone: '', amount: '' }
+
+  render() {
+    return (
+      <>
+        <label for="phone">Phone</label>
+        <InputMask
+          id="phone"
+          name="phone"
+          mask="(99) 99999-9999"
+          inputMode="tel"
+          value={this.state.phone}
+          onValueChange={(phone) => this.setState({ phone })}
+        />
+
+        <label for="amount">Amount</label>
+        <InputDecimal
+          id="amount"
+          name="amount"
+          options={currency}
+          value={this.state.amount}
+          onValueChange={(amount) => this.setState({ amount })}
+        />
+
+        <button type="button" onClick={() => this.setState({ amount: formatDecimalValue(1234.5, currency) })}>
+          Set amount
+        </button>
+      </>
+    )
+  }
+}
+
+render(<App />, document.getElementById('root'))`,
+  },
+
+  'framework-octane': {
+    lang: 'tsx',
+    code: `/** @jsxImportSource octane */
+import { useState } from 'octane'
+import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/octane'
+
+// Keep option objects outside the component so they stay stable across renders.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+export function Checkout() {
+  const [phone, setPhone] = useState('')
+  const [amount, setAmount] = useState('')
+
+  return (
+    <>
+      <label for="phone">Phone</label>
+      <InputMask
+        id="phone"
+        name="phone"
+        mask="(99) 99999-9999"
+        inputMode="tel"
+        value={phone}
+        onValueChange={setPhone}
+      />
+
+      <label for="amount">Amount</label>
+      <InputDecimal id="amount" name="amount" options={currency} value={amount} onValueChange={setAmount} />
+
+      <button onClick={() => setAmount(formatDecimalValue(1234.5, currency))}>Set amount</button>
+    </>
+  )
+}`,
+  },
+
+  'framework-mithril': {
+    lang: 'ts',
+    code: `import m from 'mithril'
+import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/mithril'
+
+// Keep option objects outside the view so they stay stable across redraws.
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+let phone = ''
+let amount = ''
+
+const Checkout = {
+  view: () =>
+    m('div', [
+      m('label', { for: 'phone' }, 'Phone'),
+      m(InputMask, {
+        id: 'phone',
+        name: 'phone',
+        mask: '(99) 99999-9999',
+        inputmode: 'tel',
+        value: phone,
+        onValueChange: (v) => { phone = v },
+      }),
+
+      m('label', { for: 'amount' }, 'Amount'),
+      m(InputDecimal, {
+        id: 'amount',
+        name: 'amount',
+        options: currency,
+        value: amount,
+        onValueChange: (v) => { amount = v },
+      }),
+
+      m('button', { onclick: () => { amount = formatDecimalValue(1234.5, currency) } }, 'Set amount'),
+    ]),
+}
+
+m.mount(document.body, Checkout)`,
+  },
+
+  'framework-ember': {
+    lang: 'ts',
+    code: `// app/components/checkout.gjs
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
+import { maskInput, maskDecimal } from 'mother-mask/ember';
+
+export default class Checkout extends Component {
+  currency = { decimalPlaces: 2, prefix: '$', allowNegative: true };
+  @tracked phone = '';
+  @tracked amount = '';
+
+  @action setPhone(value) { this.phone = value; }
+  @action setAmount(value) { this.amount = value; }
+
+  <template>
+    <label for="phone">Phone</label>
+    <input id="phone" name="phone" inputmode="tel"
+      {{maskInput "(99) 99999-9999" value=this.phone onValueChange=this.setPhone}} />
+    <label for="amount">Amount</label>
+    <input id="amount" name="amount"
+      {{maskDecimal options=this.currency value=this.amount onValueChange=this.setAmount}} />
+  </template>
+}`,
+  },
+
+  'framework-knockout': {
+    lang: 'html',
+    code: `<div id="app">
+  <label for="phone">Phone</label>
+  <input id="phone" name="phone"
+         data-bind="mask: { mask: '(99) 99999-9999', value: phone, onValueChange: phone }">
+
+  <label for="amount">Amount</label>
+  <input id="amount" name="amount"
+         data-bind="maskDecimal: { options: { decimalPlaces: 2, prefix: '$', allowNegative: true }, value: amount, onValueChange: amount }">
+
+  <button data-bind="click: setPreset">Set amount</button>
+</div>
+
+<script type="module">
+  import ko from 'knockout'
+  import 'mother-mask/knockout'
+  import { formatDecimalValue } from 'mother-mask'
+
+  // Keep option objects outside the view model's observables so they stay
+  // stable across recomputes.
+  const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+  function CheckoutViewModel() {
+    this.phone = ko.observable('')
+    this.amount = ko.observable('')
+    this.setPreset = () => this.amount(formatDecimalValue(1234.5, currency))
+  }
+
+  ko.applyBindings(new CheckoutViewModel(), document.getElementById('app'))
+</script>`,
+  },
+
+  'framework-riot': {
+    lang: 'html',
+    code: `<label for="phone">Phone</label>
+<span id="phone"></span>
+
+<label for="amount">Amount</label>
+<span id="amount"></span>
+
+<script type="module">
+  import { pure } from 'riot'
+  import { maskInput, maskDecimal, formatDecimalValue } from 'mother-mask/riot'
+
+  // Keep option objects module-level so they stay stable across updates.
+  const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+  let phone = ''
+  const phoneField = pure(maskInput)({
+    props: {
+      mask: '(99) 99999-9999',
+      name: 'phone',
+      inputMode: 'tel',
+      autocomplete: 'tel',
+      value: phone,
+      onValueChange: (v) => (phone = v),
+    },
+  })
+  phoneField.mount(document.getElementById('phone'))
+
+  let amount = ''
+  const amountField = pure(maskDecimal)({
+    props: { options: currency, name: 'amount', value: amount, onValueChange: (v) => (amount = v) },
+  })
+  amountField.mount(document.getElementById('amount'))
+
+  // Later, e.g. from a parent Riot component's onUpdated:
+  amountField.update({ options: currency, value: formatDecimalValue(1234.5, currency) })
+
+  // During parent teardown:
+  // phoneField.unmount()
+  // amountField.unmount()
+</script>`,
   },
 
   // ── Examples ───────────────────────────────────────────────────────────────

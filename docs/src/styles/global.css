@@ -2184,3 +2184,39 @@ footer {
     gap: 30px 42px;
   }
 }
+
+/* Framework integration switcher */
+.framework-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 24px 0;
+}
+
+.framework-tabs button {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.framework-tabs button:hover,
+.framework-tabs button[aria-selected='true'] {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.framework-tabs button:focus-visible,
+.framework-switcher [role='tabpanel']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.framework-switcher [hidden] {
+  display: none;
+}

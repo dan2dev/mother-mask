@@ -19,6 +19,7 @@ import type { PageModule } from './page.ts'
 
 import * as overview from '../pages/overview.ts'
 import * as quickStart from '../pages/quick-start.ts'
+import * as frameworks from '../pages/frameworks.ts'
 import * as examples from '../pages/examples.ts'
 import * as advancedPatterns from '../pages/advanced-patterns.ts'
 import * as editing from '../pages/editing.ts'
@@ -73,6 +74,16 @@ export const ROUTES: readonly Route[] = [
       'Install mother-mask and bind your first TypeScript input mask in a few lines: HTML input, bind(), and cleanup on dispose.',
     priority: 0.8,
     page: quickStart,
+  },
+  {
+    slug: 'frameworks',
+    path: 'frameworks.html',
+    label: 'Frameworks',
+    title: 'Framework integrations — mother-mask docs',
+    description:
+      'Integrate masked text and decimal inputs with React, Vue, Angular, Svelte and every mother-mask framework adapter. Copy static code samples and run example apps.',
+    priority: 0.8,
+    page: frameworks,
   },
   {
     slug: 'examples',
