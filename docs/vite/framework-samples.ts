@@ -30,34 +30,33 @@ export function integrationSample(adapter: Adapter, fields: readonly SampleField
   const typed = !['lit', 'stencil', 'web-components', 'alpine', 'knockout', 'riot', 'ember'].includes(adapter)
   const uses = [...new Set(fields.map((field) => field.mask ? 'InputMask' : 'InputDecimal'))].join(', ')
   const entry = `mother-mask/${adapter}`
-  const declarations = fields.map((field, i) => [
-    field.mask ? `const mask${i} = ${field.mask}` : '',
-    `const options${i}${typed ? `: ${field.mask ? 'BindOptions' : 'BindDecimalOptions'}` : ''} = ${field.options}`,
-  ].filter(Boolean).join('\n')).join('\n')
-  const tokenDefinitions = fields.some((field) => /uppercaseLetter|uppercaseAlphanumeric/.test(field.options))
-    ? snippets['examples-tokens'].code.replaceAll(': string', typed ? ': string' : '') + '\n\n' : ''
-  const config = tokenDefinitions + declarations
-  const types = typed ? `import type { ${[...new Set(fields.map((field) => field.mask ? 'BindOptions' : 'BindDecimalOptions'))].join(', ')} } from 'mother-mask'\n` : ''
+  // Everything else is inlined directly at its point of use — the one thing
+  // that can't be is a custom-token demo (uppercaseLetter/uppercaseAlphanumeric):
+  // those are named function/RegExp pairs, not literals, so they still need
+  // a declaration above the component.
+  const preamble = fields.some((field) => /uppercaseLetter|uppercaseAlphanumeric/.test(field.options))
+    ? (typed ? snippets['examples-tokens'].code : snippets['examples-tokens'].code.replaceAll(': string', '')) + '\n\n'
+    : ''
   const initial = (i: number) => fields[i]!.initial ?? "''"
   const log = (i: number) => fields[i]!.raw ? "console.log(value, value.replace(/\\D/g, ''))" : `console.log(value${fields[i]!.mask ? '' : ', numericValue'})`
   const params = (i: number, annotations = false) => `value${annotations ? ': string' : ''}${fields[i]!.mask ? '' : `, numericValue${annotations ? ': number' : ''}`}`
-  const props = (i: number) => `${fields[i]!.mask ? `mask: mask${i}, ` : ''}options: options${i}`
+  const mask = (i: number) => fields[i]!.mask!
+  const options = (i: number) => fields[i]!.options
+  const props = (i: number) => `${fields[i]!.mask ? `mask: ${mask(i)}, ` : ''}options: ${options(i)}`
+  const jsxProps = (i: number) => `${fields[i]!.mask ? `mask={${mask(i)}} ` : ''}options={${options(i)}}`
   const component = (i: number) => fields[i]!.mask ? 'InputMask' : 'InputDecimal'
-  const mode = (i: number) => fields[i]!.mask ? 'text' : 'decimal'
+  const modeAttr = (i: number) => fields[i]!.mask ? 'text' : 'decimal'
   const label = (i: number, forAttr = 'for') => `<label ${forAttr}="field-${i}">${fields[i]!.mask ? 'Masked value' : 'Amount'}</label>`
 
   if (['react', 'preact', 'octane'].includes(adapter)) {
     const hook = adapter === 'preact' ? 'preact/hooks' : adapter
     return { lang: 'tsx', code: `${adapter === 'react' ? "'use client'\n" : adapter === 'octane' ? '/** @jsxImportSource octane */\n' : ''}import { useState } from '${hook}'
 import { ${uses} } from '${entry}'
-${types}
-${config}
-
-export function Example() {
+${preamble}export function Example() {
 ${fields.map((_, i) => `  const [value${i}, setValue${i}] = useState(${initial(i)})`).join('\n')}
   return <>
 ${fields.map((_, i) => `    ${label(i, adapter === 'octane' ? 'for' : 'htmlFor')}
-    <${component(i)} id="field-${i}" ${fields[i]!.mask ? `mask={mask${i}} ` : ''}options={options${i}}
+    <${component(i)} id="field-${i}" ${jsxProps(i)}
       value={value${i}} onValueChange={(${params(i)}) => { setValue${i}(value); ${log(i)} }} />`).join('\n')}
   </>
 }` }
@@ -68,9 +67,7 @@ ${fields.map((_, i) => `    ${label(i, adapter === 'octane' ? 'for' : 'htmlFor')
     return { lang: 'vue', code: `<script setup lang="ts">
 import { ref } from 'vue'
 import { ${vueImports} } from '${entry}'
-${types}
-${config}
-${fields.map((_, i) => `const value${i} = ref(${initial(i)})`).join('\n')}
+${preamble}${fields.map((_, i) => `const value${i} = ref(${initial(i)})`).join('\n')}
 </script>
 
 <template>
@@ -81,9 +78,7 @@ ${fields.map((_, i) => `  ${label(i)}
   }
   if (adapter === 'svelte') return { lang: 'svelte', code: `<script lang="ts">
 import { ${[...new Set(fields.map((field) => field.mask ? 'motherMask' : 'motherMaskDecimal'))].join(', ')} } from '${entry}'
-${types}
-${config}
-${fields.map((_, i) => `let value${i} = $state(${initial(i)})`).join('\n')}
+${preamble}${fields.map((_, i) => `let value${i} = $state(${initial(i)})`).join('\n')}
 </script>
 
 ${fields.map((_, i) => `${label(i)}
@@ -91,10 +86,7 @@ ${fields.map((_, i) => `${label(i)}
   value: value${i}, onValueChange: (${params(i)}) => { value${i} = value; ${log(i)} } }} />`).join('\n')}` }
   if (adapter === 'solid') return { lang: 'tsx', code: `import { createSignal } from 'solid-js'
 import { ${[...new Set(fields.map((field) => field.mask ? 'motherMask' : 'motherMaskDecimal'))].join(', ')} } from '${entry}'
-${types}
-${config}
-
-export function Example() {
+${preamble}export function Example() {
 ${fields.map((_, i) => `  const [value${i}, setValue${i}] = createSignal(${initial(i)})`).join('\n')}
   return <>
 ${fields.map((_, i) => `    ${label(i)}
@@ -104,28 +96,22 @@ ${fields.map((_, i) => `    ${label(i)}
 }` }
   if (adapter === 'qwik') return { lang: 'tsx', code: `import { component$, useSignal } from '@builder.io/qwik'
 import { ${uses} } from '${entry}'
-${types}
-${config}
-
-export default component$(() => {
+${preamble}export default component$(() => {
 ${fields.map((_, i) => `  const value${i} = useSignal(${initial(i)})`).join('\n')}
   return <>
 ${fields.map((_, i) => `    ${label(i)}
-    <${component(i)} id="field-${i}" ${fields[i]!.mask ? `mask={mask${i}} ` : ''}options={options${i}}
+    <${component(i)} id="field-${i}" ${jsxProps(i)}
       value={value${i}.value} onValueChange$={(${params(i)}) => { value${i}.value = value; ${log(i)} }} />`).join('\n')}
   </>
 })` }
   if (adapter === 'inferno') return { lang: 'tsx', code: `import { Component } from 'inferno'
 import { ${uses} } from '${entry}'
-${types}
-${config}
-
-export class Example extends Component {
+${preamble}export class Example extends Component {
   state = { ${fields.map((_, i) => `value${i}: ${initial(i)}`).join(', ')} }
   render() {
     return <>
 ${fields.map((_, i) => `      ${label(i)}
-      <${component(i)} id="field-${i}" ${fields[i]!.mask ? `mask={mask${i}} ` : ''}options={options${i}}
+      <${component(i)} id="field-${i}" ${jsxProps(i)}
         value={this.state.value${i}} onValueChange={(${params(i)}) => { this.setState({ value${i}: value }); ${log(i)} }} />`).join('\n')}
     </>
   }
@@ -134,29 +120,23 @@ ${fields.map((_, i) => `      ${label(i)}
     const directives = [...new Set(fields.map((field) => field.mask ? 'MotherMaskDirective' : 'MotherMaskDecimalDirective'))].join(', ')
     return { lang: 'ts', code: `import { Component } from '@angular/core'
 import { ${directives} } from '${entry}'
-${types}
-${config}
-
-@Component({
+${preamble}@Component({
   selector: 'app-example', standalone: true,
   imports: [${directives}],
   template: \`
 ${fields.map((field, i) => `    ${label(i)}
-    <input id="field-${i}" ${field.mask ? `[motherMask]="mask${i}" [motherMaskOptions]="options${i}"` : `motherMaskDecimal [motherMaskDecimalOptions]="options${i}"`}
+    <input id="field-${i}" ${field.mask ? `[motherMask]="${mask(i)}" [motherMaskOptions]="${options(i)}"` : `motherMaskDecimal [motherMaskDecimalOptions]="${options(i)}"`}
       [(value)]="value${i}" ${field.mask ? `(valueChange)="change${i}($event)"` : `(numericValueChange)="change${i}(value${i}, $event)"`} />`).join('\n')}
   \`,
 })
 export class ExampleComponent {
-${fields.map((field, i) => `${field.mask ? `  readonly mask${i} = mask${i}\n` : ''}  readonly options${i} = options${i}
-  value${i} = ${initial(i)}
+${fields.map((_, i) => `  value${i} = ${initial(i)}
   change${i}(${params(i, true)}) { ${log(i)} }`).join('\n')}
 }` }
   }
   if (adapter === 'mithril') return { lang: 'ts', code: `import m from 'mithril'
 import { ${uses} } from '${entry}'
-${types}
-${config}
-${fields.map((_, i) => `let value${i} = ${initial(i)}`).join('\n')}
+${preamble}${fields.map((_, i) => `let value${i} = ${initial(i)}`).join('\n')}
 
 const Example = {
   view: () => m('div', [
@@ -173,10 +153,8 @@ import { tracked } from '@glimmer/tracking'
 import { action } from '@ember/object'
 import { ${[...new Set(fields.map((field) => field.mask ? 'maskInput' : 'maskDecimal'))].join(', ')} } from '${entry}'
 
-${config}
-
-export default class Example extends Component {
-${fields.map((field, i) => `${field.mask ? `  mask${i} = mask${i}\n` : ''}  options${i} = options${i}
+${preamble}export default class Example extends Component {
+${fields.map((field, i) => `${field.mask ? `  mask${i} = ${mask(i)}\n` : ''}  options${i} = ${options(i)}
   @tracked value${i} = ${initial(i)}
   @action change${i}(${params(i)}) { this.value${i} = value; ${log(i)} }`).join('\n')}
   <template>
@@ -193,9 +171,8 @@ ${fields.map((field, i) => `    ${label(i)}
 
 <script type="module">
 ${indent(adapter === 'stencil' ? [...new Set(fields.map((field) => `import 'mother-mask/stencil/mask-${field.mask ? 'input' : 'decimal'}'`))].join('\n') : `import '${entry}'`)}
-${indent(config)}
-${fields.map((field, i) => `  const field${i} = document.querySelector('${tag(i)}[data-field="${i}"]')
-${field.mask ? `  field${i}.mask = mask${i}\n` : ''}  field${i}.options = options${i}
+${indent(preamble)}${fields.map((field, i) => `  const field${i} = document.querySelector('${tag(i)}[data-field="${i}"]')
+${field.mask ? `  field${i}.mask = ${mask(i)}\n` : ''}  field${i}.options = ${options(i)}
   field${i}.value = ${initial(i)}
   field${i}.addEventListener('value-change', (event) => {
     const value = event.detail
@@ -206,10 +183,9 @@ ${field.mask ? `  field${i}.mask = mask${i}\n` : ''}  field${i}.options = option
   if (adapter === 'alpine') return { lang: 'html', code: `<script type="module">
   import Alpine from 'alpinejs'
   import motherMaskPlugin from '${entry}'
-${indent(config)}
-  Alpine.plugin(motherMaskPlugin)
+${indent(preamble)}  Alpine.plugin(motherMaskPlugin)
   Alpine.data('example', () => ({
-${fields.map((field, i) => `    ${field.mask ? `mask${i}, ` : ''}options${i}, value${i}: ${initial(i)},`).join('\n')}
+${fields.map((_, i) => `    value${i}: ${initial(i)},`).join('\n')}
   }))
   Alpine.start()
 </script>
@@ -227,9 +203,8 @@ ${fields.map((field, i) => `  ${label(i)}
 <script type="module">
   import ko from 'knockout'
   import '${entry}'
-${indent(config)}
-  const model = {
-${fields.map((field, i) => `    ${field.mask ? `mask${i}, ` : ''}options${i}, value${i}: ko.observable(${initial(i)}),
+${indent(preamble)}  const model = {
+${fields.map((_, i) => `    value${i}: ko.observable(${initial(i)}),
     change${i}(${params(i)}) { model.value${i}(value); ${log(i)} },`).join('\n')}
   }
   ko.applyBindings(model, document.getElementById('example'))
@@ -239,9 +214,8 @@ ${fields.map((field, i) => `    ${field.mask ? `mask${i}, ` : ''}options${i}, va
 <script type="module">
   import { pure } from 'riot'
   import { ${[...new Set(fields.map((field) => field.mask ? 'maskInput' : 'maskDecimal'))].join(', ')} } from '${entry}'
-${indent(config)}
-${fields.map((field, i) => `  const field${i} = pure(${field.mask ? 'maskInput' : 'maskDecimal'})({ props: {
-    ${props(i)}, value: ${initial(i)}, inputMode: '${mode(i)}',
+${indent(preamble)}${fields.map((field, i) => `  const field${i} = pure(${field.mask ? 'maskInput' : 'maskDecimal'})({ props: {
+    ${props(i)}, value: ${initial(i)}, inputMode: '${modeAttr(i)}',
     onValueChange: (${params(i)}) => { ${log(i)} },
   } })
   field${i}.mount(document.getElementById('field-${i}'))`).join('\n')}

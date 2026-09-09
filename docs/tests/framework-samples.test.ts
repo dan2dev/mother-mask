@@ -14,8 +14,8 @@ describe('framework examples', () => {
         const field = demoField(name)
         const source = variants[name]!.code
         expect(source).toContain(`mother-mask/${id}`)
-        if (field.mask) expect(source).toContain(`const mask0 = ${field.mask}`)
-        expect(source).toContain(`= ${field.options}`)
+        if (field.mask) expect(source).toContain(field.mask)
+        expect(source).toContain(field.options)
         expect(source).not.toContain('updateOutputs(')
         // Standalone examples must bring along any custom token declarations.
         if (field.options.includes('uppercaseLetter')) expect(source).toContain('const uppercaseLetter =')
