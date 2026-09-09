@@ -1,5 +1,7 @@
 import { CodeBlock } from '../components/CodeBlock.ts'
+import { FrameworkSelect } from '../components/FrameworkSelect.ts'
 import { FRAMEWORKS, type Adapter } from '../content/frameworks.ts'
+import { initFrameworkSelection, refreshFrameworkCode } from '../lib/framework.ts'
 import { REPO_URL } from '../site.ts'
 
 const notes = {
@@ -28,7 +30,11 @@ export function view() {
     section(
       { id: 'frameworks' },
       h1({ className: 'page-title' }, 'Frameworks'),
-      p({ className: 'section-sub' }, 'Choose a framework in the global Code examples dropdown. The selection applies to every integration example across these docs.'),
+      p(
+        { className: 'section-sub' },
+        'Pick a framework below to see its install command and a full integration example. Every other page in these docs sticks to vanilla JS.',
+      ),
+      FrameworkSelect(),
       div(
         { 'data-framework-guide': 'vanilla' },
         h2('Vanilla JS'),
@@ -46,4 +52,12 @@ export function view() {
       CodeBlock('framework-guide'),
     ),
   )
+}
+
+/** The only page with framework-aware code — the select and its repaint live here alone. */
+export function setup(): void {
+  initFrameworkSelection()
+  // In-memory selection survives navigation; repaint immediately in case it
+  // isn't 'vanilla' — the freshly mounted markup is always prerendered as such.
+  refreshFrameworkCode()
 }

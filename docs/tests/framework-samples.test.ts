@@ -31,11 +31,11 @@ describe('framework examples', () => {
     expect(frameworkSamples('react')['ex-cpf']!.code).toContain('onValueChange=')
     expect(frameworkSamples('qwik')['ex-cpf']!.code).toContain('onValueChange$=')
     expect(frameworkSamples('vue')['ex-cpf']!.code).toContain('v-mother-mask=')
-    expect(frameworkSamples('angular')['ex-cpf']!.code).toContain('[(value)]="value0"')
+    expect(frameworkSamples('angular')['ex-cpf']!.code).toContain('[(value)]="value"')
     expect(frameworkSamples('svelte')['ex-cpf']!.code).toContain('use:motherMask=')
     expect(frameworkSamples('solid')['ex-cpf']!.code).toContain('use:motherMask=')
     expect(frameworkSamples('alpine')['ex-cpf']!.code).not.toContain('x-model')
-    expect(frameworkSamples('ember')['ex-cpf']!.code).toContain('{{maskInput this.mask0')
+    expect(frameworkSamples('ember')['ex-cpf']!.code).toContain('{{maskInput this.mask')
     expect(frameworkSamples('stencil')['ex-cpf']!.code).toContain("import 'mother-mask/stencil/mask-input'")
   })
 

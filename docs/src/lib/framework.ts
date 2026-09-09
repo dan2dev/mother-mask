@@ -1,5 +1,5 @@
 import baseSnippets from 'virtual:snippets'
-import { FRAMEWORKS, isFramework, type Adapter, type Framework } from '../content/frameworks.ts'
+import { isFramework, type Adapter, type Framework } from '../content/frameworks.ts'
 import type { HighlightedSnippet, SnippetName } from '../content/snippets.ts'
 
 type Catalog = Partial<Record<SnippetName, HighlightedSnippet>>
@@ -46,12 +46,15 @@ function paint(code: HTMLElement, lines: HighlightedSnippet): void {
   code.replaceChildren(content)
 }
 
-/** Also called after navigation, when new blocks have been inserted. */
+/**
+ * Repaints the Frameworks page's own code blocks and guide panels to match
+ * `selected`. Everywhere else in the docs always shows the vanilla snippet
+ * already baked into the prerendered markup, so this never runs there — see
+ * `setup()` in src/pages/frameworks.ts, the only caller.
+ */
 export function refreshFrameworkCode(): void {
   document.querySelectorAll<HTMLElement>('[data-snippet]').forEach((block) => {
     const name = block.dataset.snippet as SnippetName
-    // Framework components include their markup; the raw HTML starter is redundant.
-    block.hidden = name === 'quick-start-html' && selected !== 'vanilla'
     if (block.dataset.renderedFramework === selected) return
     const code = block.querySelector<HTMLElement>('pre code')
     if (code) paint(code, catalog[name] ?? baseSnippets[name])
@@ -59,9 +62,6 @@ export function refreshFrameworkCode(): void {
   })
   document.querySelectorAll<HTMLElement>('[data-framework-guide]').forEach((panel) => {
     panel.hidden = panel.dataset.frameworkGuide !== selected
-  })
-  document.querySelectorAll<HTMLElement>('[data-framework-label]').forEach((label) => {
-    label.textContent = FRAMEWORKS.find((framework) => framework.id === selected)!.label
   })
 }
 

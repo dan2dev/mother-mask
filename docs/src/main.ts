@@ -20,7 +20,6 @@
 import 'nuclo'
 import './styles/global.css'
 
-import { initFrameworkSelection, refreshFrameworkCode } from './lib/framework.ts'
 import { createApp } from './app.ts'
 import { initChrome, closeMobileMenu } from './lib/chrome.ts'
 import { initTheme } from './lib/theme.ts'
@@ -58,7 +57,6 @@ document.body.classList.toggle('home-page', initial.path === '')
 
 initTheme()
 initChrome()
-initFrameworkSelection()
 
 let teardown: PageTeardown | undefined
 
@@ -84,7 +82,6 @@ function onNavigate(navigation: Navigation<Route>): void {
   if (kind !== 'initial') closeMobileMenu()
   if (changed || kind === 'initial') teardown = route.page.setup?.() ?? undefined
 
-  refreshFrameworkCode()
   restoreView(navigation, changed)
 }
 
