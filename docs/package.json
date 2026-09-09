@@ -8,7 +8,8 @@
     "build": "vite build && vite build --ssr src/entry-server.ts --outDir .ssr && tsc --noEmit && bun run prerender.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist .ssr",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "bun test tests"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",

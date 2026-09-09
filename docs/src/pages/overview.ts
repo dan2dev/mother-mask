@@ -120,7 +120,7 @@ export function view() {
 
         div(
           { className: 'playground-code-window' },
-          div({ className: 'window-toolbar' }, span('TypeScript')),
+          div({ className: 'window-toolbar' }, span({ 'data-framework-label': true }, 'Vanilla JS')),
           CodeBlock('home-playground'),
         ),
       ),

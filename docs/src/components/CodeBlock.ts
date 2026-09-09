@@ -3,7 +3,7 @@
  *
  * `virtual:snippets` hands over each sample already tokenized — a list of
  * lines, each a list of `[text, class]` pairs — so rendering is a plain walk
- * over arrays. Nothing about a code block is state-dependent, and no
+ * over arrays. Framework selection replaces only the token contents, and no
  * highlighter reaches the browser: Shiki's grammars are larger than this entire
  * site, and the colors never change once the build has run.
  *
@@ -25,21 +25,13 @@ export function CodeBlock(name: SnippetName) {
   const lines = snippets[name]
 
   return div(
-    { className: 'code-block' },
+    { className: 'code-block', 'data-snippet': name },
     // Lines are joined with real newlines rather than wrapped in per-line
     // elements, so `textContent` is the original source and the copy button
     // needs nothing but the element.
     pre({ className: 'shiki' }, code(...lines.flatMap((line, i) => (i === 0 ? tokens(line) : ['\n', ...tokens(line)])))),
     CopyButton('Copy code'),
   )
-}
-
-/**
- * A one-line sample rendered inline, as used on the demo cards. Falls back to
- * the block renderer's tokens; only the element and the wrapping differ.
- */
-export function InlineCode(name: SnippetName, className: string) {
-  return code({ className: `shiki ${className}` }, ...snippets[name].flatMap((line) => tokens(line)))
 }
 
 export function CopyButton(label: string) {

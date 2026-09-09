@@ -1,3 +1,4 @@
+import { FrameworkSelect } from './FrameworkSelect.ts'
 import { packageVersion } from 'virtual:package-meta'
 import { NavLinks } from './NavLinks.ts'
 import { icon } from './icons.ts'
@@ -62,5 +63,6 @@ export function Header() {
         ),
       ),
     ),
+    FrameworkSelect(),
   )
 }

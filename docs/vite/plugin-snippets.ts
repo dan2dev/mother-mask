@@ -16,8 +16,11 @@
  */
 import type { Plugin } from 'vite'
 import { codeToTokens, type BuiltinLanguage, type ThemeRegistrationRaw } from 'shiki'
-import { snippets, type HighlightedSnippet, type SnippetToken } from '../src/content/snippets.ts'
+import { snippets, type RawSnippet, type HighlightedSnippet, type SnippetToken } from '../src/content/snippets.ts'
 import { codeTheme, TOKEN_CLASS } from '../src/styles/code-theme.ts'
+
+import { frameworkSamples } from './framework-samples.ts'
+import { isFramework } from '../src/content/frameworks.ts'
 
 const VIRTUAL_ID = 'virtual:snippets'
 const RESOLVED_ID = '\0virtual:snippets'
@@ -29,10 +32,10 @@ function classFor(color: string | undefined): string {
   return TOKEN_CLASS[color.toLowerCase() as SentinelColor] ?? ''
 }
 
-async function highlightAll(): Promise<Record<string, HighlightedSnippet>> {
+async function highlightAll(source: Record<string, RawSnippet>): Promise<Record<string, HighlightedSnippet>> {
   const out: Record<string, HighlightedSnippet> = {}
 
-  for (const [name, snippet] of Object.entries(snippets)) {
+  for (const [name, snippet] of Object.entries(source)) {
     const { tokens } = await codeToTokens(snippet.code, {
       lang: snippet.lang as BuiltinLanguage,
       theme: codeTheme as unknown as ThemeRegistrationRaw,
@@ -56,17 +59,24 @@ async function highlightAll(): Promise<Record<string, HighlightedSnippet>> {
 }
 
 export function snippetsPlugin(): Plugin {
-  let generated: Promise<string> | null = null
+  const generated = new Map<string, Promise<string>>()
 
   return {
     name: 'mother-mask-docs:snippets',
     resolveId(id) {
-      return id === VIRTUAL_ID ? RESOLVED_ID : undefined
+      if (id === VIRTUAL_ID) return RESOLVED_ID
+      if (id.startsWith(`${VIRTUAL_ID}/`) && isFramework(id.slice(VIRTUAL_ID.length + 1))) return `\0${id}`
+      return undefined
     },
     load(id) {
-      if (id !== RESOLVED_ID) return undefined
-      generated ??= highlightAll().then((data) => `export default ${JSON.stringify(data)}`)
-      return generated
+      if (id !== RESOLVED_ID && !id.startsWith(`${RESOLVED_ID}/`)) return undefined
+      const framework = id.slice(RESOLVED_ID.length + 1)
+      if (id !== RESOLVED_ID && (!isFramework(framework) || framework === 'vanilla')) return undefined
+      if (!generated.has(id)) {
+        const source = isFramework(framework) && framework !== 'vanilla' ? frameworkSamples(framework) : snippets
+        generated.set(id, highlightAll(source).then((data) => `export default ${JSON.stringify(data)}`))
+      }
+      return generated.get(id)
     },
   }
 }

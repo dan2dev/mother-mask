@@ -171,14 +171,14 @@ for a runnable app and browser lifecycle/memory tests.
 
 ## Vue
 
-Import the Vue 3.5 Composition API components from the separate `mother-mask/vue` entry:
+Import the custom directives from the separate `mother-mask/vue` entry:
 
 ```vue
 <script setup lang="ts">
 import { ref } from 'vue'
-import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/vue'
+import { vMotherMask, vMotherMaskDecimal, formatDecimalValue } from 'mother-mask/vue'
 
-// Keep option objects stable across renders.
+// Keep the options object stable across renders.
 const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
 
 const phone = ref('')
@@ -187,10 +187,19 @@ const amount = ref('')
 
 <template>
   <label for="phone">Phone</label>
-  <InputMask id="phone" name="phone" mask="(99) 99999-9999" inputmode="tel" v-model="phone" />
+  <input
+    id="phone"
+    name="phone"
+    inputmode="tel"
+    v-mother-mask="{ mask: '(99) 99999-9999', value: phone, onValueChange: (v) => (phone = v) }"
+  />
 
   <label for="amount">Amount</label>
-  <InputDecimal id="amount" name="amount" :options="currency" v-model="amount" />
+  <input
+    id="amount"
+    name="amount"
+    v-mother-mask-decimal="{ options: currency, value: amount, onValueChange: (v) => (amount = v) }"
+  />
 
   <button type="button" @click="amount = formatDecimalValue(1234.5, currency)">
     Set amount
@@ -199,25 +208,33 @@ const amount = ref('')
 ```
 
 `mother-mask/vue` re-exports every core function, class, and type as well as
-`InputMask` and `InputDecimal`. Its core exports are aliases to `mother-mask`,
-sharing the same implementation and caches. The core ESM, CommonJS, and UMD
-builds remain independent of Vue. Vue is an optional peer dependency required
-only when importing `mother-mask/vue`; the supported version range is
-`^3.5.0`. Vue is not bundled.
+the `vMotherMask` and `vMotherMaskDecimal` directives. Its core exports are
+aliases to `mother-mask`, sharing the same implementation and caches. The
+core ESM, CommonJS, and UMD builds remain independent of Vue. Vue is an
+optional peer dependency required only when importing `mother-mask/vue`; the
+supported version range is `^3.5.0`. Vue is not bundled.
 
-- Both components support `v-model` (a `modelValue` prop plus an
-  `update:modelValue` emit). `InputMask` accepts `mask` and optional
-  `BindOptions` (without `onChange`); `InputDecimal` accepts optional
-  `BindDecimalOptions` and emits `(value, numericValue)`.
-- Binding happens in `onMounted` — a lifecycle hook that Vue never invokes
-  during SSR — so these components render safely on the server without a
-  manual `typeof window` check; hydration binds on the client as usual.
-  `onBeforeUnmount` disposes the binding, and it is disposed and recreated
-  whenever `mask`/`options` change or `modelValue` is updated externally.
-- Native attributes (`id`, `name`, `class`, ...) fall through via
-  `inheritAttrs: false` plus `v-bind="$attrs"` semantics; `InputDecimal`
-  always sets `inputmode="decimal"`. Both expose their `inputRef` via
-  `defineExpose` for `useTemplateRef` access to the underlying `<input>`.
+- `vMotherMask` takes `{ mask, options?, value?, onValueChange? }`;
+  `vMotherMaskDecimal` takes `{ options?, value?, onValueChange? }` and calls
+  `onValueChange(value, numericValue)`. `vMotherMaskDecimal` always sets
+  `inputmode="decimal"` on mount.
+- Both are exported pre-named `v` + PascalCase — Vue's own convention for a
+  local directive in `<script setup>` — so `import { vMotherMask } from
+  'mother-mask/vue'` alone makes `v-mother-mask="..."` available in the
+  template with no import rename. Register it globally instead with
+  `app.directive('mother-mask', vMotherMask)` to make `v-mother-mask`
+  available in every component.
+- `mounted` runs only once Vue mounts the element to the live DOM — Vue
+  never invokes directive hooks during server-side rendering, so this is
+  SSR-safe with no `typeof window` guard needed. `updated` runs on every
+  re-render of the owning component (not only when the bound value actually
+  changes), so it rebinds only if the mask, options, or an externally-set
+  value actually changed — an echo of the directive's own `onValueChange` is
+  ignored. `beforeUnmount` guarantees `dispose()` runs exactly once.
+- A `declare module 'vue' { interface GlobalDirectives { ... } }`
+  augmentation ships alongside each directive, so a globally-registered
+  `v-mother-mask`/`v-mother-mask-decimal` also type-checks in templates
+  without extra setup.
 
 See the [Vue example](https://github.com/dan2dev/mother-mask/tree/main/examples/vue-simple)
 for a runnable app.

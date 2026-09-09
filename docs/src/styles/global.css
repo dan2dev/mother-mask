@@ -2185,38 +2185,37 @@ footer {
   }
 }
 
-/* Framework integration switcher */
-.framework-tabs {
+/* One framework choice for every code example. */
+.framework-select-bar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 24px 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 8px max(16px, calc((100vw - 1440px) / 2));
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 0.8rem;
 }
 
-.framework-tabs button {
-  padding: 8px 14px;
+.framework-select-bar label { color: var(--text); }
+.framework-select-bar select {
+  max-width: 190px;
+  padding: 6px 30px 6px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg-raised);
-  color: var(--text);
+  color: var(--text-h);
   font: inherit;
-  font-size: 0.875rem;
-  cursor: pointer;
 }
-
-.framework-tabs button:hover,
-.framework-tabs button[aria-selected='true'] {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: var(--accent-bg);
-}
-
-.framework-tabs button:focus-visible,
-.framework-switcher [role='tabpanel']:focus-visible {
+.framework-select-bar select:focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
+.framework-status { color: var(--text-dim); }
+[data-framework-guide][hidden], .code-block[hidden] { display: none; }
+.example .code-block { margin: 12px 0; }
+.example .code-block pre { max-height: 340px; overflow: auto; }
 
-.framework-switcher [hidden] {
-  display: none;
-}
+/* Account for the shared selector row when scrolling below the sticky header. */
+.sidebar { top: 152px; max-height: calc(100vh - 176px); }
+section[id], [id].example, .section-heading { scroll-margin-top: 144px; }

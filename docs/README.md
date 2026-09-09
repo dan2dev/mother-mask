@@ -141,6 +141,23 @@ of that:
   from the repository root for the library suite; see
   [the repository guide](../REPOSITORY.md) for real-browser checks.
 
+## Framework code examples
+
+The header's **Code examples** dropdown selects Vanilla JS or a framework for
+all integration samples. The preference is restored after hydration and survives
+navigation and reloads. Only highlighted code changes; live demos continue using
+the raw binders and keep their current inputs.
+
+`src/content/frameworks.ts` owns the choices. `vite/framework-samples.ts` adapts
+each demo's existing snippet into its framework API, preserving masks, options,
+and callback behavior. New `ex-` snippets must use the supported literal bind
+format or provide an explicit mapping there; unsupported samples fail the build.
+Pattern notation, shared core types, and install commands remain framework-neutral.
+The snippet plugin emits a separate highlighted chunk for each adapter, fetched
+on selection, so the site never loads a framework runtime for its demos.
+
+Run `bun run test` in `docs/` to check adapter coverage and sample contracts.
+
 ## Nuclo notes
 
 Three things about the version currently pinned (0.2.30) shape the code here.

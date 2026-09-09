@@ -126,9 +126,9 @@ export function Form() {
     lang: 'vue',
     code: `<script setup lang="ts">
 import { ref } from 'vue'
-import { InputMask, InputDecimal, formatDecimalValue } from 'mother-mask/vue'
+import { vMotherMask, vMotherMaskDecimal, formatDecimalValue } from 'mother-mask/vue'
 
-// Keep option objects stable across renders.
+// Keep the options object stable across renders.
 const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
 
 const phone = ref('')
@@ -137,10 +137,19 @@ const amount = ref('')
 
 <template>
   <label for="phone">Phone</label>
-  <InputMask id="phone" name="phone" mask="(99) 99999-9999" inputmode="tel" v-model="phone" />
+  <input
+    id="phone"
+    name="phone"
+    inputmode="tel"
+    v-mother-mask="{ mask: '(99) 99999-9999', value: phone, onValueChange: (v) => (phone = v) }"
+  />
 
   <label for="amount">Amount</label>
-  <InputDecimal id="amount" name="amount" :options="currency" v-model="amount" />
+  <input
+    id="amount"
+    name="amount"
+    v-mother-mask-decimal="{ options: currency, value: amount, onValueChange: (v) => (amount = v) }"
+  />
 
   <button type="button" @click="amount = formatDecimalValue(1234.5, currency)">
     Set amount
@@ -641,6 +650,27 @@ export default class Checkout extends Component {
   // During parent teardown:
   // phoneField.unmount()
   // amountField.unmount()
+</script>`,
+  },
+
+  'framework-guide': {
+    lang: 'html',
+    code: `<label for="phone">Phone</label>
+<input id="phone" type="text" inputmode="tel" />
+<label for="amount">Amount</label>
+<input id="amount" type="text" inputmode="decimal" />
+
+<script type="module">
+  import { bind, bindDecimal } from 'mother-mask'
+
+  const phone = document.getElementById('phone')
+  const amount = document.getElementById('amount')
+  const disposePhone = bind(phone, '(99) 99999-9999')
+  const disposeAmount = bindDecimal(amount, { decimalPlaces: 2, prefix: '$' })
+
+  // During teardown:
+  // disposePhone()
+  // disposeAmount()
 </script>`,
   },
 

@@ -1,88 +1,124 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { defineComponent, h, nextTick, ref } from 'vue'
-import { mount } from '@vue/test-utils'
+import { createApp, h, nextTick, reactive, withDirectives } from 'vue'
+import type { Directive } from 'vue'
 import * as core from '../src/index'
 import * as vueApi from '../src/vue/index'
-import { InputDecimal, InputMask } from '../src/vue/index'
+import { vMotherMask } from '../src/vue/mask-directive'
+import type { MaskDirectiveParams } from '../src/vue/mask-directive'
+import { vMotherMaskDecimal } from '../src/vue/decimal-directive'
+import type { DecimalDirectiveParams } from '../src/vue/decimal-directive'
 
-let wrapper: ReturnType<typeof mount> | undefined
+let container: HTMLDivElement | undefined
+let app: ReturnType<typeof createApp> | undefined
 
 afterEach(() => {
-  wrapper?.unmount()
-  wrapper = undefined
+  app?.unmount()
+  app = undefined
+  container?.remove()
+  container = undefined
   vi.restoreAllMocks()
 })
 
-it('aliases every core export without exposing Vue components from core', () => {
+/**
+ * Mounts a single `<input>` bound to `directive` via `withDirectives` — the
+ * runtime helper the template compiler itself expands `v-mother-mask="..."`
+ * into — since these tests build vnodes directly with no SFC compile step.
+ * `params` is expected to already be reactive (built with `reactive()`):
+ * mutating one of its properties re-renders the root, which re-spreads
+ * `params` into a fresh object and patches the same `<input>`, running the
+ * directive's `updated` hook exactly as a template re-render would.
+ */
+function mount<P extends object>(directive: Directive<HTMLInputElement, P>, params: P): HTMLInputElement {
+  container = document.createElement('div')
+  document.body.append(container)
+  app = createApp({
+    render: () => withDirectives(h('input'), [[directive, { ...params }]]),
+  })
+  app.mount(container)
+  return container.querySelector('input') as HTMLInputElement
+}
+
+it('aliases every core export without exposing Vue directives from core', () => {
   for (const name of Object.keys(core) as Array<keyof typeof core>) {
     expect(vueApi[name]).toBe(core[name])
   }
-  expect(core).not.toHaveProperty('InputMask')
-  expect(core).not.toHaveProperty('InputDecimal')
+  expect(core).not.toHaveProperty('vMotherMask')
+  expect(core).not.toHaveProperty('vMotherMaskDecimal')
 })
 
-describe('InputMask', () => {
-  it('formats the initial modelValue on mount', () => {
-    wrapper = mount(InputMask, { props: { mask: '999-999', modelValue: '123456' } })
-    expect((wrapper.find('input').element as HTMLInputElement).value).toBe('123-456')
+describe('vMotherMask directive', () => {
+  it('formats the initial value on mount', () => {
+    const input = mount(vMotherMask, reactive<MaskDirectiveParams>({ mask: '999-999', value: '123456' }))
+    expect(input.value).toBe('123-456')
   })
 
-  it('emits update:modelValue when the user types', async () => {
-    wrapper = mount(InputMask, { props: { mask: '999-999', modelValue: '' } })
-    const input = wrapper.find('input').element as HTMLInputElement
+  it('calls onValueChange when the user types', () => {
+    const onValueChange = vi.fn()
+    const input = mount(vMotherMask, reactive<MaskDirectiveParams>({ mask: '999-999', value: '', onValueChange }))
+
     input.value = '123456'
     input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }))
-    await nextTick()
-    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['123-456'])
+
+    expect(onValueChange).toHaveBeenLastCalledWith('123-456')
   })
 
-  it('rebinds when the mask changes and reformats the current value', async () => {
-    wrapper = mount(InputMask, { props: { mask: '999-999', modelValue: '123456' } })
-    await wrapper.setProps({ mask: '99/99/99' })
-    await nextTick()
-    expect((wrapper.find('input').element as HTMLInputElement).value).toBe('12/34/56')
+  it('works without an onValueChange callback', () => {
+    const input = mount(vMotherMask, reactive<MaskDirectiveParams>({ mask: '999-999', value: '' }))
+    input.value = '123456'
+    expect(() =>
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' })),
+    ).not.toThrow()
+    expect(input.value).toBe('123-456')
   })
 
-  it('reformats when modelValue is set externally without a mask change', async () => {
-    wrapper = mount(InputMask, { props: { mask: '999-999', modelValue: '123456' } })
-    await wrapper.setProps({ modelValue: '999888' })
+  it('rebinds and reformats when the mask changes', async () => {
+    const params = reactive<MaskDirectiveParams>({ mask: '999-999', value: '123456' })
+    const input = mount(vMotherMask, params)
+    params.mask = '99/99/99'
     await nextTick()
-    expect((wrapper.find('input').element as HTMLInputElement).value).toBe('999-888')
+    expect(input.value).toBe('12/34/56')
   })
 
-  it('does not rebind for a modelValue update that echoes the current input value', async () => {
-    wrapper = mount(InputMask, { props: { mask: '999-999', modelValue: '' } })
-    const input = wrapper.find('input').element as HTMLInputElement
+  it('reformats when value is set externally', async () => {
+    const params = reactive<MaskDirectiveParams>({ mask: '999-999', value: '123456' })
+    const input = mount(vMotherMask, params)
+    params.value = '999888'
+    await nextTick()
+    expect(input.value).toBe('999-888')
+  })
+
+  it('rebinds when options change', async () => {
+    const params = reactive<MaskDirectiveParams>({ mask: '999-999', value: '123456', options: {} })
+    const input = mount(vMotherMask, params)
+    const removeEventListener = vi.spyOn(input, 'removeEventListener')
+    params.options = { eager: true }
+    await nextTick()
+    expect(removeEventListener).toHaveBeenCalled()
+  })
+
+  it('does not rebind for an update echoing its own onValueChange', async () => {
+    let params!: MaskDirectiveParams
+    params = reactive({
+      mask: '999-999',
+      value: '',
+      onValueChange: (v: string) => { params.value = v },
+    })
+    const input = mount(vMotherMask, params)
+
     input.value = '123456'
     input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }))
     await nextTick()
     expect(input.value).toBe('123-456')
 
     const removeEventListener = vi.spyOn(input, 'removeEventListener')
-    await wrapper.setProps({ modelValue: '123-456' })
-    await nextTick()
-    // No rebind means no listener churn (dispose+rebind would remove/re-add).
-    expect(removeEventListener).not.toHaveBeenCalled()
-  })
-
-  it('does not rebind when a modelValue update formats to the current input value', async () => {
-    wrapper = mount(InputMask, { props: { mask: '999-999', modelValue: '999-888' } })
-    const input = wrapper.find('input').element as HTMLInputElement
-    expect(input.value).toBe('999-888')
-
-    const removeEventListener = vi.spyOn(input, 'removeEventListener')
-    // Textually differs from input.value ('999888' vs '999-888'), but
-    // formats to the same string.
-    await wrapper.setProps({ modelValue: '999888' })
     await nextTick()
     expect(removeEventListener).not.toHaveBeenCalled()
   })
 
   it('disposes the binding on unmount so no listeners remain', () => {
-    wrapper = mount(InputMask, { props: { mask: '999-999', modelValue: '123456' } })
-    const input = wrapper.find('input').element as HTMLInputElement
+    const input = mount(vMotherMask, reactive<MaskDirectiveParams>({ mask: '999-999', value: '123456' }))
     const removeEventListener = vi.spyOn(input, 'removeEventListener')
-    wrapper.unmount()
+    app?.unmount()
     expect(removeEventListener).toHaveBeenCalled()
     // A disposed input is no longer tracked as bound, so re-binding elsewhere
     // (or leaking a listener) would show up as a second bind taking effect.
@@ -90,85 +126,63 @@ describe('InputMask', () => {
     input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }))
     expect(input.value).toBe('abcdef')
   })
-
-  it('exposes the underlying input element ref', () => {
-    const Harness = defineComponent({
-      setup() {
-        const maskRef = ref<InstanceType<typeof InputMask> | null>(null)
-        return () => h('div', [h(InputMask, { ref: maskRef, mask: '999-999', modelValue: '1' })])
-      },
-    })
-    wrapper = mount(Harness)
-    expect(wrapper.find('input').exists()).toBe(true)
-  })
 })
 
-describe('InputDecimal', () => {
-  it('formats the initial modelValue on mount', () => {
-    wrapper = mount(InputDecimal, { props: { modelValue: '123456' } })
-    expect((wrapper.find('input').element as HTMLInputElement).value).toBe('123,456')
+describe('vMotherMaskDecimal directive', () => {
+  it('formats the initial value and sets inputmode="decimal"', () => {
+    const input = mount(vMotherMaskDecimal, reactive<DecimalDirectiveParams>({ value: '123456' }))
+    expect(input.value).toBe('123,456')
+    expect(input.getAttribute('inputmode')).toBe('decimal')
   })
 
-  it('emits update:modelValue with the formatted value and numeric value', async () => {
-    wrapper = mount(InputDecimal, { props: { modelValue: '' } })
-    const input = wrapper.find('input').element as HTMLInputElement
+  it('calls onValueChange with the formatted value and numeric value', () => {
+    const onValueChange = vi.fn()
+    const input = mount(vMotherMaskDecimal, reactive<DecimalDirectiveParams>({ value: '', onValueChange }))
+
     input.value = '123456'
     input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }))
+
+    expect(onValueChange).toHaveBeenLastCalledWith('123,456', 123456)
+  })
+
+  it('rebinds and reformats when options change', async () => {
+    const params = reactive<DecimalDirectiveParams>({ value: '123456' })
+    const input = mount(vMotherMaskDecimal, params)
+    params.options = { prefix: '$' }
     await nextTick()
-    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual(['123,456', 123456])
+    expect(input.value).toBe('$123,456')
   })
 
-  it('sets inputmode="decimal" on the native input', () => {
-    wrapper = mount(InputDecimal, { props: { modelValue: '' } })
-    expect(wrapper.find('input').attributes('inputmode')).toBe('decimal')
-  })
-
-  it('rebinds when options change', async () => {
-    wrapper = mount(InputDecimal, { props: { modelValue: '123456' } })
-    await wrapper.setProps({ options: { prefix: '$' } })
+  it('reformats when value is set externally', async () => {
+    const params = reactive<DecimalDirectiveParams>({ value: '123456' })
+    const input = mount(vMotherMaskDecimal, params)
+    params.value = '999888'
     await nextTick()
-    expect((wrapper.find('input').element as HTMLInputElement).value).toBe('$123,456')
+    expect(input.value).toBe('999,888')
   })
 
-  it('reformats when modelValue is set externally', async () => {
-    wrapper = mount(InputDecimal, { props: { modelValue: '123456' } })
-    await wrapper.setProps({ modelValue: '999888' })
-    await nextTick()
-    expect((wrapper.find('input').element as HTMLInputElement).value).toBe('999,888')
-  })
+  it('does not rebind for an update echoing its own onValueChange', async () => {
+    let params!: DecimalDirectiveParams
+    params = reactive({
+      value: '',
+      onValueChange: (v: string) => { params.value = v },
+    })
+    const input = mount(vMotherMaskDecimal, params)
 
-  it('does not rebind for a modelValue update that echoes the current input value', async () => {
-    wrapper = mount(InputDecimal, { props: { modelValue: '' } })
-    const input = wrapper.find('input').element as HTMLInputElement
     input.value = '123456'
     input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText' }))
     await nextTick()
     expect(input.value).toBe('123,456')
 
     const removeEventListener = vi.spyOn(input, 'removeEventListener')
-    await wrapper.setProps({ modelValue: '123,456' })
-    await nextTick()
-    expect(removeEventListener).not.toHaveBeenCalled()
-  })
-
-  it('does not rebind when a modelValue update formats to the current input value', async () => {
-    wrapper = mount(InputDecimal, { props: { modelValue: '999,888' } })
-    const input = wrapper.find('input').element as HTMLInputElement
-    expect(input.value).toBe('999,888')
-
-    const removeEventListener = vi.spyOn(input, 'removeEventListener')
-    // Textually differs from input.value ('999888' vs '999,888'), but
-    // formats to the same string.
-    await wrapper.setProps({ modelValue: '999888' })
     await nextTick()
     expect(removeEventListener).not.toHaveBeenCalled()
   })
 
   it('disposes the binding on unmount', () => {
-    wrapper = mount(InputDecimal, { props: { modelValue: '123456' } })
-    const input = wrapper.find('input').element as HTMLInputElement
+    const input = mount(vMotherMaskDecimal, reactive<DecimalDirectiveParams>({ value: '123456' }))
     const removeEventListener = vi.spyOn(input, 'removeEventListener')
-    wrapper.unmount()
+    app?.unmount()
     expect(removeEventListener).toHaveBeenCalled()
   })
 })

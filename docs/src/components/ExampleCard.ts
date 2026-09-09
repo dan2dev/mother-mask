@@ -7,7 +7,7 @@
  * a reader sees and the mask actually running on the field next to it cannot
  * drift apart without the build failing.
  */
-import { InlineCode } from './CodeBlock.ts'
+import { CodeBlock } from './CodeBlock.ts'
 import type { SnippetName } from '../content/snippets.ts'
 import { demoInputAttributes } from './demo-input-attributes.ts'
 
@@ -36,7 +36,7 @@ export function ExampleCard(options: ExampleCardOptions, ...children: NodeModLik
       className: wide ? 'example example-wide' : 'example',
     },
     h2(...(Array.isArray(title) ? title : [title])),
-    InlineCode(inputId, 'snippet'),
+    CodeBlock(inputId),
     input({
       ...demoInputAttributes,
       id: inputId,

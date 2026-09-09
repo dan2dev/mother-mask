@@ -30,3 +30,12 @@ declare module 'virtual:package-meta' {
   /** Path of the measured artifact inside the package, e.g. `dist/mother-mask.mjs`. */
   export const bundleArtifact: string
 }
+
+/** Framework variants are fetched only when that framework is selected. */
+declare module 'virtual:snippets/*' {
+  const snippets: Partial<Record<
+    import('./src/content/snippets.ts').SnippetName,
+    import('./src/content/snippets.ts').HighlightedSnippet
+  >>
+  export default snippets
+}
