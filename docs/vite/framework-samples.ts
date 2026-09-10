@@ -239,12 +239,6 @@ export function frameworkSamples(adapter: Adapter): Partial<Record<SnippetName, 
     if (name.startsWith('ex-')) result[name] = integrationSample(adapter, [demoField(name)])
   }
   result['framework-guide'] = snippets[`framework-${adapter}`]
-  result['home-playground'] = integrationSample(adapter, [
-    { mask: "'(99) 99999-9999'", options: '{}' },
-    { mask: "'9999 9999 9999 9999'", options: '{}' },
-    { mask: "'9{1,2}/9{1,2}/9{4}'", options: '{}' },
-    { options: "{ prefix: 'R$ ', separator: '.', decimalSeparator: ',', decimalPlaces: 2 }" },
-  ])
   result['quick-start-ts'] = integrationSample(adapter, [{ mask: "'(99) 99999-9999'", options: "{ autocomplete: 'tel' }", initial: "'(11) 98765-4321'" }])
   for (const name of ['patterns-quantifier-bind', 'patterns-quantifier-standin', 'patterns-escapes'] as const) {
     const fields = snippets[name].code.split('\n').filter((line) => line.startsWith('bind(')).map((line) => {

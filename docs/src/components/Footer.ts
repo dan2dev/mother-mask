@@ -4,49 +4,55 @@ import { AUTHOR, NPM_URL, NUCLO_URL, REPO_URL } from '../site.ts'
 export function Footer() {
   return footer(
     div(
-      { className: 'footer-brand' },
-      a(
-        { className: 'brand-mark footer-brand-mark', href: href(''), 'aria-label': 'mother-mask home' },
-        img({ src: href('mother-mask-logo.svg'), alt: '', width: 40, height: 40, loading: 'lazy' }),
-      ),
+      { className: 'footer-top' },
       div(
-        { className: 'footer-brand-copy' },
-        span({ className: 'footer-brand-name' }, 'mother-mask'),
-        p(
-          'Crafted with care by  ',
-          a({ className: 'footer-author', href: AUTHOR.url, target: '_blank', rel: 'noreferrer' }, 'dan2dev ', span({ 'aria-hidden': 'true' }, '↗')),
+        { className: 'footer-brand' },
+        a(
+          { className: 'brand-mark footer-brand-mark', href: href(''), 'aria-label': 'mother-mask home' },
+          img({ src: href('mother-mask-logo.svg'), alt: '', width: 40, height: 40, loading: 'lazy' }),
         ),
-        p(
-          'This site is built with ',
-          a({ className: 'footer-tech', href: NUCLO_URL, target: '_blank', rel: 'noreferrer' }, 'Nuclo'),
+        div(
+          { className: 'footer-brand-copy' },
+          span({ className: 'footer-brand-name' }, 'mother-mask'),
+          p('Highly optimized input masking utility with zero footprint dependencies.'),
+          p(
+            { className: 'footer-brand-fine-print' },
+            'MIT License • By ',
+            a({ href: AUTHOR.url, target: '_blank', rel: 'noreferrer' }, 'dan2dev'),
+            ' • Built with ',
+            a({ href: NUCLO_URL, target: '_blank', rel: 'noreferrer' }, 'Nuclo'),
+          ),
+        ),
+      ),
+
+      div(
+        { className: 'footer-columns' },
+
+        div(
+          { className: 'footer-column' },
+          span({ className: 'footer-column-label' }, 'Library'),
+          a({ href: href('quick-start.html') }, 'Quick start'),
+          a({ href: href('examples.html') }, 'Examples'),
+          a({ href: href('api.html') }, 'API reference'),
+        ),
+
+        div(
+          { className: 'footer-column' },
+          span({ className: 'footer-column-label' }, 'Community'),
+          a({ href: REPO_URL, target: '_blank', rel: 'noreferrer' }, 'GitHub'),
+          a({ href: `${REPO_URL}/issues`, target: '_blank', rel: 'noreferrer' }, 'Issues'),
+          a({ href: NPM_URL, target: '_blank', rel: 'noreferrer' }, 'npm Registry'),
         ),
       ),
     ),
 
     div(
-      { className: 'footer-columns' },
-
-      div(
-        { className: 'footer-column' },
-        span({ className: 'footer-column-label' }, 'Resources'),
-        a({ href: href('quick-start.html') }, 'Quick start'),
-        a({ href: href('examples.html') }, 'Examples'),
-        a({ href: href('api.html') }, 'API reference'),
-      ),
-
-      div(
-        { className: 'footer-column' },
-        span({ className: 'footer-column-label' }, 'Community'),
-        a({ href: REPO_URL, target: '_blank', rel: 'noreferrer' }, 'GitHub'),
-        a({ href: `${REPO_URL}/issues`, target: '_blank', rel: 'noreferrer' }, 'Issues'),
-      ),
-
-      div(
-        { className: 'footer-column' },
-        span({ className: 'footer-column-label' }, 'Support'),
-        a({ href: NPM_URL, target: '_blank', rel: 'noreferrer' }, 'npm'),
-        a({ href: `${REPO_URL}/blob/main/LICENSE`, target: '_blank', rel: 'noreferrer' }, 'License (MIT)'),
-      ),
+      { className: 'footer-bottom' },
+      // Static, not `new Date()` — this page is prerendered at build time, and
+      // a client/server year mismatch would just be a hydration bug waiting
+      // to happen for one day a year. Bump by hand alongside a release.
+      p('© 2026 mother-mask. All rights reserved.'),
+      p('Crafted with care by ', a({ className: 'footer-author', href: AUTHOR.url, target: '_blank', rel: 'noreferrer' }, 'dan2dev')),
     ),
   )
 }

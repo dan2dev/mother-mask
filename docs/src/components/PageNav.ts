@@ -21,7 +21,7 @@ export function PageNav() {
       () => prev() !== undefined,
       a(
         { className: 'page-nav-link page-nav-prev', href: () => href(prev()?.path ?? '') },
-        span({ className: 'page-nav-label' }, '← Previous'),
+        span({ className: 'page-nav-label' }, '← Previous:'),
         span({ className: 'page-nav-title' }, () => prev()?.label ?? ''),
       ),
     ).else(span()),
@@ -30,7 +30,7 @@ export function PageNav() {
       () => next() !== undefined,
       a(
         { className: 'page-nav-link page-nav-next', href: () => href(next()?.path ?? '') },
-        span({ className: 'page-nav-label' }, 'Next →'),
+        span({ className: 'page-nav-label' }, 'Next →:'),
         span({ className: 'page-nav-title' }, () => next()?.label ?? ''),
       ),
     ).else(span()),

@@ -41,43 +41,125 @@ export type HighlightedSnippet = SnippetToken[][]
 export const snippets = {
   // ── Overview ───────────────────────────────────────────────────────────────
 
-  'home-playground': {
+  'pg-br-phone': {
     lang: 'ts',
-    code: String.raw`import { bind, bindDecimal } from 'mother-mask'
+    code: String.raw`import { bind } from 'mother-mask'
 
-bind(phone, '(99) 99999-9999')
-bind(card, '9999 9999 9999 9999')
-bind(date, '9{1,2}/9{1,2}/9{4}')
-bindDecimal(amount, {
-  prefix: 'R$ ',
+const input = document.querySelector<HTMLInputElement>('#pg-br-phone')!
+bind(input, '+55 (99) 99999-9999')`,
+  },
+
+  'pg-br-cpf': {
+    lang: 'ts',
+    code: String.raw`import { bind } from 'mother-mask'
+
+const input = document.querySelector<HTMLInputElement>('#pg-br-cpf')!
+bind(input, '999.999.999-99')`,
+  },
+
+  'pg-br-cnpj': {
+    lang: 'ts',
+    code: String.raw`import { bind } from 'mother-mask'
+
+const input = document.querySelector<HTMLInputElement>('#pg-br-cnpj')!
+bind(input, 'AA.AAA.AAA/AAAA-99', {
+  tokens: {
+    A: { match: /[a-z0-9]/i, transform: (char: string) => char.toUpperCase() },
+  },
+})`,
+  },
+
+  'pg-us-phone': {
+    lang: 'ts',
+    code: String.raw`import { bind } from 'mother-mask'
+
+const input = document.querySelector<HTMLInputElement>('#pg-us-phone')!
+bind(input, '+1 (999) 999-9999')`,
+  },
+
+  'pg-us-card': {
+    lang: 'ts',
+    code: String.raw`import { bind } from 'mother-mask'
+
+const input = document.querySelector<HTMLInputElement>('#pg-us-card')!
+bind(input, '9999 9999 9999 9999')`,
+  },
+
+  'pg-us-usd': {
+    lang: 'ts',
+    code: String.raw`import { bindDecimal } from 'mother-mask'
+
+const input = document.querySelector<HTMLInputElement>('#pg-us-usd')!
+bindDecimal(input, { prefix: '$', decimalPlaces: 2 })`,
+  },
+
+  'pg-eur': {
+    lang: 'ts',
+    code: String.raw`import { bindDecimal } from 'mother-mask'
+
+const input = document.querySelector<HTMLInputElement>('#pg-eur')!
+bindDecimal(input, {
+  prefix: '',
+  suffix: ' €',
   separator: '.',
   decimalSeparator: ',',
   decimalPlaces: 2,
 })`,
   },
 
+  'pg-amount': {
+    lang: 'ts',
+    code: String.raw`import { bindDecimal } from 'mother-mask'
+
+const input = document.querySelector<HTMLInputElement>('#pg-amount')!
+bindDecimal(input, { decimalPlaces: 0, suffix: ' units' })`,
+  },
+
+  'pg-precision': {
+    lang: 'ts',
+    code: String.raw`import { bindDecimal } from 'mother-mask'
+
+const input = document.querySelector<HTMLInputElement>('#pg-precision')!
+bindDecimal(input, { decimalPlaces: 4, segmented: false })`,
+  },
+
   // ── Quick start ────────────────────────────────────────────────────────────
 
   'quick-start-html': {
     lang: 'html',
-    code: String.raw`<input id="phone" type="text" inputmode="tel" aria-label="Phone number" />`,
+    code: String.raw`<label for="phone">Phone number</label>
+<input
+  id="phone"
+  name="phone"
+  type="text"
+  inputmode="tel"
+  autocomplete="tel"
+  placeholder="(11) 98765-4321"
+/>
+<script type="module" src="/src/main.ts"></script>`,
   },
 
   'quick-start-ts': {
     lang: 'ts',
-    code: String.raw`import { bind, process } from 'mother-mask'
+    code: String.raw`import { bind } from 'mother-mask'
 
-const input = document.querySelector<HTMLInputElement>('#phone')!
-const mask = '(99) 99999-9999'
-input.value = process('11987654321', mask)
+const phone = document.querySelector<HTMLInputElement>('#phone')!
+const dispose = bind(phone, '(99) 99999-9999')`,
+  },
 
-const dispose = bind(input, mask, {
-  autocomplete: 'tel',
-  onChange: value => console.log(value),
-})
+  'quick-start-prefill': {
+    lang: 'ts',
+    code: String.raw`import { process } from 'mother-mask'
 
-// Later, during cleanup, before rebinding or removing the input:
-// dispose()`,
+// Use the same pattern as your binding.
+phone.value = process('11987654321', '(99) 99999-9999')
+// → (11) 98765-4321`,
+  },
+
+  'quick-start-cleanup': {
+    lang: 'ts',
+    code: String.raw`// Run when your page or component is removed.
+dispose()`,
   },
 
   // Framework integrations adapted from packages/mother-mask/README.md.

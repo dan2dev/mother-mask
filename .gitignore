@@ -48,3 +48,5 @@ Thumbs.db
 *.sln
 *.sw?
 docs/.astro/
+docs/.claude/
+.claude/

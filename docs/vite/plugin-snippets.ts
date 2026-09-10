@@ -25,6 +25,9 @@ import { isFramework } from '../src/content/frameworks.ts'
 const VIRTUAL_ID = 'virtual:snippets'
 const RESOLVED_ID = '\0virtual:snippets'
 
+const LANGS_ID = 'virtual:snippet-langs'
+const RESOLVED_LANGS_ID = '\0virtual:snippet-langs'
+
 type SentinelColor = keyof typeof TOKEN_CLASS
 
 function classFor(color: string | undefined): string {
@@ -65,10 +68,15 @@ export function snippetsPlugin(): Plugin {
     name: 'mother-mask-docs:snippets',
     resolveId(id) {
       if (id === VIRTUAL_ID) return RESOLVED_ID
+      if (id === LANGS_ID) return RESOLVED_LANGS_ID
       if (id.startsWith(`${VIRTUAL_ID}/`) && isFramework(id.slice(VIRTUAL_ID.length + 1))) return `\0${id}`
       return undefined
     },
     load(id) {
+      if (id === RESOLVED_LANGS_ID) {
+        const langs = Object.fromEntries(Object.entries(snippets).map(([name, snippet]) => [name, snippet.lang]))
+        return `export default ${JSON.stringify(langs)}`
+      }
       if (id !== RESOLVED_ID && !id.startsWith(`${RESOLVED_ID}/`)) return undefined
       const framework = id.slice(RESOLVED_ID.length + 1)
       if (id !== RESOLVED_ID && (!isFramework(framework) || framework === 'vanilla')) return undefined

@@ -1,9 +1,9 @@
 import baseSnippets from 'virtual:snippets'
-import { isFramework, type Adapter, type Framework } from '../content/frameworks.ts'
+import { FRAMEWORKS, isFramework, type Adapter, type Framework } from '../content/frameworks.ts'
 import type { HighlightedSnippet, SnippetName } from '../content/snippets.ts'
 
-type Catalog = Partial<Record<SnippetName, HighlightedSnippet>>
-const loaders = {
+export type Catalog = Partial<Record<SnippetName, HighlightedSnippet>>
+export const loaders = {
   'react': () => import('virtual:snippets/react'),
   'vue': () => import('virtual:snippets/vue'),
   'angular': () => import('virtual:snippets/angular'),
@@ -23,13 +23,16 @@ const loaders = {
   'riot': () => import('virtual:snippets/riot'),
 } satisfies Record<Adapter, () => Promise<{ default: Catalog }>>
 
-const STORAGE_KEY = 'mother-mask:framework'
+// Exported so the home page's own framework teaser (lib/home-framework-teaser.ts)
+// can read/write the same preference — one persisted choice for the whole
+// site, not two competing ones.
+export const STORAGE_KEY = 'mother-mask:framework'
 let selected: Framework = 'vanilla'
 let catalog: Catalog = baseSnippets
 let request = 0
 
 /** Mutate code contents only; never rerender or rebind a demo input. */
-function paint(code: HTMLElement, lines: HighlightedSnippet): void {
+export function paint(code: HTMLElement, lines: HighlightedSnippet): void {
   const content = document.createDocumentFragment()
   lines.forEach((line, index) => {
     if (index) content.append('\n')
@@ -58,6 +61,13 @@ export function refreshFrameworkCode(): void {
     if (block.dataset.renderedFramework === selected) return
     const code = block.querySelector<HTMLElement>('pre code')
     if (code) paint(code, catalog[name] ?? baseSnippets[name])
+    // Only this one block's content actually changes language per framework
+    // (the install command next to it is always the same `bash` line) — keep
+    // its editor-chrome tab labeled with the file that framework is shown in.
+    if (name === 'framework-guide') {
+      const tab = block.querySelector('.code-chrome-filename')
+      if (tab) tab.textContent = FRAMEWORKS.find((framework) => framework.id === selected)?.filename ?? tab.textContent
+    }
     block.dataset.renderedFramework = selected
   })
   document.querySelectorAll<HTMLElement>('[data-framework-guide]').forEach((panel) => {

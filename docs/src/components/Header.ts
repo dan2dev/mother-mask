@@ -1,15 +1,18 @@
 import { packageVersion } from 'virtual:package-meta'
 import { NavLinks } from './NavLinks.ts'
 import { icon } from './icons.ts'
-import { ariaCurrent } from './aria-current.ts'
+import { activeRoute } from '../router/active.ts'
 import { href } from '../router/url.ts'
 import { NPM_URL, REPO_URL } from '../site.ts'
 
-const featured = [
-  { slug: 'quick-start', path: 'quick-start.html', label: 'Get started' },
-  { slug: 'examples', path: 'examples.html', label: 'Examples' },
-  { slug: 'api', path: 'api.html', label: 'API' },
-] as const
+// mother-mask-design's navbar has exactly two primary links — "Docs" and
+// "Examples" — not a row of page shortcuts. "Docs" covers every page with a
+// sidebar (i.e. everything except the home page and Examples itself); it
+// lands on Quick start, the first page actually about using the library.
+function isDocsActive(): 'page' | 'false' {
+  const slug = activeRoute().slug
+  return slug !== 'overview' && slug !== 'examples' ? 'page' : 'false'
+}
 
 export function Header() {
   return header(
@@ -26,20 +29,13 @@ export function Header() {
           ),
           'mother-mask',
         ),
-        span({ className: 'version-pill' }, `v${packageVersion}`),
+        span({ className: 'version-pill' }, span({ className: 'version-dot', 'aria-hidden': 'true' }), `v${packageVersion}`),
       ),
 
       nav(
-        { className: 'header-nav', 'aria-label': 'Featured documentation' },
-        ...featured.map((item) =>
-          a(
-            {
-              href: href(item.path),
-              'aria-current': () => ariaCurrent(item.slug),
-            },
-            item.label,
-          ),
-        ),
+        { className: 'header-nav', 'aria-label': 'Primary' },
+        a({ href: href('quick-start.html'), 'aria-current': isDocsActive }, 'Docs'),
+        a({ href: href('examples.html'), 'aria-current': () => (activeRoute().slug === 'examples' ? 'page' : 'false') }, 'Examples'),
       ),
 
       // A <details> menu works before the bundle arrives and needs no state of

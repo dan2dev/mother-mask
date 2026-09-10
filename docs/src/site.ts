@@ -33,4 +33,4 @@ export const NUCLO_URL = 'https://nuclo.dev/'
 export const SOCIAL_IMAGE = `${SITE_URL}og-image.png`
 export const SOCIAL_IMAGE_ALT = 'mother-mask — TypeScript input masks without the rough edges'
 
-export const THEME_COLOR = '#18152a'
+export const THEME_COLOR = '#07080e'
