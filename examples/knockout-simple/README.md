@@ -33,7 +33,7 @@ ko.applyBindings(new ViewModel())
 ```
 
 ```html
-<input data-bind="mask: { mask: '999-999', value: phone, onValueChange: phone }">
+<input data-bind="mask: { mask: '(99) 99999-9999', value: phone, onValueChange: phone }">
 ```
 
 - `value` may be a plain string, a Knockout observable, or any accessor

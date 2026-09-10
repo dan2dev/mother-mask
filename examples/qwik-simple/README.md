@@ -29,7 +29,7 @@ import { InputMask } from 'mother-mask/qwik'
 
 export default component$(() => {
   const phone = useSignal('')
-  return <InputMask mask="999-999" value={phone.value} onValueChange$={(v) => (phone.value = v)} />
+  return <InputMask mask="(99) 99999-9999" value={phone.value} onValueChange$={(v) => (phone.value = v)} />
 })
 ```
 

@@ -30,7 +30,7 @@ class App extends Component {
   render() {
     return (
       <InputMask
-        mask="999-999"
+        mask="(99) 99999-9999"
         value={this.state.phone}
         onValueChange={(v: string) => this.setState({ phone: v })}
       />

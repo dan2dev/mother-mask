@@ -30,7 +30,7 @@ let phone = ''
 const App = {
   view: () =>
     m('div', [
-      m(InputMask, { mask: '999-999', value: phone, onValueChange: (v) => { phone = v; m.redraw() } }),
+      m(InputMask, { mask: '(99) 99999-9999', value: phone, onValueChange: (v) => { phone = v; m.redraw() } }),
       m('p', phone),
     ]),
 }

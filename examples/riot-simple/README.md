@@ -26,12 +26,12 @@ import { pure } from 'riot'
 import { maskInput } from 'mother-mask/riot'
 
 const field = pure(maskInput)({
-  props: { mask: '999-999', onValueChange: (v) => console.log(v) },
+  props: { mask: '(99) 99999-9999', onValueChange: (v) => console.log(v) },
 })
 field.mount(document.getElementById('phone'))
 
 // Later, e.g. from a parent component's onUpdated:
-field.update({ mask: '999-999', value: '123456' })
+field.update({ mask: '(99) 99999-9999', value: '(11) 98765-4321' })
 ```
 
 - `riot.pure` is Riot's own documented escape hatch for mounting

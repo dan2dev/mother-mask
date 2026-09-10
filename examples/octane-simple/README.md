@@ -30,7 +30,7 @@ import { InputMask } from 'mother-mask/octane'
 
 export function PhoneField() {
   const [phone, setPhone] = useState('')
-  return <InputMask mask="999-999" value={phone} onValueChange={setPhone} />
+  return <InputMask mask="(99) 99999-9999" value={phone} onValueChange={setPhone} />
 }
 ```
 

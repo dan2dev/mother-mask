@@ -14,7 +14,7 @@ export function Footer() {
         div(
           { className: 'footer-brand-copy' },
           span({ className: 'footer-brand-name' }, 'mother-mask'),
-          p('Highly optimized input masking utility with zero footprint dependencies.'),
+          p('Zero-dependency TypeScript input masks for browser forms.'),
           p(
             { className: 'footer-brand-fine-print' },
             'MIT License • By ',

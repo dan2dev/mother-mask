@@ -1223,7 +1223,7 @@ td {
   flex-wrap: wrap;
   gap: 12px 16px;
   margin-top: 48px;
-  padding-top: 24px;
+  padding-block: 24px;
   border-top: 1px solid var(--border);
 }
 

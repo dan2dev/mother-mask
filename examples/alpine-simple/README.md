@@ -22,7 +22,7 @@ build, then `bun run preview` to preview the production build.
 ## Use the directive
 
 ```html
-<input x-data="{ phone: '' }" x-mask="{ mask: '999-999', value: phone }"
+<input x-data="{ phone: '' }" x-mask="{ mask: '(99) 99999-9999', value: phone }"
        x-on:mask-change="phone = $event.detail" />
 
 <input x-data="{ amount: '' }" x-mask.decimal="{ value: amount }"
