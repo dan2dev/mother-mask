@@ -5,6 +5,15 @@ on:
     branches:
       - main
 
+# Runs still race even with this (each run's checkout is pinned to the commit
+# that triggered it, not the ref's tip when the run actually starts — see the
+# retry loop below for why that still matters), but serializing at least means
+# they don't burn concurrent runners doing the same build/test/docs-build work
+# only to have one of them lose the push anyway.
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     if: ${{ !contains(github.event.head_commit.message, 'chore(release):') }}
@@ -43,11 +52,30 @@ jobs:
       - name: Test
         run: bun run test
 
-      - name: Bump minor version and tag
+      - name: Install docs dependencies
+        working-directory: docs
+        run: bun install --frozen-lockfile
+
+      - name: Build matching docs
+        working-directory: docs
+        run: bun run build
+
+      - name: Bump version, commit, tag, and push (retries on a racing release)
         id: version
         env:
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # Two pushes to main close together can both reach this job before either
+        # has published, so each computes the same "next" version and races to
+        # push its release commit — whichever loses gets a plain non-fast-forward
+        # rejection from `git push`. That's expected, not corruption: retry by
+        # resetting to the now-current main and recomputing the version (it reads
+        # `npm view` for the current published version, so a retry correctly
+        # starts from whatever the winner just published) rather than failing the
+        # whole release. This step only does cheap git/version-file work, and it
+        # runs — deliberately — before `Publish` below, so a retry here can never
+        # cause a second `npm publish` for the same run.
         run: |
+          bump_commit_and_tag() {
           package_name="$(bun pm pkg get name | tr -d '"')"
           local_version="$(bun pm pkg get version | tr -d '"')"
           published_version="$(npm view "$package_name" version 2>/dev/null || true)"
@@ -86,24 +114,32 @@ jobs:
           git add package.json
           git commit -m "chore(release): v${version} [skip ci]"
           git tag "v${version}"
-          echo "tag=v${version}" >> "$GITHUB_OUTPUT"
+          }
 
-      - name: Install docs dependencies
-        working-directory: docs
-        run: bun install --frozen-lockfile
+          bump_commit_and_tag
 
-      - name: Build matching docs
-        working-directory: docs
-        run: bun run build
+          attempt=1
+          max_attempts=5
+          until git push --atomic origin "HEAD:${{ github.ref_name }}" "refs/tags/v$(bun pm pkg get version | tr -d '"')"; do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "::error::Failed to push release commit after ${max_attempts} attempts — a competing release keeps winning the race."
+              exit 1
+            fi
+            echo "Push rejected (another release landed on ${{ github.ref_name }} first) — retrying, attempt $((attempt + 1))/${max_attempts}..."
+            git tag -d "v$(bun pm pkg get version | tr -d '"')"
+            git fetch origin "${{ github.ref_name }}"
+            git reset --hard "origin/${{ github.ref_name }}"
+            sleep $((RANDOM % 5 + 1))
+            bump_commit_and_tag
+            attempt=$((attempt + 1))
+          done
+
+          echo "tag=v$(bun pm pkg get version | tr -d '"')" >> "$GITHUB_OUTPUT"
 
       - name: Publish
         run: bun publish --access public
         env:
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Push release commit and tag
-        run: |
-          git push --atomic origin HEAD:${{ github.ref_name }} "refs/tags/${{ steps.version.outputs.tag }}"
 
   deploy-docs:
     name: Deploy matching docs
