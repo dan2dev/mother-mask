@@ -59,7 +59,7 @@ export function view() {
       ),
       p(
         'A ',
-        a({ href: href('patterns.html') }, 'bounded quantifier'),
+        a({ href: href('patterns') }, 'bounded quantifier'),
         ' such as ',
         code('9{1,2}'),
         ' makes a segment variable-width, and the separator you type is what closes it: with ',

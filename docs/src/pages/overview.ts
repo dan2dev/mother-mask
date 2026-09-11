@@ -85,7 +85,7 @@ export function view() {
       ),
       div(
         { className: 'hero-actions' },
-        a({ className: 'button-link', href: href('quick-start.html') }, icon('arrow-right-icon'), 'Get started'),
+        a({ className: 'button-link', href: href('quick-start') }, icon('arrow-right-icon'), 'Get started'),
         InstallBox('npm install mother-mask', '-hero'),
       ),
     ),
@@ -203,7 +203,7 @@ export function view() {
               button({ className: 'framework-more-item', type: 'button', role: 'menuitem', 'data-framework': framework.id }, framework.label),
             ),
             a(
-              { className: 'framework-more-viewall', href: href('frameworks.html'), role: 'menuitem' },
+              { className: 'framework-more-viewall', href: href('frameworks'), role: 'menuitem' },
               'View all frameworks',
               icon('arrow-right-icon'),
             ),
@@ -231,7 +231,7 @@ export function view() {
         div(
           { className: 'cta-banner-actions' },
           InstallBox(),
-          a({ className: 'button-link', href: href('quick-start.html') }, icon('arrow-right-icon'), 'Get started'),
+          a({ className: 'button-link', href: href('quick-start') }, icon('arrow-right-icon'), 'Get started'),
         ),
       ),
     ),

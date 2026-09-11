@@ -31,9 +31,9 @@ export function Footer() {
         div(
           { className: 'footer-column' },
           span({ className: 'footer-column-label' }, 'Library'),
-          a({ href: href('quick-start.html') }, 'Quick start'),
-          a({ href: href('examples.html') }, 'Examples'),
-          a({ href: href('api.html') }, 'API reference'),
+          a({ href: href('quick-start') }, 'Quick start'),
+          a({ href: href('examples') }, 'Examples'),
+          a({ href: href('api') }, 'API reference'),
         ),
 
         div(

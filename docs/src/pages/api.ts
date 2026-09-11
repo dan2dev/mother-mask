@@ -59,7 +59,7 @@ export function view() {
               td(code('getMaxLength(mask, options?)')),
               td(
                 'Formatted UTF-16 upper bound, including literals; up to two units per custom-token slot, and a ',
-                a({ href: href('patterns.html') }, 'quantified'),
+                a({ href: href('patterns') }, 'quantified'),
                 ' run counted at its maximum — never the length of the pattern source. ',
                 code('Infinity'),
                 ' with a resolver.',

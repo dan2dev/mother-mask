@@ -1,13 +1,10 @@
 /**
  * URL shapes, in one place.
  *
- * The site is deployed at the root of its own domain, on a host that only
- * serves files, so every page is a real `<name>.html` sitting at the site root:
- * `quick-start.html`, `api.html`, and `index.html` for the home page. A route's
- * `path` is exactly that filename — `''` for home — which means one string
- * serves as the route key, the link target, and the file the prerenderer
- * writes. Nothing has to translate between three spellings of the same page,
- * and no host-side rewrite rule is needed for a deep link to work.
+ * Every page's canonical URL is its route path with no extension —
+ * `/quick-start`, `/api`, and `/` for home — resolved fresh per request by
+ * src/app-handler.ts rather than baked into files on disk, so there's no
+ * host-side rewrite rule to keep in sync with this module.
  */
 
 import { BASE_PATH, SITE_URL } from '../site.ts'
@@ -44,10 +41,11 @@ export function absoluteUrl(path: string): string {
  * URL is outside this deployment.
  *
  * Accepts every spelling a person or another site might produce for the same
- * page — `/api.html`, `/api`, `/api/` — and returns the one canonical form
- * (`api.html`). The extensionless forms only ever reach the client through a
- * host 404 fallback; resolving them anyway means such a link still lands on
- * the right page instead of an error.
+ * page — the canonical `/api`, a lingering `/api.html` bookmark or backlink
+ * from before this site dropped the extension, `/api/`, `/index.html` — and
+ * resolves all of them to the one canonical form (`api`). src/app-handler.ts
+ * renders that route either way, and 301-redirects the address bar to the
+ * canonical spelling when the request didn't already use it.
  */
 export function routePathFromPathname(pathname: string): string | null {
   const decoded = safeDecode(pathname)
@@ -63,7 +61,7 @@ export function routePathFromPathname(pathname: string): string | null {
 
   const rest = withBase.slice(BASE.length).replace(/^\/+|\/+$/g, '')
   if (rest === '' || rest === 'index.html') return ''
-  return rest.endsWith('.html') ? rest : `${rest}.html`
+  return rest.endsWith('.html') ? rest.slice(0, -'.html'.length) : rest
 }
 
 function safeDecode(value: string): string {

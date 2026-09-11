@@ -3,9 +3,9 @@
  *
  * Adding an entry here is the whole job of adding a page: it registers the
  * route with the client router, gives the sidebar, mobile menu, footer and
- * prev/next links their entry, supplies the `<title>`/description/JSON-LD the
- * prerenderer writes into that page's HTML, and tells the build which file to
- * emit and which URL to put in the sitemap.
+ * prev/next links their entry, supplies the `<title>`/description/JSON-LD
+ * src/app-handler.ts renders into the page on every request, and tells the
+ * build which URL to put in the sitemap.
  *
  * Order is the reading order of the docs, and drives prev/next.
  *
@@ -33,8 +33,10 @@ export interface Route {
   /** Stable id used to mark the active nav link. */
   slug: string
   /**
-   * The file this page is served as, relative to the deploy base. `''` is the
-   * home page (`index.html`). Doubles as the route key and the link target.
+   * The canonical URL this page answers to, relative to the deploy base,
+   * with no `.html` extension. `''` is the home page. Doubles as the route
+   * key and the link target — src/app-handler.ts's `appFetch` 301-redirects
+   * any other spelling (a legacy `.html` link, a trailing slash) here.
    */
   path: string
   /** Sidebar, mobile menu and breadcrumb label. */
@@ -67,7 +69,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'quick-start',
-    path: 'quick-start.html',
+    path: 'quick-start',
     label: 'Quick start',
     title: 'Quick start — mother-mask docs',
     description:
@@ -77,7 +79,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'frameworks',
-    path: 'frameworks.html',
+    path: 'frameworks',
     label: 'Frameworks',
     title: 'Framework integrations — mother-mask docs',
     description:
@@ -87,7 +89,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'examples',
-    path: 'examples.html',
+    path: 'examples',
     label: 'Examples',
     title: 'Examples — mother-mask docs',
     description:
@@ -97,7 +99,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'advanced-patterns',
-    path: 'advanced-patterns.html',
+    path: 'advanced-patterns',
     label: 'Custom patterns',
     title: 'Custom tokens & dynamic patterns — mother-mask docs',
     description:
@@ -107,7 +109,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'editing',
-    path: 'editing.html',
+    path: 'editing',
     label: 'Editing',
     title: 'Segmented editing — mother-mask docs',
     description:
@@ -117,7 +119,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'decimals',
-    path: 'decimals.html',
+    path: 'decimals',
     label: 'Decimals',
     title: 'Decimal formatting — mother-mask docs',
     description:
@@ -127,7 +129,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'regional',
-    path: 'regional.html',
+    path: 'regional',
     label: 'Regional',
     title: 'Regional formats — mother-mask docs',
     description:
@@ -137,7 +139,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'patterns',
-    path: 'patterns.html',
+    path: 'patterns',
     label: 'Patterns',
     title: 'Pattern syntax — mother-mask docs',
     description:
@@ -147,7 +149,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'cdn',
-    path: 'cdn.html',
+    path: 'cdn',
     label: 'CDN',
     title: 'UMD / CDN — mother-mask docs',
     description:
@@ -157,7 +159,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'api',
-    path: 'api.html',
+    path: 'api',
     label: 'API',
     title: 'API reference — mother-mask docs',
     description:

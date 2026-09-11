@@ -15,7 +15,7 @@
 import { renderRoute } from './entry-server.ts'
 import { NOT_FOUND } from './router/not-found.ts'
 import { routeByPath, type Route } from './router/routes.ts'
-import { routePathFromPathname } from './router/url.ts'
+import { href, routePathFromPathname } from './router/url.ts'
 
 export interface ViteManifestEntry {
   file: string
@@ -101,13 +101,25 @@ function resolveRoute(pathname: string): { route: Route; status: number } {
 }
 
 /**
- * The shared request pipeline: resolve the route, render it, inject it into
- * the shell, hand the result to `transformHtml` (dev HMR rewrite, or the prod
+ * The shared request pipeline: resolve the route, redirect to its canonical
+ * URL if the request used another spelling, render it, inject it into the
+ * shell, hand the result to `transformHtml` (dev HMR rewrite, or the prod
  * manifest-driven asset tags), respond.
  */
 export async function appFetch(request: Request, transformHtml: (html: string) => string | Promise<string>): Promise<Response> {
   const url = new URL(request.url)
   const { route, status } = resolveRoute(url.pathname)
+
+  // A known route reached via a non-canonical spelling — a legacy `.html`
+  // link, a trailing slash, `/index.html` — gets sent to the one URL that's
+  // ever linked, canonicalized, or put in the sitemap, rather than serving
+  // duplicate content at two addresses. Unknown paths (status 404) have no
+  // single canonical URL to redirect to, so those just render the 404 page.
+  if (status !== 404 && url.pathname !== href(route.path)) {
+    const canonical = new URL(`${href(route.path)}${url.search}${url.hash}`, url)
+    return Response.redirect(canonical, 301)
+  }
+
   const page = renderRoute(route)
 
   const bodyAttrs = page.bodyClass ? ` class="${page.bodyClass}"` : ''

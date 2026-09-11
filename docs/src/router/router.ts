@@ -41,7 +41,7 @@ export interface Navigation<TRoute> {
 }
 
 export interface RouterOptions<TRoute> {
-  /** Resolve a route path (`''`, `'api.html'`) to a route, or nothing. */
+  /** Resolve a route path (`''`, `'api'`) to a route, or nothing. */
   match: (path: string) => TRoute | undefined
   /** Render the navigation. Runs for the initial page too, after hydration. */
   onNavigate: (navigation: Navigation<TRoute>) => void

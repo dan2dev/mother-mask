@@ -34,8 +34,8 @@ export function Header() {
 
       nav(
         { className: 'header-nav', 'aria-label': 'Primary' },
-        a({ href: href('quick-start.html'), 'aria-current': isDocsActive }, 'Docs'),
-        a({ href: href('examples.html'), 'aria-current': () => (activeRoute().slug === 'examples' ? 'page' : 'false') }, 'Examples'),
+        a({ href: href('quick-start'), 'aria-current': isDocsActive }, 'Docs'),
+        a({ href: href('examples'), 'aria-current': () => (activeRoute().slug === 'examples' ? 'page' : 'false') }, 'Examples'),
       ),
 
       // A <details> menu works before the bundle arrives and needs no state of

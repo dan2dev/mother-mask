@@ -13,7 +13,7 @@ export function view() {
       { id: 'quick-start' },
       h1({ className: 'page-title' }, 'Quick start'),
       p({ className: 'section-sub' }, 'Turn a text input into a phone field that formats as you type.'),
-      p('This example uses TypeScript in a bundled app. Using a UI framework? ', a({ href: href('frameworks.html') }, 'Choose your framework'), '. For a plain HTML page, use the ', a({ href: href('cdn.html') }, 'CDN guide'), '.'),
+      p('This example uses TypeScript in a bundled app. Using a UI framework? ', a({ href: href('frameworks') }, 'Choose your framework'), '. For a plain HTML page, use the ', a({ href: href('cdn') }, 'CDN guide'), '.'),
 
       SectionHeading('1. Install', 'install-package'),
       InstallBox(),
@@ -47,7 +47,7 @@ export function view() {
         p('Keep the ', code('dispose'), ' function returned by ', code('bind()'), ' and call it in your page or component cleanup. Call it before binding a different mask to the same input, too.'),
         CodeBlock('quick-start-cleanup', 'src/main.ts'),
       ),
-      p('Next, explore ', a({ href: href('examples.html') }, 'more live examples'), ', format ', a({ href: href('decimals.html') }, 'currency and decimals'), ', or see ', a({ href: href('api.html') }, 'callbacks and options in the API reference'), '.'),
+      p('Next, explore ', a({ href: href('examples') }, 'more live examples'), ', format ', a({ href: href('decimals') }, 'currency and decimals'), ', or see ', a({ href: href('api') }, 'callbacks and options in the API reference'), '.'),
     ),
   )
 }

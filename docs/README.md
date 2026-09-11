@@ -131,11 +131,13 @@ crawler running JavaScript. On top of that:
 - **Prose sections are linkable.** `SectionHeading` gives each one a slug id and
   a `#` link that appears on hover or keyboard focus, so readers can share a
   section and search engines can offer a jump to it. Demo cards get an id too
-  (`examples.html#cnpj`). Passing an explicit id keeps a published anchor
-  working after a heading is reworded.
-- **One `<h1>` per page, no skipped heading levels**, every image has `alt`, and
-  canonical URLs point at the `.html` file so `/` and `/index.html` do not
-  compete.
+  (`examples#cnpj`). Passing an explicit id keeps a published anchor working
+  after a heading is reworded.
+- **One `<h1>` per page, no skipped heading levels**, every image has `alt`,
+  and canonical URLs are extensionless (`src/router/routes.ts`'s `path`,
+  never `.html`) — `src/app-handler.ts`'s `appFetch` 301-redirects any other
+  spelling (a lingering `.html` bookmark or backlink, a trailing slash,
+  `/index.html`) to it, so no URL competes with its own canonical form.
 - No web fonts, one stylesheet, one deferred module — nothing blocks the first
   paint but the CSS.
 

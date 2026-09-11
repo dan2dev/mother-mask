@@ -37,7 +37,7 @@ export function view() {
         'Array masks: pass patterns ',
         strong('shortest → longest by data capacity'),
         '; the active one is picked from how many data characters are accepted, not a prefix or card network. Use ',
-        a({ href: href('advanced-patterns.html') }, code('resolveMask')),
+        a({ href: href('advanced-patterns') }, code('resolveMask')),
         ' to choose a layout from content instead.',
       ),
 
@@ -154,7 +154,7 @@ export function view() {
         ' is the literal text ',
         code('9{1,2}'),
         '. ',
-        a({ href: href('api.html') }, code('getMaxLength')),
+        a({ href: href('api') }, code('getMaxLength')),
         ' and the ',
         code('maxlength'),
         ' ',
