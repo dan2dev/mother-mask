@@ -14,7 +14,7 @@ import 'nuclo/polyfill'
 import 'nuclo'
 import { renderToString } from 'nuclo/ssr'
 
-import pageDates from 'virtual:page-dates'
+import pageDates from './generated/page-dates.ts'
 
 import { createApp } from './app.ts'
 import { headTagsFor, renderHeadTags } from './router/head.ts'

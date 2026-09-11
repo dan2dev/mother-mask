@@ -1,40 +1,10 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  // `dist/` is served as static assets; `main` below is only a thin shim in
-  // front of them (see worker.ts) — there's no app logic in the Worker.
+  // Cloudflare Pages, not a Workers static-assets project — see docs/README.md
+  // for why (per-request SSR via functions/[[path]].ts, no prerendered
+  // dist/*.html files). Wrangler auto-discovers functions/ from this project
+  // root regardless of pages_build_output_dir.
   "name": "mother-mask",
   "compatibility_date": "2026-09-04",
-  "main": "worker.ts",
-
-  "assets": {
-    "directory": "./dist",
-    "binding": "ASSETS",
-    // Every page is deployed as a real `<name>.html` file and that filename
-    // is this site's one canonical URL (see src/router/url.ts) — sitemap,
-    // canonical tags, and internal links all point at it. Cloudflare's other
-    // `html_handling` modes redirect `.html` requests to an extensionless
-    // URL, which would fight that. "none" serves each request's exact path
-    // with no rewriting in either direction, matching how GitHub Pages served
-    // this site before — except "none" also drops GitHub Pages' automatic
-    // `/` → `/index.html` directory-index resolution, which Cloudflare has
-    // no other `html_handling` mode for either (cloudflare/workers-sdk#10671).
-    // worker.ts patches just that one path back in.
-    "html_handling": "none",
-    // Extensionless deep links (`/api`) have no exact file match under
-    // "none" above, so they fall through here instead of 404ing for real.
-    // `404.html` is a full page of this site; the client router reads
-    // `location.pathname`, resolves it to the right route, and corrects the
-    // address bar — see src/main.ts and src/router/not-found.ts.
-    "not_found_handling": "404-page"
-  },
-
-  // Cloudflare manages the DNS record for this subdomain once the zone
-  // (dan2.dev) is on Cloudflare — see docs/README.md for the one-time
-  // account setup this still needs.
-  "routes": [
-    {
-      "pattern": "mother-mask.dan2.dev",
-      "custom_domain": true
-    }
-  ]
+  "pages_build_output_dir": "dist"
 }

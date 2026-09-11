@@ -1,21 +1,23 @@
 /**
  * Browser entry point.
  *
- * Every route arrives as a complete HTML document the build already wrote, so
- * this file's job is to adopt that document rather than replace it, and then
- * take over navigation. In order:
+ * Every route arrives as a complete, server-rendered HTML document (see
+ * src/app-handler.ts) — this file's job is to adopt that document rather
+ * than replace it, then take over navigation. In order:
  *
- *  1. Work out which route the URL addresses.
- *  2. Build the same tree the build built, and `hydrate()` onto the existing
+ *  1. Work out which route the URL addresses — the same resolution the
+ *     server just used to decide what to render, so it always matches what's
+ *     already in the DOM.
+ *  2. Build the same tree the server built, and `hydrate()` onto the existing
  *     markup — no nodes are re-created, so nothing moves or flashes.
  *  3. Start the router, which dispatches the current page immediately so its
  *     `setup()` runs and the masks come alive.
  *
- * Two situations serve markup that is not this URL's page: the host's 404
- * fallback (the document is `404.html`, but the URL may name a real page) and
- * the dev server (nothing is prerendered at all). `#app` carries the route it
- * was rendered for, so either mismatch is detected rather than guessed at, and
- * the page is rendered from scratch instead of hydrated onto the wrong tree.
+ * Unlike a prerendered site, there is no "wrong file got served" case to
+ * detect: the server (src/app-handler.ts, in production a Cloudflare Pages
+ * Function; in dev, vite/plugin-ssr-dev.ts) always renders exactly the route
+ * the request named — including the 404 page for a genuinely unknown path —
+ * so hydration here is unconditional.
  */
 import 'nuclo'
 import './styles/global.css'
@@ -27,31 +29,16 @@ import { applyHeadTags, headTagsFor } from './router/head.ts'
 import { NOT_FOUND } from './router/not-found.ts'
 import type { PageTeardown } from './router/page.ts'
 import { startRouter, type Navigation } from './router/router.ts'
-import { HOME, routeByPath, type Route } from './router/routes.ts'
-import { BASE, routePathFromPathname } from './router/url.ts'
+import { routeByPath, type Route } from './router/routes.ts'
+import { routePathFromPathname } from './router/url.ts'
 
 const container = document.getElementById('app')!
-const prerenderedPath = container.dataset.route ?? ''
 
 const requestedPath = routePathFromPathname(location.pathname)
-const requested = requestedPath === null ? undefined : routeByPath(requestedPath)
-const initial = requested ?? (prerenderedPath === NOT_FOUND.path ? NOT_FOUND : HOME)
+const initial = (requestedPath === null ? undefined : routeByPath(requestedPath)) ?? NOT_FOUND
 
 const app = createApp(initial)
-
-if (prerenderedPath === initial.path) {
-  hydrate(app.element, container)
-} else {
-  // Either the host's 404 fallback served a different page than the URL names,
-  // or this is the dev server, where nothing is prerendered. Neither leaves
-  // anything worth claiming, so start clean — and, for the fallback, put the
-  // canonical URL in the address bar so a reload or a share links to the real
-  // file next time.
-  container.replaceChildren()
-  render(app.element, container)
-  applyHeadTags(headTagsFor(initial))
-  if (requested) history.replaceState({}, '', `${BASE}${requested.path}${location.hash}`)
-}
+hydrate(app.element, container)
 
 document.body.classList.toggle('home-page', initial.path === '')
 

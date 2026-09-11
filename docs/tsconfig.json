@@ -19,6 +19,6 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*.ts", "vite/**/*.ts", "vite.config.ts", "prerender.ts", "env.d.ts"],
+  "include": ["src/**/*.ts", "vite/**/*.ts", "scripts/**/*.ts", "functions/**/*.ts", "vite.config.ts", "env.d.ts"],
   "exclude": ["dist", ".ssr", "node_modules"]
 }

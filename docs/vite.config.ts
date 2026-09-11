@@ -1,9 +1,6 @@
 import { defineConfig } from 'vite'
 
-import { devRoutesPlugin } from './vite/plugin-dev-routes.ts'
-import { packageMetaPlugin } from './vite/plugin-package-meta.ts'
-import { pageDatesPlugin } from './vite/plugin-page-dates.ts'
-import { snippetsPlugin } from './vite/plugin-snippets.ts'
+import { ssrDevPlugin } from './vite/plugin-ssr-dev.ts'
 import { BASE_PATH } from './src/site.ts'
 
 export default defineConfig({
@@ -11,7 +8,13 @@ export default defineConfig({
   // reaches the client as `import.meta.env.BASE_URL`.
   base: BASE_PATH,
 
-  plugins: [snippetsPlugin(), packageMetaPlugin(), pageDatesPlugin(), devRoutesPlugin()],
+  plugins: [ssrDevPlugin()],
+
+  // There is no `index.html` — every page is server-rendered per request
+  // (src/app-handler.ts) rather than prerendered, so Vite has no HTML page to
+  // serve or transform by default. `appType: 'custom'` turns that default
+  // behavior off entirely; plugin-ssr-dev.ts's middleware takes over instead.
+  appType: 'custom',
 
   server: {
     // Accept any Host header. The dev server otherwise rejects requests from
@@ -20,15 +23,15 @@ export default defineConfig({
     allowedHosts: true,
   },
 
-  preview: {
-    port: 4331,
-    strictPort: true,
-  },
-
   build: {
-    // `index.html` is the entry, so Vite writes the shell with its hashed
-    // script and stylesheet already inlined; prerender.ts uses that file as the
-    // template for every page rather than rebuilding the tags from a manifest.
+    // No HTML entry — the client bundle is just src/main.ts. The HTML shell
+    // lives as a template string in src/app-handler.ts instead, filled in per
+    // request using this build's manifest (below).
+    rollupOptions: { input: 'src/main.ts' },
+    // Emits `dist/.vite/manifest.json`, mapping this entry to its real hashed
+    // output files — src/app-handler.ts's `buildProdTransform` reads it to
+    // inject the right `<script>`/`<link>` tags into every response.
+    manifest: true,
     outDir: 'dist',
     emptyOutDir: true,
     target: 'es2022',

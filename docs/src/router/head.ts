@@ -13,8 +13,8 @@
  * are not here. They live in the HTML shell in prerender.ts and are never
  * touched again.
  */
-import { packageVersion } from 'virtual:package-meta'
-import pageDates from 'virtual:page-dates'
+import { packageVersion } from '../generated/package-meta.ts'
+import pageDates from '../generated/page-dates.ts'
 import { AUTHOR, NPM_URL, REPO_URL, SITE_NAME, SITE_URL, SOCIAL_IMAGE, SOCIAL_IMAGE_ALT } from '../site.ts'
 import { absoluteUrl } from './url.ts'
 import type { Route } from './routes.ts'

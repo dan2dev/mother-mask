@@ -10,10 +10,19 @@
  * and no host-side rewrite rule is needed for a deep link to work.
  */
 
-import { SITE_URL } from '../site.ts'
+import { BASE_PATH, SITE_URL } from '../site.ts'
 
-/** Deploy path, always with a trailing slash — `/` today, or a project path if that ever changes. */
-export const BASE: string = normalizeBase(import.meta.env.BASE_URL)
+/**
+ * Deploy path, always with a trailing slash — `/` today, or a project path if
+ * that ever changes. Derived from `site.ts`'s `BASE_PATH` (also what
+ * `vite.config.ts` sets as Vite's `base`) rather than reading
+ * `import.meta.env.BASE_URL` directly: this module is imported by
+ * src/app-handler.ts, which is bundled both by Vite (dev-mode SSR) and by
+ * Wrangler's own bundler (the Cloudflare Pages Function) — the latter never
+ * defines `import.meta.env`, Vite-injected globals only exist for code Vite
+ * itself builds.
+ */
+export const BASE: string = normalizeBase(BASE_PATH)
 
 function normalizeBase(base: string | undefined): string {
   if (!base) return '/'

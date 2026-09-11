@@ -1,4 +1,4 @@
-import { packageVersion } from 'virtual:package-meta'
+import { packageVersion } from '../generated/package-meta.ts'
 import { NavLinks } from './NavLinks.ts'
 import { icon } from './icons.ts'
 import { activeRoute } from '../router/active.ts'

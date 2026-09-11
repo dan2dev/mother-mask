@@ -1,26 +1,26 @@
-import baseSnippets from 'virtual:snippets'
+import baseSnippets from '../generated/snippets/index.ts'
 import { FRAMEWORKS, isFramework, type Adapter, type Framework } from '../content/frameworks.ts'
 import type { HighlightedSnippet, SnippetName } from '../content/snippets.ts'
 
 export type Catalog = Partial<Record<SnippetName, HighlightedSnippet>>
 export const loaders = {
-  'react': () => import('virtual:snippets/react'),
-  'vue': () => import('virtual:snippets/vue'),
-  'angular': () => import('virtual:snippets/angular'),
-  'svelte': () => import('virtual:snippets/svelte'),
-  'solid': () => import('virtual:snippets/solid'),
-  'preact': () => import('virtual:snippets/preact'),
-  'lit': () => import('virtual:snippets/lit'),
-  'stencil': () => import('virtual:snippets/stencil'),
-  'alpine': () => import('virtual:snippets/alpine'),
-  'web-components': () => import('virtual:snippets/web-components'),
-  'qwik': () => import('virtual:snippets/qwik'),
-  'inferno': () => import('virtual:snippets/inferno'),
-  'octane': () => import('virtual:snippets/octane'),
-  'mithril': () => import('virtual:snippets/mithril'),
-  'ember': () => import('virtual:snippets/ember'),
-  'knockout': () => import('virtual:snippets/knockout'),
-  'riot': () => import('virtual:snippets/riot'),
+  'react': () => import('../generated/snippets/react.ts'),
+  'vue': () => import('../generated/snippets/vue.ts'),
+  'angular': () => import('../generated/snippets/angular.ts'),
+  'svelte': () => import('../generated/snippets/svelte.ts'),
+  'solid': () => import('../generated/snippets/solid.ts'),
+  'preact': () => import('../generated/snippets/preact.ts'),
+  'lit': () => import('../generated/snippets/lit.ts'),
+  'stencil': () => import('../generated/snippets/stencil.ts'),
+  'alpine': () => import('../generated/snippets/alpine.ts'),
+  'web-components': () => import('../generated/snippets/web-components.ts'),
+  'qwik': () => import('../generated/snippets/qwik.ts'),
+  'inferno': () => import('../generated/snippets/inferno.ts'),
+  'octane': () => import('../generated/snippets/octane.ts'),
+  'mithril': () => import('../generated/snippets/mithril.ts'),
+  'ember': () => import('../generated/snippets/ember.ts'),
+  'knockout': () => import('../generated/snippets/knockout.ts'),
+  'riot': () => import('../generated/snippets/riot.ts'),
 } satisfies Record<Adapter, () => Promise<{ default: Catalog }>>
 
 // Exported so the home page's own framework teaser (lib/home-framework-teaser.ts)

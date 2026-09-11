@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build && vite build --ssr src/entry-server.ts --outDir .ssr && tsc --noEmit && bun run prerender.ts",
-    "preview": "vite preview",
-    "clean": "rm -rf dist .ssr",
-    "deploy": "wrangler deploy",
+    "generate": "bun scripts/update-page-dates.ts && bun scripts/update-package-meta.ts && bun scripts/build-snippets.ts",
+    "build": "bun run generate && tsc --noEmit && vite build && bun scripts/build-sitemap.ts",
+    "preview": "bun run build && wrangler pages dev dist",
+    "clean": "rm -rf dist src/generated",
+    "deploy": "wrangler pages deploy dist",
     "test": "bun test tests"
   },
   "devDependencies": {

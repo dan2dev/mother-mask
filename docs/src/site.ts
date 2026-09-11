@@ -1,6 +1,6 @@
 /**
- * Facts about the published site that both the browser bundle and the
- * prerenderer need, and that must not drift between them.
+ * Facts about the published site that the browser bundle and the per-request
+ * SSR handler both need, and that must not drift between them.
  */
 
 /**
@@ -8,8 +8,11 @@
  * deployed at the root of its own custom domain, so this is `/`.
  *
  * Read by vite.config.ts (as Vite's `base`, which is what fills
- * `import.meta.env.BASE_URL` for the client) and by prerender.ts. One value,
- * so a move to another path or another host is a one-line change.
+ * `import.meta.env.BASE_URL` for the client bundle) and by
+ * `router/url.ts`'s `BASE` (used isomorphically, including by the Cloudflare
+ * Pages Function, which is why it reads this plain constant rather than
+ * `import.meta.env.BASE_URL` directly — see url.ts). One value, so a move to
+ * another path or another host is a one-line change.
  */
 export const BASE_PATH = '/'
 

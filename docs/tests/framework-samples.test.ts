@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test'
 import { FRAMEWORKS } from '../src/content/frameworks.ts'
 import { snippets, type SnippetName } from '../src/content/snippets.ts'
-import { demoField, frameworkSamples } from '../vite/framework-samples.ts'
+import { demoField, frameworkSamples } from '../scripts/framework-samples.ts'
 
 const demoNames = (Object.keys(snippets) as SnippetName[]).filter((name) => name.startsWith('ex-'))
 

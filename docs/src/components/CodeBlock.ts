@@ -1,20 +1,20 @@
 /**
  * Code samples, highlighted at build time.
  *
- * `virtual:snippets` hands over each sample already tokenized — a list of
- * lines, each a list of `[text, class]` pairs — so rendering is a plain walk
- * over arrays. Framework selection replaces only the token contents, and no
- * highlighter reaches the browser: Shiki's grammars are larger than this entire
- * site, and the colors never change once the build has run.
+ * `generated/snippets/index.ts` (written by scripts/build-snippets.ts) hands
+ * over each sample already tokenized — a list of lines, each a list of
+ * `[text, class]` pairs — so rendering is a plain walk over arrays. Framework
+ * selection replaces only the token contents, and no highlighter reaches the
+ * browser: Shiki's grammars are larger than this entire site, and the colors
+ * never change once the build has run.
  *
  * The markup is ordinary elements rather than an HTML string, which is what
- * lets `hydrate()` claim the prerendered code instead of re-creating it, and
- * keeps `textContent` equal to the original source — the copy button just reads
- * the element.
+ * lets `hydrate()` claim the server-rendered code instead of re-creating it,
+ * and keeps `textContent` equal to the original source — the copy button just
+ * reads the element.
  */
-import snippets from 'virtual:snippets'
-import snippetLangs from 'virtual:snippet-langs'
-import type { SnippetLang, SnippetName, SnippetToken } from '../content/snippets.ts'
+import snippets, { snippetLangs } from '../generated/snippets/index.ts'
+import type { HighlightedSnippet, SnippetLang, SnippetName, SnippetToken } from '../content/snippets.ts'
 import { icon } from './icons.ts'
 
 function tokens(line: readonly SnippetToken[]) {
@@ -36,9 +36,20 @@ const DEFAULT_FILENAME: Record<SnippetLang, string> = {
   bash: 'terminal',
 }
 
-/** A full, multi-line block with editor chrome and a copy button. */
-export function CodeBlock(name: SnippetName, filename?: string) {
-  const lines = snippets[name]
+/**
+ * A full, multi-line block with editor chrome and a copy button.
+ *
+ * `initialLines` overrides the vanilla content this snippet's key normally
+ * resolves to — for a spot whose *default displayed state* isn't vanilla (the
+ * home page's framework teaser starts on React, not vanilla; see
+ * src/pages/overview.ts). Without it, the very first paint would show
+ * vanilla content next to a pill row that already marks another framework
+ * active, and hydration would immediately swap it — a visible flash on every
+ * first-ever visit. Passing the matching framework's highlighted lines here
+ * means the first paint already shows what hydration would repaint anyway.
+ */
+export function CodeBlock(name: SnippetName, filename?: string, initialLines?: HighlightedSnippet) {
+  const lines = initialLines ?? snippets[name]
   const tab = filename ?? DEFAULT_FILENAME[snippetLangs[name]]
 
   return div(

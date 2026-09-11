@@ -5,9 +5,10 @@
  * Unlike the docs pages this one has no sidebar and no prev/next — the shell
  * decides that from the route's empty path — so it is free to run full width.
  */
-import snippets from 'virtual:snippets'
+import snippets from '../generated/snippets/index.ts'
+import homeTeaserDefault from '../generated/snippets/home-teaser-default.ts'
 import { paint } from '../lib/framework.ts'
-import { bundleArtifact, bundleGzipBytes, bundleGzipSize } from 'virtual:package-meta'
+import { bundleArtifact, bundleGzipBytes, bundleGzipSize } from '../generated/package-meta.ts'
 import { CodeBlock } from '../components/CodeBlock.ts'
 import { InstallBox } from '../components/InstallBox.ts'
 import { icon, type IconId } from '../components/icons.ts'
@@ -210,7 +211,12 @@ export function view() {
         ),
       ),
 
-      div({ className: 'framework-code-window' }, CodeBlock('framework-guide', 'PaymentForm.tsx')),
+      // `homeTeaserDefault` (not the vanilla `snippets['framework-guide']`)
+      // so the first paint already matches the "React" pill marked active
+      // above — see CodeBlock's `initialLines` doc comment. Both server and
+      // client import the same generated file, so hydration still sees an
+      // identical tree on both sides.
+      div({ className: 'framework-code-window' }, CodeBlock('framework-guide', 'PaymentForm.tsx', homeTeaserDefault)),
     ),
 
     section(

@@ -3,15 +3,15 @@
  *
  * This module is read twice, and never by the browser:
  *
- *  - `vite/plugin-snippets.ts` imports it during the build, runs Shiki over
+ *  - `scripts/build-snippets.ts` imports it during the build, runs Shiki over
  *    each entry with the site's own themes (../styles/code-theme.ts), and
- *    serves the tokenized result as `virtual:snippets`.
+ *    writes the tokenized result to `src/generated/snippets/`.
  *  - `tsc` reads it for the `SnippetName` union, so a page that asks for a
  *    key that does not exist fails the build instead of rendering blank.
  *
- * Because the plugin imports this file directly — outside Vite's module
- * graph, under Bun or Node — it must stay free of imports and of anything
- * that needs bundler resolution. Plain data only.
+ * Because the script imports this file directly — outside Vite's module
+ * graph, under Bun — it must stay free of imports and of anything that needs
+ * bundler resolution. Plain data only.
  *
  * Keys that start with `ex-` are demo ids: `ExampleCard` looks its snippet up
  * by the id of the input it wraps, so a card's visible code and its live
@@ -35,7 +35,7 @@ export interface RawSnippet {
  */
 export type SnippetToken = readonly [text: string, className: string]
 
-/** What `virtual:snippets` serves per snippet: pre-tokenized lines of tokens. */
+/** What `generated/snippets/index.ts` holds per snippet: pre-tokenized lines of tokens. */
 export type HighlightedSnippet = SnippetToken[][]
 
 export const snippets = {

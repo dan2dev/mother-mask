@@ -65,5 +65,5 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: docs
           packageManager: bun
-          command: deploy
+          command: pages deploy dist
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}

@@ -10,12 +10,22 @@
  * Figma's row only has room for 6 pills before "+ N more"; the rest live in
  * a popover menu opened from that pill, not a link out to /frameworks.html.
  */
-import baseSnippets from 'virtual:snippets'
+import baseSnippets from '../generated/snippets/index.ts'
 import { paint, loaders, STORAGE_KEY, type Catalog } from './framework.ts'
 import { FRAMEWORKS, isFramework, type Adapter, type Framework } from '../content/frameworks.ts'
 import type { SnippetName } from '../content/snippets.ts'
 
 const SNIPPET: SnippetName = 'framework-guide'
+/**
+ * Keep in sync with the hardcoded `'react'` in scripts/build-snippets.ts,
+ * which writes `src/generated/snippets/home-teaser-default.ts` — the
+ * matching highlighted content src/pages/overview.ts gives this teaser's
+ * `CodeBlock` so its first paint (server and client alike) already shows
+ * what this default pill choice would otherwise repaint it to a moment
+ * later. Can't import the constant across that boundary: the generator
+ * script runs before any generated file (including this one's dependency,
+ * `generated/snippets/index.ts`) exists on a clean build.
+ */
 const DEFAULT_PILL: Adapter = 'react'
 
 function readSavedFramework(): Framework | null {

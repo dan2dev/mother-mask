@@ -1,31 +1,45 @@
 # Documentation website
 
 The [mother-mask documentation and live examples](https://mother-mask.dan2.dev/)
-are built with [Nuclo](https://nuclo.dev) and Vite. Every page is prerendered
-to a real HTML file at build time and then hydrated in the browser, so the site
-is a single-page app for anyone browsing it and a plain folder of static files
-for everyone and everything else — crawlers, link previews, readers with
-JavaScript off, and any host that can serve a directory.
+are built with [Nuclo](https://nuclo.dev) and Vite, and server-rendered on
+every request — the same architecture as [nuclo's own docs
+site](https://nuclo.dev), not a separate one this project invented. There is
+no prerendering step and no `dist/*.html` file per page: a Cloudflare Pages
+Function renders the requested route fresh for every request, the browser
+`hydrate()`s onto that markup once, and from there it behaves as a
+single-page app.
 
 ## How a page gets to the browser
 
-1. `vite build` bundles the client from `index.html` + `src/main.ts` into
-   `dist/`, leaving the shell with its hashed script and stylesheet in
-   `dist/index.html`.
-2. `vite build --ssr src/entry-server.ts` builds the same app for Node into
-   `.ssr/`.
-3. `prerender.ts` renders every route in `src/router/routes.ts` with
-   `renderToString()`, drops each one into that shell, and writes
-   `index.html`, `quick-start.html`, `api.html`, … plus `404.html` and
-   `sitemap.xml`.
+1. `vite build` bundles the client — entry is `src/main.ts`, not an
+   `index.html` (there isn't one) — into `dist/`, and writes
+   `dist/.vite/manifest.json` mapping that entry to its real hashed output
+   files.
+2. A request arrives at `src/app-handler.ts`'s `appFetch()`: resolve the URL
+   to a route (`src/router/url.ts`, `src/router/routes.ts`), render it with
+   `renderToString()` (`src/entry-server.ts`, unchanged from the old
+   prerendering pipeline — it was always a pure per-route function), and drop
+   the result into an HTML template string, using the manifest to inject the
+   real `<script>`/`<link>` tags.
+3. Three different callers invoke that same `appFetch()`, unchanged: Vite's
+   dev server (`vite/plugin-ssr-dev.ts`, so `bun run dev` server-renders too,
+   no separate prerendering path to fall out of sync with), and — in
+   production — the Cloudflare Pages Function (`functions/[[path]].ts`).
 4. In the browser, `src/main.ts` builds the same tree from the same
-   `createApp()` and calls Nuclo's `hydrate()`, which adopts the prerendered
-   nodes instead of replacing them. Nothing re-renders on load.
+   `createApp()` and calls Nuclo's `hydrate()`, which adopts the
+   server-rendered nodes instead of replacing them. Nothing re-renders on
+   load — and unlike prerendering, there's no "wrong file got served" case to
+   detect, since the server just rendered exactly the route the request
+   named.
 5. From then on `src/router/router.ts` handles navigation: it swaps the page
    inside `<main>`, updates the `<head>`, and leaves the browser alone for
    anything that is not a plain left click on a link this site owns.
 
-`bun run build` runs all four steps and typechecks in between.
+`bun run build` runs `bun run generate` (see Writing content and SEO below —
+the git-derived page dates, the bundle-size stats, and the Shiki-highlighted
+snippets, each written to a real file under `src/generated/` rather than
+computed per-request), typechecks, then `vite build`, then writes
+`dist/sitemap.xml`.
 
 ## Layout
 
@@ -36,10 +50,15 @@ JavaScript off, and any host that can serve a directory.
 | `src/router/head.ts` | Per-route `<head>`, serialized by the build and applied by the router |
 | `src/router/url.ts` | Base path and the pathname → route mapping |
 | `src/app.ts` | The shell (header, sidebar, `<main>`, footer), used by both renderers |
+| `src/app-handler.ts` | The shared per-request handler — resolves a URL to a route, renders it, fills in the HTML template |
+| `src/entry-server.ts` | `renderRoute()`: one route in, `{ head, html, bodyClass }` out — called per request now, not once per route at build time |
+| `functions/[[path]].ts` | The Cloudflare Pages Function — thin wrapper around `appFetch()` for production |
 | `src/pages/*.ts` | One module per page: `view()` for markup, `setup()` for live demos |
 | `src/content/snippets.ts` | Every code sample on the site |
+| `src/generated/` | Build output committed to the repo and refreshed by `bun run build`: page dates, package/bundle-size stats, highlighted snippets — see `scripts/` |
 | `src/components/`, `src/demos/`, `src/lib/` | Shared pieces, demo bindings, theme + copy behaviour |
-| `vite/` | Build-time plugins: highlighted snippets, package size, dev routing |
+| `scripts/` | Build-time-only generators: page dates, package meta, highlighted snippets, sitemap |
+| `vite/` | Vite plugins: the dev-mode SSR middleware (`plugin-ssr-dev.ts`) |
 | `src/styles/global.css` | All styling |
 
 ## Run locally
@@ -57,17 +76,22 @@ Then, from `docs/`:
 bun install --no-save && bun run dev
 ```
 
-The dev server is client-rendered only; nothing is prerendered there, which
-`main.ts` detects and handles by rendering instead of hydrating. To exercise the
-real thing — prerendered HTML, hydration, the generated sitemap — build and
-preview:
+The dev server server-renders too (`vite/plugin-ssr-dev.ts`), so `bun run dev`
+already exercises the real request → route → render → hydrate path, not a
+client-only stand-in. To check the actual production path — the real
+Cloudflare Pages Function, the real static-asset routing in
+`public/_routes.json`, the generated sitemap — build and preview with
+Wrangler's local runtime instead of Vite's:
 
 ```bash
-bun run build && bun run preview
+bun run preview
 ```
 
-Bun is the supported runtime: `prerender.ts` runs under it, and it is what the
-deploy workflow uses.
+(`preview` runs `bun run build` then `wrangler pages dev dist` — Miniflare, not
+a guess at what Cloudflare will do.)
+
+Bun is the supported runtime: every `scripts/*.ts` generator runs under it, and
+it is what the deploy workflow uses.
 
 ## Adding a page
 
@@ -75,7 +99,8 @@ deploy workflow uses.
    live `bind()` demos.
 2. Add one entry to `ROUTES` in `src/router/routes.ts`. That alone registers
    the route, gives it a sidebar and mobile-menu link, wires prev/next, writes
-   its `<head>`, emits its HTML file, and adds it to `sitemap.xml`.
+   its `<head>`, makes it renderable by `appFetch()`, and adds it to
+   `sitemap.xml`.
 
 A page's `view()` returns a single `<div class="page">`. Everything it renders
 must be isomorphic — Nuclo builders only, no `document`, no bound inputs. Those
@@ -84,9 +109,10 @@ whose return value it calls on the way out.
 
 ## SEO
 
-The site is prerendered, which is most of the work: every URL answers with a
-complete document, so nothing depends on a crawler running JavaScript. On top
-of that:
+The site is server-rendered, which is most of the work: every URL answers with
+a complete document (real HTTP status included — a genuinely unknown path gets
+a real `404`, not a `200` with "not found" text), so nothing depends on a
+crawler running JavaScript. On top of that:
 
 - **`src/router/routes.ts` owns each page's title and description.** They are
   unique per page, and the build fails loudly on a missing one because the same
@@ -96,10 +122,12 @@ of that:
   library itself as `SoftwareSourceCode`, and every other page's `about` points
   back at that one node. The 404 page gets none — it asks not to be indexed.
 - **`lastmod` and `dateModified` come from git**, per page, via
-  `vite/plugin-page-dates.ts`. A page whose history cannot supply a date gets no
-  date rather than the build date: a `lastmod` that changes on every deploy
-  carries no information and teaches crawlers to ignore the field. This is why
-  the deploy workflow checks out with `fetch-depth: 0`.
+  `scripts/update-page-dates.ts` (writes `src/generated/page-dates.ts`, read by
+  both `src/router/head.ts` and `scripts/build-sitemap.ts`). A page whose
+  history cannot supply a date gets no date rather than the build date: a
+  `lastmod` that changes on every deploy carries no information and teaches
+  crawlers to ignore the field. This is why the deploy workflow checks out
+  with `fetch-depth: 0`.
 - **Prose sections are linkable.** `SectionHeading` gives each one a slug id and
   a `#` link that appears on hover or keyboard focus, so readers can share a
   section and search engines can offer a jump to it. Demo cards get an id too
@@ -117,8 +145,9 @@ of that:
   `cp README.md packages/mother-mask/README.md` after editing the root copy.
 - Check API names, options, and defaults against `packages/mother-mask/src/`.
 - Code samples live in `src/content/snippets.ts` and are highlighted at build
-  time by Shiki (`vite/plugin-snippets.ts`) — there is no highlighter in the
-  browser bundle. A snippet whose key starts with `ex-` is the code for the
+  time by Shiki (`scripts/build-snippets.ts`, writing `src/generated/snippets/`)
+  — there is no highlighter in the browser bundle, and none in the Cloudflare
+  Function either. A snippet whose key starts with `ex-` is the code for the
   demo input with that id, so `ExampleCard` finds it without being told; keep
   it in step with the matching `bind()` call in the page's `setup()`.
 - Token colors come from the site's own CSS variables. `src/styles/code-theme.ts`
@@ -148,13 +177,15 @@ all integration samples. The preference is restored after hydration and survives
 navigation and reloads. Only highlighted code changes; live demos continue using
 the raw binders and keep their current inputs.
 
-`src/content/frameworks.ts` owns the choices. `vite/framework-samples.ts` adapts
-each demo's existing snippet into its framework API, preserving masks, options,
-and callback behavior. New `ex-` snippets must use the supported literal bind
-format or provide an explicit mapping there; unsupported samples fail the build.
-Pattern notation, shared core types, and install commands remain framework-neutral.
-The snippet plugin emits a separate highlighted chunk for each adapter, fetched
-on selection, so the site never loads a framework runtime for its demos.
+`src/content/frameworks.ts` owns the choices. `scripts/framework-samples.ts`
+adapts each demo's existing snippet into its framework API, preserving masks,
+options, and callback behavior. New `ex-` snippets must use the supported
+literal bind format or provide an explicit mapping there; unsupported samples
+fail the build. Pattern notation, shared core types, and install commands
+remain framework-neutral. `scripts/build-snippets.ts` writes a separate
+highlighted file per adapter (`src/generated/snippets/<adapter>.ts`),
+lazy-`import()`ed by `src/lib/framework.ts` on selection, so the site never
+loads a framework runtime for its demos.
 
 Run `bun run test` in `docs/` to check adapter coverage and sample contracts.
 
@@ -170,8 +201,8 @@ hydrated, which is worth knowing before reaching for any of these patterns:
   instead — both valid ARIA — in `src/components/aria-current.ts`.
 - **A state-dependent `className` cannot drop a class the server rendered.**
   `initReactiveClassName` records whatever class an element already carries as
-  permanent "static" classes, and hydration runs after the prerendered class is
-  in the DOM — so on a hydrated element the first value is merged into every
+  permanent "static" classes, and hydration runs after the server-rendered
+  class is in the DOM — so on a hydrated element the first value is merged into every
   later one and can never come off. The home-vs-docs layout switch therefore
   lives on `body.home-page`, set imperatively by the router, rather than on
   `.layout` itself.
@@ -189,21 +220,34 @@ to [Deploy docs](../.github/workflows/deploy-docs.yml), which builds the library
 and website from that exact tag and deploys `docs/dist` to Cloudflare with
 [wrangler-action](https://github.com/cloudflare/wrangler-action). The docs
 workflow can also be run manually for a selected ref. Do not commit generated
-`dist/` files.
+`dist/` files (unlike `src/generated/` — see Layout above — `dist/` is a full
+build output, gitignored as always).
 
-The site is a static-assets Worker (`docs/wrangler.jsonc`), not a Pages
-project — Cloudflare's Pages product always redirects `…/api.html` to `…/api`,
-which fights this site's canonical URLs (see SEO above), so the config sets
-`html_handling: "none"` instead and gets the exact-file serving GitHub Pages
-gave it for free. `not_found_handling: "404-page"` keeps the extensionless-URL
-trick working (see the next paragraph). Deploying needs a
-`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` set as repository secrets,
-and — once — the `mother-mask.dan2.dev` custom domain attached to the
-`mother-mask` Worker; `routes` in `wrangler.jsonc` provisions the DNS record
-automatically as long as `dan2.dev` is already a Cloudflare-managed zone.
+The site is a **Cloudflare Pages** project (`docs/wrangler.jsonc`'s
+`pages_build_output_dir`), not a static-assets Worker — the same pattern
+[nuclo's own docs site](https://nuclo.dev) uses. `functions/[[path]].ts` is a
+catch-all Pages Function that Cloudflare auto-discovers from this project
+root; `public/_routes.json` tells it which paths are real static files
+(hashed JS/CSS under `/assets/*`, the manifest, favicons, `sitemap.xml`, …)
+that should skip the Function entirely and be served directly — free and
+unlimited, per Cloudflare's own static-asset billing — versus which paths
+(everything else: every page route, and any unknown path) should invoke it
+for a per-request render. See "How a page gets to the browser" above for what
+happens inside the Function.
 
-Nothing in the output needs a server or a rewrite rule beyond that config: the
-deployed folder is one HTML file per URL, plus `404.html` for anything else. A
-host that falls back to `404.html` for unknown paths also gets working deep
-links for the extensionless spelling of a page — the router resolves `…/api`
-to the API page and corrects the address bar to `…/api.html`.
+This project used to be a Workers static-assets deployment prerendering every
+route to its own `dist/*.html` file, with a small `worker.ts` shim patching a
+gap in Cloudflare's `html_handling` config (`/` had no exact asset match under
+`html_handling: "none"`, so it 404'd at the HTTP level until hydration
+papered over it). Moving to per-request SSR removes that whole class of
+problem — the server always renders exactly the route a request names, so
+there's no "wrong file got served, fix it up client-side" case left to have a
+bug in.
+
+Deploying needs a `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` set as
+repository secrets, and — once — the `mother-mask.dan2.dev` custom domain
+attached to the `mother-mask` Pages project (**Pages custom domains are
+attached differently from a Worker's `routes` config** — either in the
+Cloudflare dashboard under the project's Custom domains tab, or via
+`wrangler pages deployment domain add`; there's no `routes`/`custom_domain`
+block in `wrangler.jsonc` for Pages the way the old Workers setup had).

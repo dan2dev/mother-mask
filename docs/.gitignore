@@ -9,10 +9,10 @@ lerna-debug.log*
 
 node_modules
 
-# Build output: dist/ is the deployable site, .ssr/ is the server build the
-# prerenderer renders it with.
+# Build output: the client bundle + manifest that src/app-handler.ts renders
+# against. No separate SSR build — Wrangler bundles src/app-handler.ts itself
+# when deploying functions/[[path]].ts.
 dist
-.ssr
 
 # Wrangler's local cache and dry-run state.
 .wrangler
