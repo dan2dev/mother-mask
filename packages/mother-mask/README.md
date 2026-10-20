@@ -1328,6 +1328,79 @@ framework entry. `mount`/`update`/`unmount` only ever run on the client:
 Riot has no built-in server-side renderer of its own, so there is no
 `typeof window` guard to write.
 
+## Nuclo
+
+Import the mods from the separate `mother-mask/nuclo` entry and pass them to
+an `input()` builder like any other attributes object:
+
+```ts
+import 'nuclo'
+import { motherMask, motherMaskDecimal, formatDecimalValue } from 'mother-mask/nuclo'
+
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+let phone = ''
+let amount = ''
+
+export const Form = () =>
+  div(
+    label({ for: 'phone' }, 'Phone'),
+    input(
+      { id: 'phone', name: 'phone', inputMode: 'tel' },
+      motherMask('(99) 99999-9999', {
+        value: () => phone,
+        onChange: (next) => { phone = next; update() },
+      }),
+    ),
+
+    label({ for: 'amount' }, 'Amount'),
+    input(
+      { id: 'amount', name: 'amount' },
+      motherMaskDecimal({
+        ...currency,
+        value: () => amount,
+        onChange: (next) => { amount = next; update() },
+      }),
+    ),
+
+    button('Set amount', {
+      onClick: () => { amount = formatDecimalValue(1234.5, currency); update() },
+    }),
+  )
+```
+
+`mother-mask/nuclo` re-exports every core function, class, and type as well
+as the `motherMask` and `motherMaskDecimal` mods. Its core exports are aliases
+to `mother-mask`, sharing the same implementation and caches. The entry has no
+Nuclo runtime import at all — each mod is a plain attributes object, which is
+already something every Nuclo tag builder accepts — so there is no peer
+dependency to install; it needs Nuclo `^0.3.0`, the first release with
+`onMount`/`onDestroy` hooks. Nuclo is not bundled.
+
+- `motherMask(mask, options?)` takes the same `BindOptions` as `bind()`, so
+  `onChange` and every binding option work unchanged; `motherMaskDecimal(options?)`
+  takes `BindDecimalOptions` and calls `onChange(value, numericValue)`. Both
+  set `type="text"`, and the decimal mod sets `inputmode="decimal"`.
+- Binding happens in `onMount`, which Nuclo runs once after the element is
+  inserted — never on the server, and after `hydrate()` on the client. The
+  disposer `bind()` returns is the hook's cleanup, so Nuclo disposes the
+  binding when it removes the element (a `when()` branch switching, a
+  `list()` row leaving). An element you remove yourself with `node.remove()`
+  never runs its hooks, exactly as Nuclo documents.
+- `value` is optional and, as everywhere in Nuclo, a zero-argument function:
+  it becomes a dynamic attribute re-read on every `update()`. An external
+  change (`phone = '11987654321'; update()`) is formatted before Nuclo writes
+  it, while an echo of the mod's own `onChange` hands back the live input
+  value so the write is a no-op and the caret and any IME draft survive. On
+  the server the getter runs once, so the HTML already carries the formatted
+  initial value.
+- Attributes you pass in a sibling object are kept, including your own
+  `onMount`; a later object's `type` wins over the mod's, as Nuclo's usual
+  merging rules say.
+
+See the [Nuclo example](https://github.com/dan2dev/mother-mask/tree/main/examples/nuclo-simple)
+for a runnable app.
+
 ## Decimal Inputs
 
 Use `bindDecimal` for numbers, currency fields, and values where the integer part should grow freely.

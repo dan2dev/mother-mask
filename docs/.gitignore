@@ -14,6 +14,9 @@ node_modules
 # when deploying functions/[[path]].ts.
 dist
 
+# Written by `bun run generate` (runs before dev and build).
+src/generated
+
 # Wrangler's local cache and dry-run state.
 .wrangler
 

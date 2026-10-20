@@ -22,7 +22,7 @@ import type { PageTeardown } from '../router/page.ts'
 
 // The pill row only has room for a handful of frameworks before it needs a
 // wide, oddly-shaped section — everything else lives behind "+ N more".
-const VISIBLE_PILLS: readonly Framework[] = ['vanilla', 'react', 'vue', 'angular', 'svelte', 'solid']
+const VISIBLE_PILLS: readonly Framework[] = ['vanilla', 'react', 'vue', 'nuclo', 'svelte', 'solid']
 const MORE_FRAMEWORKS = FRAMEWORKS.filter((framework) => !VISIBLE_PILLS.includes(framework.id))
 
 function Feature(iconId: IconId, tag: string, heading: string, body: NodeModLike<'p'>) {
@@ -67,7 +67,7 @@ function FrameworkPill(frameworkId: string, label: string, active = false) {
 
 export function view() {
   return div(
-    { className: 'page' },
+    { className: 'page', onMount: setup },
 
     section(
       { className: 'hero', id: 'top' },
@@ -180,7 +180,7 @@ export function view() {
         FrameworkPill('vanilla', 'Vanilla JS'),
         FrameworkPill('react', 'React', true),
         FrameworkPill('vue', 'Vue'),
-        FrameworkPill('angular', 'Angular'),
+        FrameworkPill('nuclo', 'Nuclo'),
         FrameworkPill('svelte', 'Svelte'),
         FrameworkPill('solid', 'SolidJS'),
 
@@ -238,7 +238,7 @@ export function view() {
   )
 }
 
-export function setup(): PageTeardown {
+function setup(): PageTeardown {
   const demos = createDemos()
 
   demos.mask('pg-br-phone', '+55 (99) 99999-9999')

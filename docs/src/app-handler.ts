@@ -7,12 +7,12 @@
  * whichever bundler builds it.
  *
  * There is no prerendering: every request is server-rendered fresh via
- * `renderRoute()` (entry-server.ts), which is the same `renderToString()` +
- * `headTagsFor()` pipeline that used to run once per route at build time.
+ * `renderPage()` (entry-server.ts) — nuclo-router's `start()` + `run()` around
+ * `renderToString()`.
  * `src/main.ts` then `hydrate()`s onto exactly this markup — real per-request
  * SSR with genuine hydration, not prerendering.
  */
-import { renderRoute } from './entry-server.ts'
+import { renderPage } from './entry-server.ts'
 import { NOT_FOUND } from './router/not-found.ts'
 import { routeByPath, type Route } from './router/routes.ts'
 import { href, routePathFromPathname } from './router/url.ts'
@@ -120,7 +120,7 @@ export async function appFetch(request: Request, transformHtml: (html: string) =
     return Response.redirect(canonical, 301)
   }
 
-  const page = renderRoute(route)
+  const page = await renderPage(url.href)
 
   const bodyAttrs = page.bodyClass ? ` class="${page.bodyClass}"` : ''
   const filled = htmlTemplate.replace('{{head}}', () => page.head).replace('{{bodyAttrs}}', () => bodyAttrs).replace('{{html}}', () => page.html)

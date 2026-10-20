@@ -2,7 +2,7 @@
  * The one list of pages.
  *
  * Adding an entry here is the whole job of adding a page: it registers the
- * route with the client router, gives the sidebar, mobile menu, footer and
+ * route with nuclo-router (src/router/router.ts), gives the sidebar, mobile menu, footer and
  * prev/next links their entry, supplies the `<title>`/description/JSON-LD
  * src/app-handler.ts renders into the page on every request, and tells the
  * build which URL to put in the sitemap.
@@ -41,6 +41,8 @@ export interface Route {
   path: string
   /** Sidebar, mobile menu and breadcrumb label. */
   label: string
+  /** Sidebar section. Keep each group's routes consecutive; the 404 page has none. */
+  group?: 'Getting started' | 'Guides' | 'Reference'
   /** `<title>` — each page's own, not the site name. */
   title: string
   /** `<meta name="description">`, and the og/twitter description. */
@@ -57,6 +59,7 @@ export interface Route {
 export const ROUTES: readonly Route[] = [
   {
     slug: 'overview',
+    group: 'Getting started',
     path: '',
     label: 'Overview',
     title: 'mother-mask — TypeScript input masks for browser forms',
@@ -69,6 +72,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'quick-start',
+    group: 'Getting started',
     path: 'quick-start',
     label: 'Quick start',
     title: 'Quick start — mother-mask docs',
@@ -79,6 +83,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'frameworks',
+    group: 'Getting started',
     path: 'frameworks',
     label: 'Frameworks',
     title: 'Framework integrations — mother-mask docs',
@@ -89,6 +94,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'examples',
+    group: 'Getting started',
     path: 'examples',
     label: 'Examples',
     title: 'Examples — mother-mask docs',
@@ -99,6 +105,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'advanced-patterns',
+    group: 'Guides',
     path: 'advanced-patterns',
     label: 'Custom patterns',
     title: 'Custom tokens & dynamic patterns — mother-mask docs',
@@ -109,6 +116,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'editing',
+    group: 'Guides',
     path: 'editing',
     label: 'Editing',
     title: 'Segmented editing — mother-mask docs',
@@ -119,6 +127,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'decimals',
+    group: 'Guides',
     path: 'decimals',
     label: 'Decimals',
     title: 'Decimal formatting — mother-mask docs',
@@ -129,6 +138,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'regional',
+    group: 'Guides',
     path: 'regional',
     label: 'Regional',
     title: 'Regional formats — mother-mask docs',
@@ -139,6 +149,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'patterns',
+    group: 'Reference',
     path: 'patterns',
     label: 'Patterns',
     title: 'Pattern syntax — mother-mask docs',
@@ -149,6 +160,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'cdn',
+    group: 'Reference',
     path: 'cdn',
     label: 'CDN',
     title: 'UMD / CDN — mother-mask docs',
@@ -159,6 +171,7 @@ export const ROUTES: readonly Route[] = [
   },
   {
     slug: 'api',
+    group: 'Reference',
     path: 'api',
     label: 'API',
     title: 'API reference — mother-mask docs',

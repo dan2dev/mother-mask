@@ -6,7 +6,7 @@ import type { PageTeardown } from '../router/page.ts'
 
 export function view() {
   return div(
-    { className: 'page' },
+    { className: 'page', onMount: setup },
     section(
       { id: 'editing' },
       h1({ className: 'page-title' }, 'Segmented editing and eager literals'),
@@ -125,7 +125,7 @@ export function view() {
   )
 }
 
-export function setup(): PageTeardown {
+function setup(): PageTeardown {
   const demos = createDemos()
 
   demos.mask('ex-phone-edit', '(999) 999-9999')

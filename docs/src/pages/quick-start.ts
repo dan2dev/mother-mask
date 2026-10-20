@@ -8,7 +8,7 @@ import type { PageTeardown } from '../router/page.ts'
 
 export function view() {
   return div(
-    { className: 'page' },
+    { className: 'page', onMount: setup },
     section(
       { id: 'quick-start' },
       h1({ className: 'page-title' }, 'Quick start'),
@@ -52,7 +52,7 @@ export function view() {
   )
 }
 
-export function setup(): PageTeardown {
+function setup(): PageTeardown {
   const demos = createDemos()
   demos.mask('quick-start-phone', '(99) 99999-9999')
   return demos.teardown

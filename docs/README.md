@@ -16,24 +16,26 @@ single-page app.
    `dist/.vite/manifest.json` mapping that entry to its real hashed output
    files.
 2. A request arrives at `src/app-handler.ts`'s `appFetch()`: resolve the URL
-   to a route (`src/router/url.ts`, `src/router/routes.ts`), render it with
-   `renderToString()` (`src/entry-server.ts`, unchanged from the old
-   prerendering pipeline — it was always a pure per-route function), and drop
-   the result into an HTML template string, using the manifest to inject the
-   real `<script>`/`<link>` tags.
+   to a route (`src/router/url.ts`, `src/router/routes.ts`) for its status and
+   canonical redirect, then render it (`src/entry-server.ts`):
+   [nuclo-router](https://github.com/dan2dev/nuclo/tree/main/packages/nuclo-router)'s
+   `router.start(url)` resolves the page, and `renderToString(App)` runs inside
+   that request's `route.run()`. The result goes into an HTML template string,
+   using the manifest to inject the real `<script>`/`<link>` tags.
 3. Three different callers invoke that same `appFetch()`, unchanged: Vite's
    dev server (`vite/plugin-ssr-dev.ts`, so `bun run dev` server-renders too,
    no separate prerendering path to fall out of sync with), and — in
    production — the Cloudflare Pages Function (`functions/[[path]].ts`).
-4. In the browser, `src/main.ts` builds the same tree from the same
-   `createApp()` and calls Nuclo's `hydrate()`, which adopts the
-   server-rendered nodes instead of replacing them. Nothing re-renders on
-   load — and unlike prerendering, there's no "wrong file got served" case to
-   detect, since the server just rendered exactly the route the request
-   named.
-5. From then on `src/router/router.ts` handles navigation: it swaps the page
-   inside `<main>`, updates the `<head>`, and leaves the browser alone for
-   anything that is not a plain left click on a link this site owns.
+4. In the browser, `src/main.ts` calls `router.start()` and then Nuclo's
+   `hydrate(App, …)`, which adopts the server-rendered nodes instead of
+   replacing them. Nothing re-renders on load — and unlike prerendering,
+   there's no "wrong file got served" case to detect, since the server just
+   rendered exactly the route the request named.
+5. From then on nuclo-router handles navigation: `router.outlet()` swaps the
+   page inside `<main>`, the `onNavigate` hook in `src/router/router.ts`
+   updates the `<head>`, scroll and focus, and the router leaves the browser
+   alone for anything that is not a plain left click on a link this site
+   owns.
 
 `bun run build` runs `bun run generate` (see Writing content and SEO below —
 the git-derived page dates, the bundle-size stats, and the Shiki-highlighted
@@ -45,15 +47,15 @@ computed per-request), typechecks, then `vite build`, then writes
 
 | Path | What lives there |
 | --- | --- |
-| `src/router/routes.ts` | The one list of pages — URL, nav label, title, description, sitemap weight |
-| `src/router/router.ts` | Client-side navigation: link interception, history, scroll, focus |
-| `src/router/head.ts` | Per-route `<head>`, serialized by the build and applied by the router |
-| `src/router/url.ts` | Base path and the pathname → route mapping |
-| `src/app.ts` | The shell (header, sidebar, `<main>`, footer), used by both renderers |
+| `src/router/routes.ts` | The one list of pages — URL, nav label and group, title, description, sitemap weight |
+| `src/router/router.ts` | The nuclo-router instance built from `routes.ts`, `activeRoute()`, and the `onNavigate` hook: head, scroll, focus |
+| `src/router/head.ts` | Per-route `<head>`, serialized by the server and applied by the router |
+| `src/router/url.ts` | Base path and the pathname → route mapping the server uses for status codes and canonical redirects |
+| `src/app.ts` | `App`, the shell (header, sidebar, `<main>` with `router.outlet()`, "On this page", footer), used by both renderers |
 | `src/app-handler.ts` | The shared per-request handler — resolves a URL to a route, renders it, fills in the HTML template |
-| `src/entry-server.ts` | `renderRoute()`: one route in, `{ head, html, bodyClass }` out — called per request now, not once per route at build time |
+| `src/entry-server.ts` | `renderPage()`: a request URL in, `{ head, html, bodyClass }` out |
 | `functions/[[path]].ts` | The Cloudflare Pages Function — thin wrapper around `appFetch()` for production |
-| `src/pages/*.ts` | One module per page: `view()` for markup, `setup()` for live demos |
+| `src/pages/*.ts` | One module per page: `view()` for markup, its root's `onMount` for live demos |
 | `src/content/snippets.ts` | Every code sample on the site |
 | `src/generated/` | Build output committed to the repo and refreshed by `bun run build`: page dates, package/bundle-size stats, highlighted snippets — see `scripts/` |
 | `src/components/`, `src/demos/`, `src/lib/` | Shared pieces, demo bindings, theme + copy behaviour |
@@ -95,8 +97,8 @@ it is what the deploy workflow uses.
 
 ## Adding a page
 
-1. Create `src/pages/<name>.ts` exporting `view()`, and `setup()` if it has
-   live `bind()` demos.
+1. Create `src/pages/<name>.ts` exporting `view()`. If it has live `bind()`
+   demos, bind them in the page root's `onMount` and return their teardown.
 2. Add one entry to `ROUTES` in `src/router/routes.ts`. That alone registers
    the route, gives it a sidebar and mobile-menu link, wires prev/next, writes
    its `<head>`, makes it renderable by `appFetch()`, and adds it to
@@ -104,8 +106,13 @@ it is what the deploy workflow uses.
 
 A page's `view()` returns a single `<div class="page">`. Everything it renders
 must be isomorphic — Nuclo builders only, no `document`, no bound inputs. Those
-belong in `setup()`, which the router calls once the page is in the DOM and
-whose return value it calls on the way out.
+belong in the root's `onMount` (by convention a local `setup()`), which Nuclo
+runs once the page is in the DOM — claimed by `hydrate()` or inserted by a
+navigation — and whose return value it calls when the router removes the page.
+
+Every `SectionHeading` and `ExampleCard` lists itself in the "On this page"
+rail with Nuclo's `into()` (`src/components/Toc.ts`), so a new section shows up
+there without touching anything else.
 
 ## SEO
 
@@ -193,27 +200,22 @@ Run `bun run test` in `docs/` to check adapter coverage and sample contracts.
 
 ## Nuclo notes
 
-Three things about the version currently pinned (0.2.30) shape the code here.
-All three are invisible on a fresh `render()` and only show up once markup is
-hydrated, which is worth knowing before reaching for any of these patterns:
+Two things about the versions currently pinned (`nuclo` 0.3.30, `nuclo-router`
+0.1.7) shape the code here. Both are invisible on a fresh `render()` and only
+show up once markup is hydrated, which is worth knowing before reaching for
+either pattern:
 
 - **A state-dependent attribute is applied but never removed.** A value that
   becomes `undefined` leaves the previous one in place, so `aria-current` would
   accumulate on every page it visited. It is spelled `'page'` / `'false'`
   instead — both valid ARIA — in `src/components/aria-current.ts`.
 - **A state-dependent `className` cannot drop a class the server rendered.**
-  `initReactiveClassName` records whatever class an element already carries as
-  permanent "static" classes, and hydration runs after the server-rendered
-  class is in the DOM — so on a hydrated element the first value is merged into every
+  Nuclo records whatever class an element already carries as permanent
+  "static" classes, and hydration runs after the server-rendered class is in
+  the DOM — so on a hydrated element the first value is merged into every
   later one and can never come off. The home-vs-docs layout switch therefore
   lives on `body.home-page`, set imperatively by the router, rather than on
   `.layout` itself.
-- **An SVG element's `className` is a read-only `SVGAnimatedString`**, so Nuclo
-  falls back to `setAttribute('className', …)` and the element ends up with a
-  stray attribute next to the real one. SVG attributes here are named `class`.
-
-`nuclo@0.2.31` is skipped: its published tarball is missing every ESM artifact,
-including the package's own main entry.
 
 ## Deployment
 

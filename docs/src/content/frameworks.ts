@@ -9,7 +9,7 @@ export const FRAMEWORKS = [
   { id: 'vanilla', label: 'Vanilla JS', filename: 'index.html' },
   { id: 'react', label: 'React', filename: 'PaymentForm.tsx' },
   { id: 'vue', label: 'Vue', filename: 'PaymentForm.vue' },
-  { id: 'angular', label: 'Angular', filename: 'payment-form.ts' },
+  { id: 'nuclo', label: 'Nuclo', filename: 'payment-form.ts' },
   { id: 'svelte', label: 'Svelte', filename: 'PaymentForm.svelte' },
   { id: 'solid', label: 'SolidJS', filename: 'PaymentForm.tsx' },
   { id: 'preact', label: 'Preact', filename: 'PaymentForm.tsx' },
@@ -24,6 +24,7 @@ export const FRAMEWORKS = [
   { id: 'ember', label: 'Ember.js', filename: 'payment-form.ts' },
   { id: 'knockout', label: 'Knockout.js', filename: 'index.html' },
   { id: 'riot', label: 'Riot.js', filename: 'index.html' },
+  { id: 'angular', label: 'Angular', filename: 'payment-form.ts' },
 ] as const
 
 export type Framework = typeof FRAMEWORKS[number]['id']

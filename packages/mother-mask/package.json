@@ -183,6 +183,16 @@
         "default": "./dist/riot.cjs"
       }
     },
+    "./nuclo": {
+      "import": {
+        "types": "./dist/nuclo.d.mts",
+        "default": "./dist/nuclo.mjs"
+      },
+      "require": {
+        "types": "./dist/nuclo.d.cts",
+        "default": "./dist/nuclo.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -289,6 +299,7 @@
     "knockout": "^3.5.3",
     "lit": "^3.3.3",
     "mithril": "^2.3.8",
+    "nuclo": "^0.3.30",
     "octane": "^0.2.16",
     "preact": "^10.29.8",
     "react": "^19.3.1",

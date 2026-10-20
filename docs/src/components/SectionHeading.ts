@@ -1,3 +1,5 @@
+import { tocEntry } from './Toc.ts'
+
 /**
  * A section heading that can be linked to.
  *
@@ -14,12 +16,15 @@
  * Ids are derived from the heading text so they read well and stay stable as
  * the page is edited around them. Pass one explicitly to keep a URL working
  * after a heading is reworded — a published anchor is a promise.
+ *
+ * Each heading also lists itself in the page's "On this page" rail.
  */
 export function SectionHeading(text: string, id: string = slugify(text)) {
   return h2(
     { id, className: 'section-heading' },
     text,
     a({ className: 'heading-anchor', href: `#${id}`, 'aria-label': `Link to “${text}”` }, '#'),
+    tocEntry(id, text),
   )
 }
 

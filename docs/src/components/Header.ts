@@ -1,7 +1,7 @@
 import { packageVersion } from '../generated/package-meta.ts'
 import { NavLinks } from './NavLinks.ts'
 import { icon } from './icons.ts'
-import { activeRoute } from '../router/active.ts'
+import { activeRoute } from '../router/router.ts'
 import { href } from '../router/url.ts'
 import { NPM_URL, REPO_URL } from '../site.ts'
 

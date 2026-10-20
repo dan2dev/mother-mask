@@ -15,7 +15,9 @@ describe('framework examples', () => {
         const source = variants[name]!.code
         expect(source).toContain(`mother-mask/${id}`)
         if (field.mask) expect(source).toContain(field.mask)
-        expect(source).toContain(field.options)
+        // The Nuclo mods take BindOptions directly, so the demo's options are
+        // spread into the mod's own object rather than nested as a literal.
+        expect(source).toContain(id === 'nuclo' ? field.options.slice(1, -1).trim() : field.options)
         expect(source).not.toContain('updateOutputs(')
         // Standalone examples must bring along any custom token declarations.
         if (field.options.includes('uppercaseLetter')) expect(source).toContain('const uppercaseLetter =')
@@ -37,6 +39,12 @@ describe('framework examples', () => {
     expect(frameworkSamples('alpine')['ex-cpf']!.code).not.toContain('x-model')
     expect(frameworkSamples('ember')['ex-cpf']!.code).toContain('{{maskInput this.mask')
     expect(frameworkSamples('stencil')['ex-cpf']!.code).toContain("import 'mother-mask/stencil/mask-input'")
+    // Nuclo has no controlled-input layer: the mod takes bind()'s own onChange
+    // and the sample syncs the DOM the Nuclo way, with an explicit update().
+    expect(frameworkSamples('nuclo')['ex-cpf']!.code).toContain('motherMask(')
+    expect(frameworkSamples('nuclo')['ex-cpf']!.code).toContain('onChange:')
+    expect(frameworkSamples('nuclo')['ex-cpf']!.code).toContain('update()')
+    expect(frameworkSamples('nuclo')['ex-usd']!.code).toContain('motherMaskDecimal({')
   })
 
   test('custom element configuration targets hosts after ids transfer', () => {

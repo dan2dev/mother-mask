@@ -10,6 +10,7 @@
 import { CodeBlock } from './CodeBlock.ts'
 import type { SnippetName } from '../content/snippets.ts'
 import { demoInputAttributes } from './demo-input-attributes.ts'
+import { tocEntry } from './Toc.ts'
 
 export interface ExampleCardOptions {
   /** Card heading. An array when it needs inline markup, e.g. a `<code>`. */
@@ -26,16 +27,16 @@ export interface ExampleCardOptions {
 
 export function ExampleCard(options: ExampleCardOptions, ...children: NodeModLike<'div'>[]) {
   const { title, inputId, ariaLabel, placeholder, inputmode, value, wide = false } = options
+  // Each demo is a thing worth linking to on its own — "see the CNPJ
+  // example" should be a URL. The input already owns `ex-cpf`, so the card
+  // takes the readable half: `examples#cpf`.
+  const id = inputId.replace(/^ex-/, '')
+  const heading = Array.isArray(title) ? title : [title]
 
   return div(
-    {
-      // Each demo is a thing worth linking to on its own — "see the CNPJ
-      // example" should be a URL. The input already owns `ex-cpf`, so the card
-      // takes the readable half: `examples.html#cpf`.
-      id: inputId.replace(/^ex-/, ''),
-      className: wide ? 'example example-wide' : 'example',
-    },
-    h2(...(Array.isArray(title) ? title : [title])),
+    { id, className: wide ? 'example example-wide' : 'example' },
+    h2(...heading),
+    tocEntry(id, ...heading),
     CodeBlock(inputId),
     input({
       ...demoInputAttributes,

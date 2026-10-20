@@ -4,8 +4,9 @@
  * `createDemos()` binds masks and hands back a teardown, because the demos are
  * a documentation site's own use of the thing it documents: the pages tell
  * readers to call the disposer before an input is removed, so the site does it
- * too. Each `bind()` returns one, they are collected here, and the router calls
- * `teardown()` before it swaps a page out.
+ * too. Each `bind()` returns one, they are collected here, and a page returns
+ * `teardown()` from its root's `onMount`, so Nuclo calls it when the router
+ * swaps the page out.
  */
 import { bind, bindDecimal, type BindDecimalOptions, type BindOptions, type MaskPattern } from 'mother-mask'
 import type { PageTeardown } from '../router/page.ts'

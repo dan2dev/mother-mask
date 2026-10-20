@@ -21,6 +21,7 @@ export const loaders = {
   'ember': () => import('../generated/snippets/ember.ts'),
   'knockout': () => import('../generated/snippets/knockout.ts'),
   'riot': () => import('../generated/snippets/riot.ts'),
+  'nuclo': () => import('../generated/snippets/nuclo.ts'),
 } satisfies Record<Adapter, () => Promise<{ default: Catalog }>>
 
 // Exported so the home page's own framework teaser (lib/home-framework-teaser.ts)

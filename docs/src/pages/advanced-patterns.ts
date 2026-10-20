@@ -5,7 +5,7 @@ import type { PageTeardown } from '../router/page.ts'
 
 export function view() {
   return div(
-    { className: 'page' },
+    { className: 'page', onMount: setup },
     section(
       { id: 'advanced-patterns' },
       h1({ className: 'page-title' }, 'Custom tokens and dynamic patterns'),
@@ -112,7 +112,7 @@ export function view() {
   )
 }
 
-export function setup(): PageTeardown {
+function setup(): PageTeardown {
   const demos = createDemos()
 
   demos.mask('ex-hex', 'HH:HH:HH:HH:HH:HH', { tokens: { H: /[0-9A-Fa-f]/ } })

@@ -6,7 +6,7 @@ const hint = (id: string, text: string) => span({ className: 'hint', id }, text)
 
 export function view() {
   return div(
-    { className: 'page' },
+    { className: 'page', onMount: setup },
     section(
       { id: 'regional' },
       h1({ className: 'page-title' }, 'Regional formats'),
@@ -77,7 +77,7 @@ function dateHint(id: string, value: string, separator: string, yearFirst: boole
   )
 }
 
-export function setup(): PageTeardown {
+function setup(): PageTeardown {
   const demos = createDemos()
 
   demos.mask('ex-us-phone', '(999) 999-9999', (v) => countHint('ex-us-phone-hint', digits(v), 10, '10 digits'))

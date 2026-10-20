@@ -149,4 +149,14 @@ export default defineConfig([{
   sourcemap: true,
   // Riot is an optional peer, and core exports must retain their identity.
   deps: { neverBundle: ['mother-mask', 'riot'] },
+}, {
+  entry: { nuclo: 'src/nuclo/index.ts' },
+  format: ['esm', 'cjs'],
+  outDir: 'dist',
+  clean: false,
+  dts: { tsgo: true },
+  minify: true,
+  sourcemap: true,
+  // No Nuclo runtime dependency at all — this entry is a plain attributes object.
+  deps: { neverBundle: ['mother-mask'] },
 }])

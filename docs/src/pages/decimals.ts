@@ -8,7 +8,7 @@ const hint = (text: string) => span({ className: 'hint' }, text)
 
 export function view() {
   return div(
-    { className: 'page' },
+    { className: 'page', onMount: setup },
     section(
       { id: 'decimals' },
       h1({ className: 'page-title' }, 'Decimal formatting'),
@@ -170,7 +170,7 @@ export function view() {
   )
 }
 
-export function setup(): PageTeardown {
+function setup(): PageTeardown {
   const demos = createDemos()
 
   demos.decimal('ex-decimal-free')

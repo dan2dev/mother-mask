@@ -23,7 +23,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['node_modules/**', 'dist/**', '**/*.d.ts', 'src/index.ts', 'src/react/index.ts', 'src/vue/index.ts', 'src/angular/index.ts', 'src/svelte/index.ts', 'src/solid/index.ts', 'src/preact/index.ts', 'src/lit/index.ts', 'src/alpine/index.ts', 'src/web-components/index.ts', 'src/qwik/index.ts', 'src/qwik/**', 'src/inferno/index.ts', 'src/octane/index.ts', 'src/octane/**', 'src/mithril/index.ts', 'src/ember/index.ts', 'src/ember/mask-input.ts', 'src/ember/mask-decimal.ts', 'src/knockout/index.ts', 'src/riot/index.ts', 'src/types.ts'],
+      exclude: ['node_modules/**', 'dist/**', '**/*.d.ts', 'src/index.ts', 'src/react/index.ts', 'src/vue/index.ts', 'src/angular/index.ts', 'src/svelte/index.ts', 'src/solid/index.ts', 'src/preact/index.ts', 'src/lit/index.ts', 'src/alpine/index.ts', 'src/web-components/index.ts', 'src/qwik/index.ts', 'src/qwik/**', 'src/inferno/index.ts', 'src/octane/index.ts', 'src/octane/**', 'src/mithril/index.ts', 'src/ember/index.ts', 'src/ember/mask-input.ts', 'src/ember/mask-decimal.ts', 'src/knockout/index.ts', 'src/riot/index.ts', 'src/nuclo/index.ts', 'src/types.ts'],
       reporter: ['text', 'html', 'json-summary'],
       reportsDirectory: './coverage',
       thresholds: {
@@ -152,6 +152,13 @@ export default defineConfig({
           branches: 70,
           functions: 80,
           statements: 85,
+        },
+        'src/nuclo/*.ts': {
+          perFile: true,
+          lines: 95,
+          branches: 85,
+          functions: 100,
+          statements: 95,
         },
       },
     },

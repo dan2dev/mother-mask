@@ -1,7 +1,7 @@
 :root {
-  --text: #5d5970;
+  --text: #4d4a63;
   --text-h: #14131c;
-  --text-dim: #83809a;
+  --text-dim: #6b6782;
   --bg: #fbfafc;
   --bg-raised: #ffffff;
   --bg-soft: #f4f3f9;
@@ -557,15 +557,6 @@ header .bar {
   }
 }
 
-.sidebar-label {
-  display: block;
-  margin: 0 0 8px 12px;
-  color: var(--text-dim);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
 .content {
   width: 100%;
   min-width: 0;
@@ -702,6 +693,16 @@ nav.primary-nav.sidebar-nav a {
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--bg-raised);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+  }
+
+  .mobile-menu-nav .nav-group-label {
+    margin: 6px 10px 2px;
+    color: var(--text-dim);
   }
 
   .mobile-menu-nav a {
@@ -1212,68 +1213,65 @@ td {
   font-size: 0.93em;
 }
 
-/* Prev/next links between docs pages — a flat text row under one top
-   border (mother-mask-design docs-quick-start `page-navigation`, node
-   24:88), not the earlier bordered-box link pair. */
+/* Prev/next links between docs pages — two cards under one top border. The
+   empty <span> PageNav leaves for a missing side keeps the other card in its
+   own column. */
 
 .page-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px 16px;
-  margin-top: 48px;
-  padding-block: 24px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+  padding-top: 32px;
   border-top: 1px solid var(--border);
 }
 
 .page-nav-link {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 4px;
   min-width: 0;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-raised);
   text-decoration: none;
-  transition: opacity 0.15s;
+  transition: border-color 0.15s, transform 0.15s;
 }
 
 .page-nav-link:hover {
-  opacity: 0.75;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  transform: translateY(-1px);
 }
 
 .page-nav-next {
-  margin-left: auto;
+  align-items: flex-end;
   text-align: right;
 }
 
 .page-nav-label {
   color: var(--text-dim);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
-  white-space: nowrap;
 }
 
 .page-nav-title {
-  color: var(--text);
-  font-size: 15px;
+  color: var(--text-h);
+  font-size: 16px;
   font-weight: 600;
-  white-space: nowrap;
 }
 
-/* The next-page title is the one call to action here, so it's the only
-   one that picks up the accent color — matches Figma exactly. */
-.page-nav-next .page-nav-title {
+.page-nav-link:hover .page-nav-title {
   color: var(--accent);
 }
 
 @media (max-width: 480px) {
   .page-nav {
-    flex-direction: column;
-    align-items: flex-start;
+    grid-template-columns: 1fr;
   }
 
-  .page-nav-next {
-    margin-left: 0;
-    text-align: left;
+  .page-nav > span:empty {
+    display: none;
   }
 }
 
@@ -1542,7 +1540,7 @@ summary {
 }
 
 header .bar {
-  max-width: 1240px;
+  max-width: var(--frame);
   min-height: 80px;
 }
 
@@ -1570,6 +1568,10 @@ header {
   border: 1px solid var(--border);
   color: var(--accent);
   background: var(--accent-bg);
+  /* A phone's header has no room for it beside the menu button. */
+  @media (max-width: 640px) {
+    display: none;
+  }
 }
 
 .version-dot {
@@ -1633,10 +1635,24 @@ header {
   color: var(--text-h);
 }
 
+:root {
+  --frame: 1360px;
+}
+
 .layout {
-  max-width: 1240px;
-  grid-template-columns: 210px minmax(0, 1fr);
+  max-width: var(--frame);
+  grid-template-columns: 220px minmax(0, 1fr);
   gap: 56px;
+}
+
+/* Wide screens get a third column: the "On this page" rail. It keeps its
+   column even on a page with nothing to list, so the content column is the
+   same width on every docs page. */
+@media (min-width: 1280px) {
+  body:not(.home-page) .layout {
+    grid-template-columns: 220px minmax(0, 1fr) 200px;
+    gap: 48px;
+  }
 }
 
 /* The home page runs full width with no sidebar; every docs page is the
@@ -1662,21 +1678,31 @@ body:not(.home-page) main > .page > section:first-child {
   top: 100px;
 }
 
-.sidebar-label {
-  margin-bottom: 12px;
-  color: var(--text-dim);
-  font-size: 12px;
-  letter-spacing: 0.08em;
+nav.primary-nav.sidebar-nav {
+  gap: 28px;
 }
 
-nav.primary-nav.sidebar-nav {
-  gap: 8px;
+.nav-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-group-label,
+.toc-label {
+  display: block;
+  margin: 0 0 10px;
+  color: var(--text-h);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 nav.primary-nav.sidebar-nav a {
   position: relative;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 6px 12px 6px 14px;
+  border-left: 1px solid var(--border);
+  border-radius: 0 6px 6px 0;
   font-size: 14px;
   font-weight: 400;
 }
@@ -1693,7 +1719,7 @@ nav.primary-nav.sidebar-nav a[aria-current='page'] {
 nav.primary-nav.sidebar-nav a[aria-current='page']::before {
   content: '';
   position: absolute;
-  left: 0;
+  left: -1px;
   top: 0;
   bottom: 0;
   width: 2px;
@@ -2446,3 +2472,87 @@ footer {
 .quick-start-detail summary { cursor: pointer; font-weight: 600; }
 .quick-start-detail[open] summary { margin-bottom: 16px; }
 #quick-start > .quick-start-detail + p { margin-top: 24px; }
+
+/* ── Docs reading rhythm ─────────────────────────────────────────────────── */
+
+/* Section headings open a new topic, so they get room above them — the
+   code block or demo before one used to butt straight into it. */
+.page .section-heading {
+  margin: 56px 0 14px;
+}
+
+/* "On this page" — filled by the page itself (components/Toc.ts). */
+.toc {
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .toc {
+    display: block;
+    position: sticky;
+    top: 100px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding: 4px 0 24px;
+  }
+}
+
+/* Nothing to list: keep the column, drop the rail. */
+.toc:not(:has(li)) {
+  visibility: hidden;
+}
+
+.toc ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-left: 1px solid var(--border);
+}
+
+.toc a {
+  display: block;
+  margin-left: -1px;
+  padding: 5px 0 5px 14px;
+  border-left: 2px solid transparent;
+  color: var(--text-dim);
+  font-size: 13.5px;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.toc a:hover {
+  color: var(--text-h);
+}
+
+.toc a[aria-current] {
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+
+.toc code {
+  padding: 0;
+  background: none;
+  color: inherit;
+  font-size: 0.92em;
+}
+
+/* A page arriving by client-side navigation fades in. Not on the first,
+   server-rendered paint — the router sets `body.navigated` from the first
+   navigation on — so a cold load is never held back by an animation. */
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.navigated main > .page {
+  animation: page-in 0.28s ease backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navigated main > .page {
+    animation: none;
+  }
+}

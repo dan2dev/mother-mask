@@ -734,6 +734,44 @@ export default class Checkout extends Component {
   // amountField.unmount()
 </script>`,
   },
+  'framework-nuclo': {
+    lang: 'ts',
+    code: `import 'nuclo'
+import { motherMask, motherMaskDecimal, formatDecimalValue } from 'mother-mask/nuclo'
+
+const currency = { decimalPlaces: 2, prefix: '$', allowNegative: true }
+
+// Plain mutable state: change it, then call update() to sync the DOM.
+let phone = ''
+let amount = ''
+
+export const Form = () =>
+  div(
+    label({ for: 'phone' }, 'Phone'),
+    input(
+      { id: 'phone', name: 'phone', inputMode: 'tel' },
+      motherMask('(99) 99999-9999', {
+        value: () => phone,
+        onChange: (next) => { phone = next; update() },
+      }),
+    ),
+
+    label({ for: 'amount' }, 'Amount'),
+    input(
+      { id: 'amount', name: 'amount' },
+      motherMaskDecimal({
+        ...currency,
+        value: () => amount,
+        onChange: (next) => { amount = next; update() },
+      }),
+    ),
+
+    button('Set amount', {
+      type: 'button',
+      onClick: () => { amount = formatDecimalValue(1234.5, currency); update() },
+    }),
+  )`,
+  },
 
   'framework-guide': {
     lang: 'html',

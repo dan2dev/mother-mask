@@ -7,7 +7,7 @@ const hint = (id: string, text: string) => span({ className: 'hint', id }, text)
 
 export function view() {
   return div(
-    { className: 'page' },
+    { className: 'page', onMount: setup },
     section(
       { id: 'examples' },
       h1({ className: 'page-title' }, 'Examples'),
@@ -120,7 +120,7 @@ export function view() {
   )
 }
 
-export function setup(): PageTeardown {
+function setup(): PageTeardown {
   const demos = createDemos()
 
   demos.mask('ex-cpf', '999.999.999-99', (v) => countHint('ex-cpf-hint', digits(v), 11, '11 digits'))

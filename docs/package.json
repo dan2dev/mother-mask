@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "bun run generate",
     "dev": "vite --host",
     "generate": "bun scripts/update-page-dates.ts && bun scripts/update-package-meta.ts && bun scripts/build-snippets.ts",
     "build": "bun run generate && tsc --noEmit && vite build && bun scripts/build-sitemap.ts",
@@ -21,6 +22,7 @@
   },
   "dependencies": {
     "mother-mask": "file:../packages/mother-mask",
-    "nuclo": "0.2.30"
+    "nuclo": "0.3.30",
+    "nuclo-router": "0.1.7"
   }
 }

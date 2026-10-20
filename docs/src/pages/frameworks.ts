@@ -22,11 +22,12 @@ const notes = {
   'ember': 'Use maskInput and maskDecimal modifiers in a Glimmer component with a .gjs template.',
   'knockout': 'Importing the adapter registers mask and maskDecimal bindings. Run the module after the markup exists.',
   'riot': 'Mount the pure maskInput and maskDecimal wrappers, then unmount them during parent teardown.',
+  'nuclo': 'Pass the motherMask and motherMaskDecimal mods to an input() builder; a value getter keeps the field in sync on update().',
 } satisfies Record<Adapter, string>
 
 export function view() {
   return div(
-    { className: 'page' },
+    { className: 'page', onMount: setup },
     section(
       { id: 'frameworks' },
       h1({ className: 'page-title' }, 'Frameworks'),
@@ -55,7 +56,7 @@ export function view() {
 }
 
 /** The only page with framework-aware code — the select and its repaint live here alone. */
-export function setup(): void {
+function setup(): void {
   initFrameworkSelection()
   // In-memory selection survives navigation; repaint immediately in case it
   // isn't 'vanilla' — the freshly mounted markup is always prerendered as such.

@@ -229,6 +229,24 @@ ${indent(preamble)}${fields.map((field, i) => `  const field${n(i)} = pure(${fie
   // During parent teardown:
 ${fields.map((_, i) => `  // field${n(i)}.unmount()`).join('\n')}
 </script>` }
+  if (adapter === 'nuclo') {
+    // The mods take BindOptions directly, so a demo's `{ eager: false }` is
+    // spread into the same object as `value`/`onChange` rather than nested.
+    const inline = (i: number) => options(i) === '{}' ? '' : `${options(i).slice(1, -1).trim()}, `
+    const mod = (i: number) => fields[i]!.mask ? `motherMask(${mask(i)}, {` : 'motherMaskDecimal({'
+    return { lang: 'ts', code: `import 'nuclo'
+import { ${[...new Set(fields.map((field) => field.mask ? 'motherMask' : 'motherMaskDecimal'))].join(', ')} } from '${entry}'
+
+${preamble}${fields.map((_, i) => `let value${n(i)} = ${initial(i)}`).join('\n')}
+
+export const Example = () => div(
+${fields.map((field, i) => `  label({ for: 'field-${i}' }, '${field.mask ? 'Masked value' : 'Amount'}'),
+  input({ id: 'field-${i}' }, ${mod(i)} ${inline(i)}value: () => value${n(i)},
+    onChange: (${params(i)}) => { value${n(i)} = next; ${log(i)}; update() } })),`).join('\n')}
+)`
+
+    }
+  }
   throw new Error(`Missing adapter generator: ${adapter}`)
 }
 
