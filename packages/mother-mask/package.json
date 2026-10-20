@@ -278,7 +278,7 @@
   "devDependencies": {
     "@angular/common": "^20.3.34",
     "@angular/compiler": "^22.2.3",
-    "@angular/core": "^20.3.34",
+    "@angular/core": "^22.2.3",
     "@angular/platform-browser": "^22.2.3",
     "@builder.io/qwik": "^1.20.2",
     "@octanejs/vite-plugin": "^0.4.1",
