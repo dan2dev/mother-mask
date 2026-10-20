@@ -75,7 +75,7 @@
     "eslint": "^9.39.5",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-ember": "^12.7.5",
-    "eslint-plugin-n": "^17.24.0",
+    "eslint-plugin-n": "^18.4.1",
     "eslint-plugin-qunit": "^8.2.6",
     "eslint-plugin-warp-drive": "^5.8.2",
     "globals": "^16.5.0",
