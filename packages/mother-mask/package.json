@@ -294,7 +294,7 @@
     "alpinejs": "^3.17.4",
     "bumpp": "^12.3.0",
     "ember-modifier": "^4.3.0",
-    "inferno": "^9.1.0",
+    "inferno": "^10.0.0",
     "jsdom": "^29.1.1",
     "knockout": "^3.5.3",
     "lit": "^3.3.3",
