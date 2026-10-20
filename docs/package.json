@@ -13,11 +13,11 @@
     "test": "bun test tests"
   },
   "devDependencies": {
-    "@types/bun": "^1.3.14",
-    "shiki": "^4.4.3",
+    "@types/bun": "^1.4.3",
+    "shiki": "^4.5.0",
     "typescript": "~7.0.2",
-    "vite": "^8.2.2",
-    "wrangler": "^4.129.0"
+    "vite": "^8.3.4",
+    "wrangler": "^4.151.2"
   },
   "dependencies": {
     "mother-mask": "file:../packages/mother-mask",
