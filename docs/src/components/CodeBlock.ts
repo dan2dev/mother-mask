@@ -67,8 +67,9 @@ export function CodeBlock(name: SnippetName, filename?: string, initialLines?: H
     ),
     // Lines are joined with real newlines rather than wrapped in per-line
     // elements, so `textContent` is the original source and the copy button
-    // needs nothing but the element.
-    pre({ className: 'shiki' }, code(...lines.flatMap((line, i) => (i === 0 ? tokens(line) : ['\n', ...tokens(line)])))),
+    // needs nothing but the element. `tabindex` lets keyboard users scroll
+    // lines wider than the block.
+    pre({ className: 'shiki', tabindex: '0' }, code(...lines.flatMap((line, i) => (i === 0 ? tokens(line) : ['\n', ...tokens(line)])))),
   )
 }
 

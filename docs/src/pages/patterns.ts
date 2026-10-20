@@ -14,7 +14,7 @@ export function view() {
       h1({ className: 'page-title' }, 'Pattern syntax'),
 
       div(
-        { className: 'table-wrap' },
+        { className: 'table-wrap', tabindex: '0' },
         table(
           thead(row(th('Character'), th('Matches'))),
           tbody(

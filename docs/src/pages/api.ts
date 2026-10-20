@@ -7,7 +7,7 @@ function block(heading: string, ...content: NodeModLike<'div'>[]) {
 }
 
 function wrap(...content: NodeModLike<'div'>[]) {
-  return div({ className: 'table-wrap' }, table(...content))
+  return div({ className: 'table-wrap', tabindex: '0' }, table(...content))
 }
 
 export function view() {

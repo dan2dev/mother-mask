@@ -8,12 +8,15 @@
   --border: #e6e4ef;
   --code-bg: #f2f1f8;
   --code-text: #2b2a3d;
-  --accent: #6366f1;
+  --accent: #4f46e5;
   --accent-solid: #6366f1;
   --accent-2: #ff745f;
   --accent-3: #d94ed7;
   --accent-bg: rgba(99, 102, 241, 0.1);
-  --grad: linear-gradient(90deg, var(--accent-2), var(--accent-3) 55%, var(--accent));
+  --grad: linear-gradient(90deg, var(--accent-2), var(--accent-3) 55%, var(--accent-solid));
+  /* accent-2/3 are too light for text on --code-bg (WCAG AA 4.5:1). */
+  --code-key: #b02eae;
+  --code-str: #b93a26;
   --cta-bg: #14131c;
   --cta-text: #fdfbf8;
   --ok: #12946a;
@@ -55,6 +58,8 @@
   --accent-2: #ff9678;
   --accent-3: #ff7ec4;
   --accent-bg: rgba(99, 102, 241, 0.14);
+  --code-key: var(--accent-3);
+  --code-str: var(--accent-2);
   --grad: linear-gradient(90deg, var(--accent-2), var(--accent-3) 55%, var(--accent));
   --cta-bg: #ffffff;
   --cta-text: #07080e;
@@ -82,6 +87,8 @@
     --accent-2: #ff9678;
     --accent-3: #ff7ec4;
     --accent-bg: rgba(99, 102, 241, 0.14);
+    --code-key: var(--accent-3);
+    --code-str: var(--accent-2);
     --grad: linear-gradient(90deg, var(--accent-2), var(--accent-3) 55%, var(--accent));
     --cta-bg: #ffffff;
     --cta-text: #07080e;
@@ -293,7 +300,7 @@ section[id] {
 }
 
 .tk-key {
-  color: var(--accent-3);
+  color: var(--code-key);
 }
 
 .tk-pun {
@@ -301,7 +308,7 @@ section[id] {
 }
 
 .tk-str {
-  color: var(--accent-2);
+  color: var(--code-str);
 }
 
 .tk-acc {
@@ -1986,7 +1993,6 @@ nav.primary-nav.sidebar-nav a[aria-current='page']::before {
   color: var(--text-dim);
   font-family: var(--mono);
   font-size: 11px;
-  opacity: 0.8;
 }
 
 .demo-field-input-wrap {
@@ -2100,8 +2106,9 @@ nav.primary-nav.sidebar-nav a[aria-current='page']::before {
 }
 
 .framework-pill[aria-pressed='true'] {
-  border-color: var(--accent-solid);
-  background: var(--accent-solid);
+  /* #4f46e5, not --accent-solid: white on #6366f1 is 4.47:1, just under AA. */
+  border-color: #4f46e5;
+  background: #4f46e5;
   color: #ffffff;
   font-weight: 600;
   box-shadow: 0 8px 16px color-mix(in srgb, var(--accent-solid) 25%, transparent);
@@ -2125,8 +2132,8 @@ nav.primary-nav.sidebar-nav a[aria-current='page']::before {
 }
 
 .framework-pill-more.is-active {
-  border-color: var(--accent-solid);
-  background: var(--accent-solid);
+  border-color: #4f46e5;
+  background: #4f46e5;
   color: #ffffff;
   font-weight: 600;
 }

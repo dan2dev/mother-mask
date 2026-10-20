@@ -40,7 +40,7 @@ export function Header() {
 
       // A <details> menu works before the bundle arrives and needs no state of
       // its own; the router closes it on navigation.
-      details({ className: 'mobile-menu', id: 'mobile-menu' }, summary(icon('menu-icon'), span('Menu')), NavLinks('mobile-menu-nav')),
+      details({ className: 'mobile-menu', id: 'mobile-menu' }, summary({ 'aria-label': 'Menu' }, icon('menu-icon'), span('Menu')), NavLinks('mobile-menu-nav')),
 
       div(
         { className: 'header-links' },
