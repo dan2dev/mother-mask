@@ -419,6 +419,13 @@ describe('formatDecimalValue() — number to masked string, decimalPlaces: 2', (
     expect(formatDecimalValue(-0, { decimalPlaces: 2, allowNegative: true })).toBe('0.00')
   })
 
+  it('drops the sign of a negative value that rounds to zero at this width', () => {
+    // unmaskDecimal never yields -0, so "-0.00" could never round-trip.
+    expect(formatDecimalValue(-0.001, { decimalPlaces: 2, allowNegative: true })).toBe('0.00')
+    expect(formatDecimalValue(-0.4, { decimalPlaces: 0, allowNegative: true })).toBe('0')
+    expect(formatDecimalValue(-0.006, { decimalPlaces: 2, allowNegative: true })).toBe('-0.01')
+  })
+
   it('formats negative numbers when allowed', () => {
     expect(formatDecimalValue(-42.5, { decimalPlaces: 2, allowNegative: true, prefix: '$' })).toBe(
       '-$42.50',

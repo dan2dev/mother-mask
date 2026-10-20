@@ -97,6 +97,18 @@ export function view() {
 
         ExampleCard(
           {
+            title: 'Calculator-style entry',
+            inputId: 'ex-decimal-push',
+            ariaLabel: 'Calculator-style decimal entry',
+            inputmode: 'decimal',
+            value: '$23.00',
+            placeholder: '$0.00',
+          },
+          hint('Type “4”, “5”, “6” after the separator: $23.00 → $23.40 → $23.45 → $234.56. Backspace pulls it back: $23.45 → $2.34.'),
+        ),
+
+        ExampleCard(
+          {
             title: 'No thousands grouping',
             inputId: 'ex-decimal-plain',
             ariaLabel: 'Ungrouped decimal value',
@@ -167,6 +179,7 @@ export function setup(): PageTeardown {
   demos.decimal('ex-decimal-eur', { decimalPlaces: 2, separator: '.', decimalSeparator: ',', suffix: ' €' })
   demos.decimal('ex-decimal-units', { decimalPlaces: 0, suffix: ' units' })
   demos.decimal('ex-decimal-negative', { decimalPlaces: 2, prefix: '$', allowNegative: true })
+  demos.decimal('ex-decimal-push', { decimalPlaces: 2, prefix: '$', allowNegative: true, allowDecimalPush: true })
   demos.decimal('ex-decimal-plain', { decimalPlaces: 2, segmented: false })
   demos.decimal('ex-decimal-width', { numberPlaces: 2, decimalPlaces: 2 })
   demos.decimal('ex-decimal-callback', {

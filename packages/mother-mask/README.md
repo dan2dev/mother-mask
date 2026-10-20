@@ -1371,7 +1371,25 @@ optionally pads and caps the integer part; it is unlimited by default.
 | `decimalSeparator` | `'.'` | Separator before the fraction |
 | `prefix`, `suffix` | `''` | Fixed display text, excluded from numeric parsing |
 | `allowNegative` | `false` | Allow negative numbers — typing `-` anywhere makes the value negative, `+` anywhere makes it positive |
+| `allowDecimalPush` | `false` | Calculator-style entry: a digit typed into a full fraction pushes the number left, Backspace/Delete in the fraction pulls it back (needs a positive `decimalPlaces`) |
 | `onChange` | Unset | Binding callback receiving the formatted string and JS number |
+
+With `allowDecimalPush`, a fixed-width fraction fills from the right: zero
+padding after the caret is overwritten first, and once the fraction holds real
+digits a typed digit pushes the whole number one place left instead of being
+dropped. Backspace and Delete inside the fraction pull it back the same way.
+Only typing and deleting are affected — paste, `processDecimal` and
+`unmaskDecimal` still truncate the fraction.
+
+```ts
+bindDecimal(input, { decimalPlaces: 2, prefix: '$', allowNegative: true, allowDecimalPush: true })
+// "$23.|00" — type "4", "5", "6"
+// → "$23.4|0" → "$23.45|" → "$234.56|"
+// "$234.56|" — Backspace, Backspace
+// → "$23.45|" → "$2.34|"
+// "$0.00|" — type "5", "4", "2"
+// → "$0.05|" → "$0.54|" → "$5.42|"
+```
 
 For decimal masks, `segmented` controls thousands grouping. It is separate from
 the independent-field behavior of pattern masks. Use `type="text"` and

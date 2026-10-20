@@ -16211,6 +16211,118 @@ const snippets: Record<SnippetName, HighlightedSnippet> = {
       ]
     ]
   ],
+  "ex-push": [
+    [
+      [
+        "bindDecimal",
+        "tk-acc"
+      ],
+      [
+        "(",
+        "tk-pun"
+      ],
+      [
+        "input",
+        ""
+      ],
+      [
+        ",",
+        "tk-pun"
+      ],
+      [
+        " ",
+        ""
+      ],
+      [
+        "{",
+        "tk-pun"
+      ],
+      [
+        " decimalPlaces",
+        ""
+      ],
+      [
+        ":",
+        "tk-pun"
+      ],
+      [
+        " ",
+        ""
+      ],
+      [
+        "2",
+        "tk-acc"
+      ],
+      [
+        ",",
+        "tk-pun"
+      ],
+      [
+        " prefix",
+        ""
+      ],
+      [
+        ":",
+        "tk-pun"
+      ],
+      [
+        " ",
+        ""
+      ],
+      [
+        "'$'",
+        "tk-str"
+      ],
+      [
+        ",",
+        "tk-pun"
+      ],
+      [
+        " allowNegative",
+        ""
+      ],
+      [
+        ":",
+        "tk-pun"
+      ],
+      [
+        " ",
+        ""
+      ],
+      [
+        "true",
+        "tk-acc"
+      ],
+      [
+        ",",
+        "tk-pun"
+      ],
+      [
+        " allowDecimalPush",
+        ""
+      ],
+      [
+        ":",
+        "tk-pun"
+      ],
+      [
+        " ",
+        ""
+      ],
+      [
+        "true",
+        "tk-acc"
+      ],
+      [
+        " ",
+        ""
+      ],
+      [
+        "})",
+        "tk-pun"
+      ]
+    ]
+  ],
   "ex-raw": [
     [
       [
@@ -17564,6 +17676,118 @@ const snippets: Record<SnippetName, HighlightedSnippet> = {
       ],
       [
         " allowNegative",
+        ""
+      ],
+      [
+        ":",
+        "tk-pun"
+      ],
+      [
+        " ",
+        ""
+      ],
+      [
+        "true",
+        "tk-acc"
+      ],
+      [
+        " ",
+        ""
+      ],
+      [
+        "})",
+        "tk-pun"
+      ]
+    ]
+  ],
+  "ex-decimal-push": [
+    [
+      [
+        "bindDecimal",
+        "tk-acc"
+      ],
+      [
+        "(",
+        "tk-pun"
+      ],
+      [
+        "input",
+        ""
+      ],
+      [
+        ",",
+        "tk-pun"
+      ],
+      [
+        " ",
+        ""
+      ],
+      [
+        "{",
+        "tk-pun"
+      ],
+      [
+        " decimalPlaces",
+        ""
+      ],
+      [
+        ":",
+        "tk-pun"
+      ],
+      [
+        " ",
+        ""
+      ],
+      [
+        "2",
+        "tk-acc"
+      ],
+      [
+        ",",
+        "tk-pun"
+      ],
+      [
+        " prefix",
+        ""
+      ],
+      [
+        ":",
+        "tk-pun"
+      ],
+      [
+        " ",
+        ""
+      ],
+      [
+        "'$'",
+        "tk-str"
+      ],
+      [
+        ",",
+        "tk-pun"
+      ],
+      [
+        " allowNegative",
+        ""
+      ],
+      [
+        ":",
+        "tk-pun"
+      ],
+      [
+        " ",
+        ""
+      ],
+      [
+        "true",
+        "tk-acc"
+      ],
+      [
+        ",",
+        "tk-pun"
+      ],
+      [
+        " allowDecimalPush",
         ""
       ],
       [
@@ -20768,6 +20992,7 @@ export const snippetLangs: Record<SnippetName, SnippetLang> = {
   "ex-eur": "ts",
   "ex-qty": "ts",
   "ex-balance": "ts",
+  "ex-push": "ts",
   "ex-raw": "ts",
   "ex-hex": "ts",
   "ex-upper": "ts",
@@ -20783,6 +21008,7 @@ export const snippetLangs: Record<SnippetName, SnippetLang> = {
   "ex-decimal-eur": "ts",
   "ex-decimal-units": "ts",
   "ex-decimal-negative": "ts",
+  "ex-decimal-push": "ts",
   "ex-decimal-plain": "ts",
   "ex-decimal-width": "ts",
   "ex-decimal-callback": "ts",

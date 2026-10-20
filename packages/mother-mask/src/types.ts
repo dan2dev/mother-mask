@@ -180,6 +180,17 @@ export interface DecimalMaskOptions {
   suffix?: string
   /** Allow a leading `-` to produce a negative value. @default false */
   allowNegative?: boolean
+  /**
+   * Calculator-style entry for a fixed `decimalPlaces` fraction. With the
+   * caret in an already-full fraction, a typed digit pushes the whole
+   * number left one place instead of being dropped: `"$123.12|"` + `"3"` →
+   * `"$1,231.23|"`. Zero padding after the caret is overwritten first.
+   * Backspace and Delete inside the fraction pull it back the same way:
+   * `"$1,231.23|"` + Backspace → `"$123.12|"`. Only affects typing and
+   * deleting — paste, `processDecimal` and `unmaskDecimal` are unchanged —
+   * and does nothing without a positive `decimalPlaces`. @default false
+   */
+  allowDecimalPush?: boolean
 }
 
 /** Options for {@link bindDecimal}. */

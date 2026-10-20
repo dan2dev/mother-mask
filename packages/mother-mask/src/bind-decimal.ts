@@ -9,6 +9,8 @@ import {
 import { isDigitChar } from './chars'
 import {
   applyDecimalMask,
+  applyDecimalMaskPullingFraction,
+  applyDecimalMaskPushingFraction,
   applyDecimalMaskReplacingLoneZero,
   applyDecimalMaskUnmergingSeparator,
   relocateAffixInsertion,
@@ -34,6 +36,40 @@ interface DecimalEdit {
   insertedText?: string | null
   insertedAt?: number
   inputType?: string
+}
+
+type BurstKind = 'insert' | 'deleteContentBackward' | 'deleteContentForward'
+
+/**
+ * What a burst of same-kind keystrokes did to `oldValue` (as captured at
+ * keydown, with the selection `[start, end)` — just a caret when equal) to
+ * produce `value`: the run of characters typed over the selection, or how
+ * many single-character Backspaces/Deletes followed the selection's own
+ * removal. `null` when `value` isn't explained that way (mixed keys, a
+ * paste, ...), or when only one keystroke landed — nothing to replay.
+ */
+function describeBurst(
+  value: string,
+  oldValue: string,
+  start: number,
+  end: number,
+  kind: BurstKind,
+): { run: string; singles: number } | null {
+  const selected = end - start
+  if (kind === 'insert') {
+    const n = value.length - oldValue.length + selected
+    if (n <= 1 || !value.startsWith(oldValue.slice(0, start)) || !value.endsWith(oldValue.slice(end))) {
+      return null
+    }
+    return { run: value.slice(start, start + n), singles: 0 }
+  }
+  const singles = oldValue.length - value.length - selected
+  if (singles < 0 || singles + (selected ? 1 : 0) <= 1) return null
+  const expected =
+    kind === 'deleteContentBackward'
+      ? start - singles >= 0 && oldValue.slice(0, start - singles) + oldValue.slice(end)
+      : oldValue.slice(0, start) + oldValue.slice(end + singles)
+  return value === expected ? { run: '', singles } : null
 }
 
 /**
@@ -135,6 +171,16 @@ export function bindDecimal(
       }
     }
 
+    // With `allowDecimalPush`, a digit deleted from the fraction pulls the
+    // number right one place (calculator-style) instead of being zero-padded.
+    if (edit.inputType === 'deleteContentBackward' || edit.inputType === 'deleteContentForward') {
+      const pulled = applyDecimalMaskPullingFraction(target.value, pos, decimalOptions)
+      if (pulled) {
+        applyResult(target, pulled)
+        return
+      }
+    }
+
     // A numeric keypad (or a locale mismatch) may only offer "." or ",".
     // Normalize whichever one was just inserted to the configured
     // `decimalSeparator` before parsing, so mobile `input`-only edits still open
@@ -170,8 +216,12 @@ export function bindDecimal(
       insertedText != null && insertedText.length === 1 && isDigitChar(insertedText)
         ? insertedText
         : undefined
+    // With `allowDecimalPush`, a digit typed into an already-full fraction
+    // scrolls the number left one place (calculator-style) instead of being
+    // dropped.
     const replaced = insertedDigit
-      ? applyDecimalMaskReplacingLoneZero(target.value, pos, insertedDigit, decimalOptions)
+      ? (applyDecimalMaskReplacingLoneZero(target.value, pos, insertedDigit, decimalOptions) ??
+        applyDecimalMaskPushingFraction(target.value, pos, insertedDigit, decimalOptions))
       : null
 
     applyResult(target, replaced ?? applyDecimalMask(target.value, pos, decimalOptions))
@@ -221,6 +271,12 @@ export function bindDecimal(
     const ke = e as KeyboardEvent
     const target = ke.target as HTMLInputElement
     const keyStart = getCaret(target)
+    let keyEnd = keyStart
+    try {
+      keyEnd = target.selectionEnd ?? keyStart
+    } catch {
+      // Same input types `getCaret` guards against.
+    }
     const oldValue = target.value
 
     if (isComposing) return
@@ -284,6 +340,57 @@ export function bindDecimal(
       // `editStillPending`'s doc comment (the same Firefox race fixed in
       // `bind.ts`).
       if (editStillPending(target, oldValue)) return
+
+      // Several keystrokes can land before this frame fires. With
+      // `allowDecimalPush` each one matters on its own — a digit overwrites
+      // padding, pushes, or inserts depending on the state it finds — so a
+      // burst is replayed one character at a time from the pre-burst value,
+      // exactly as per-keystroke `input` events would have delivered it.
+      // Formatted in one go, the whole burst would read as fraction overflow
+      // and be dropped. The frames the later keystrokes scheduled still fire,
+      // but find no digit of theirs at the caret and leave the value alone.
+      // Deletes get the same treatment: a pulled fraction after each
+      // Backspace is not the same as one pull over the whole burst (the
+      // separator may have gone in between), so each keystroke is replayed.
+      const kind: BurstKind | null = isCharInsert
+        ? 'insert'
+        : isBackspace
+          ? 'deleteContentBackward'
+          : isDelete
+            ? 'deleteContentForward'
+            : null
+      const burst =
+        kind && decimalOptions.allowDecimalPush
+          ? describeBurst(target.value, oldValue, keyStart, keyEnd, kind)
+          : null
+      if (burst && kind) {
+        target.value = oldValue.slice(0, keyStart) + oldValue.slice(keyEnd)
+        setCaret(target, keyStart)
+        if (kind === 'insert') {
+          let at = keyStart
+          for (const ch of burst.run) {
+            target.value = target.value.slice(0, at) + ch + target.value.slice(at)
+            setCaret(target, at + ch.length)
+            formatCurrentValue(target, { insertedText: ch, insertedAt: at })
+            at = getCaret(target)
+          }
+          return
+        }
+        if (keyEnd > keyStart) formatCurrentValue(target, { inputType: kind })
+        for (let i = 0; i < burst.singles; i++) {
+          const at = getCaret(target)
+          if (kind === 'deleteContentBackward') {
+            if (at === 0) break
+            target.value = target.value.slice(0, at - 1) + target.value.slice(at)
+            setCaret(target, at - 1)
+          } else {
+            target.value = target.value.slice(0, at) + target.value.slice(at + 1)
+            setCaret(target, at)
+          }
+          formatCurrentValue(target, { inputType: kind })
+        }
+        return
+      }
 
       formatCurrentValue(target, {
         insertedText: isCharInsert ? ke.key : null,

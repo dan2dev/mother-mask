@@ -22,6 +22,7 @@ interface ResolvedDecimalOptions {
   prefix: string
   suffix: string
   allowNegative: boolean
+  allowDecimalPush: boolean
 }
 
 /** @internal exported for {@link bindDecimal}'s "." / "," key normalization */
@@ -48,6 +49,7 @@ export function resolveDecimalOptions(options?: DecimalMaskOptions): ResolvedDec
     prefix: options?.prefix ?? '',
     suffix: options?.suffix ?? '',
     allowNegative: options?.allowNegative ?? false,
+    allowDecimalPush: options?.allowDecimalPush ?? false,
   }
 }
 
@@ -82,6 +84,11 @@ function groupThousands(s: string, sep: string): string {
  * {@link formatDecimalValue} — the caret math in the former also needs
  * `intPart`/`paddedInt` individually to know how many synthetic zeros it
  * inserted, so all three stages are returned rather than just the result.
+ *
+ * Deliberately pads but never caps: the mask's own input is already capped
+ * by `computeDecimalParts`, while a programmatic number wider than
+ * `numberPlaces` keeps every digit through {@link formatDecimalValue}
+ * rather than silently losing some (see its tests).
  */
 function formatIntegerPart(
   intDigits: string,
@@ -522,13 +529,131 @@ export function applyDecimalMaskReplacingLoneZero(
     hasRealDigits && opts.numberPlaces != null && realDigits.length < opts.numberPlaces
   if (hasRealDigits && !hasPaddingRoom) return null
 
-  const prefixLen = (isNegative ? 1 : 0) + opts.prefix.length
-  if (insertIdx < prefixLen || insertIdx > prefixLen + intDigits.length) return null
+  // The integer segment's span in the *string*, grouping separators
+  // included: a `numberPlaces: 5` field padded to "00,001" is six characters
+  // wide, not five digits, and a digit typed right after it must still count
+  // as typed into the integer part.
+  const { bodyStart, body } = splitAffixes(withoutDigit, opts)
+  const sepIdx = opts.decimalPlaces === 0 ? -1 : body.indexOf(opts.decimalSeparator)
+  const intEnd = bodyStart + (sepIdx < 0 ? body.length : sepIdx)
+  if (insertIdx < bodyStart || insertIdx > intEnd) return null
 
   const signPart = isNegative ? '-' : ''
   const newIntDigits = (hasRealDigits ? realDigits : '') + digit
   const raw = signPart + newIntDigits + (hasSeparator ? opts.decimalSeparator + fracDigits : '')
   return applyDecimalMask(raw, signPart.length + newIntDigits.length, opts)
+}
+
+/**
+ * Calculator-style entry (`allowDecimalPush`): a digit typed into a fraction
+ * that's already `decimalPlaces` wide pushes the whole digit stream one place
+ * left instead of being dropped, so cents keep scrolling in from the right:
+ *
+ * - "$123.12|" + "3" → "$1,231.23|"
+ * - "$0.00|"   + "5" → "$0.05|", then "4" → "$0.54|", then "2" → "$5.42|"
+ * - "$123.1|2" + "3" → "$1,231.3|2" — the caret stays glued to the typed digit
+ * - "$23.|00"  + "4" → "$23.4|0", then "5" → "$23.45|", then "6" → "$234.56|"
+ *   — zero padding after the caret is overwritten first; only a fraction
+ *   full of real digits pushes
+ *
+ * The integer segment is untouched by this: a digit typed there (or into a
+ * fraction with room left) falls through to the default behavior. With
+ * `numberPlaces` set, a push that would overflow the integer width is
+ * refused — `null` — and the default formatter drops the keystroke, matching
+ * what `numberPlaces` does everywhere else.
+ *
+ * `value`/`caret` are the post-insertion snapshot (`digit` already sits at
+ * `caret - 1`), like {@link applyDecimalMaskReplacingLoneZero}. Returns
+ * `null` whenever the pattern doesn't apply.
+ */
+export function applyDecimalMaskPushingFraction(
+  value: string,
+  caret: number,
+  digit: string,
+  options?: DecimalMaskOptions,
+): MaskResult | null {
+  const opts = resolveDecimalOptions(options)
+  if (!opts.allowDecimalPush || opts.decimalPlaces == null || opts.decimalPlaces <= 0) return null
+  const insertIdx = caret - 1
+  if (insertIdx < 0 || value[insertIdx] !== digit) return null
+
+  const withoutDigit = value.slice(0, insertIdx) + value.slice(caret)
+  const { isNegative, intDigits, fracDigits, hasSeparator } = computeDecimalParts(withoutDigit, opts)
+  if (!hasSeparator || fracDigits.length < opts.decimalPlaces) return null
+
+  const split = splitAffixes(withoutDigit, opts)
+  const bodyCaret = insertIdx - split.bodyStart
+  if (bodyCaret < 0 || bodyCaret > split.body.length) return null
+  const { inFraction, digitsBefore } = locateCaretSegment(split.body, bodyCaret, opts)
+  if (!inFraction) return null
+  // A trailing zero after the caret is padding, not content, so the fraction
+  // isn't really full yet: the default formatter overwrites it (it keeps the
+  // first `decimalPlaces` fraction digits, dropping that zero off the end).
+  if (fracDigits.slice(digitsBefore).endsWith('0')) return null
+
+  const stream = intDigits + fracDigits.slice(0, digitsBefore) + digit + fracDigits.slice(digitsBefore)
+  const newIntLength = stream.length - opts.decimalPlaces
+  // Leading zeros (the "0" placeholder, `numberPlaces` padding) are not real
+  // digits: stripped here so they neither count against `numberPlaces` nor
+  // crowd out the pushed digit under its cap.
+  const newInt = stripLeadingZeros(stream.slice(0, newIntLength))
+  if (opts.numberPlaces != null && newInt.length > opts.numberPlaces) return null
+
+  const signPart = isNegative ? '-' : ''
+  const raw = signPart + newInt + opts.decimalSeparator + stream.slice(newIntLength)
+  // Caret right after the typed digit, wherever the shifted boundary left it.
+  const dropped = newIntLength - newInt.length
+  const streamPos = Math.max(0, intDigits.length + digitsBefore + 1 - dropped)
+  const rawCaret =
+    signPart.length +
+    (streamPos <= newInt.length
+      ? streamPos
+      : newInt.length + opts.decimalSeparator.length + (streamPos - newInt.length))
+  return applyDecimalMask(raw, rawCaret, opts)
+}
+
+/**
+ * The mirror of {@link applyDecimalMaskPushingFraction} for Backspace and
+ * Delete under `allowDecimalPush`: a digit removed from the fraction pulls
+ * the whole digit stream one place right, so the number shrinks the way it
+ * grew instead of the gap being zero-padded:
+ *
+ * - "$1,231.23|" + Backspace → "$123.12|", again → "$12.31|", ... → "$0.00|"
+ * - "$1,231.2|3" + Backspace → "$123.1|3" — the caret keeps its slot
+ * - "$123.|12"   + Delete    → "$12.3|2"
+ *
+ * A selection deleted inside the fraction pulls one place per digit it
+ * took. Deleting the separator itself is left to
+ * {@link applyDecimalMaskUnmergingSeparator}, and the integer part is
+ * unaffected: only a fraction left shorter than `decimalPlaces` pulls.
+ * When the integer part runs out the fraction is left-padded with zeros.
+ *
+ * `value`/`caret` are the post-deletion snapshot. Returns `null` whenever
+ * the pattern doesn't apply, so the caller falls through to the default
+ * (zero-padding) formatter.
+ */
+export function applyDecimalMaskPullingFraction(
+  value: string,
+  caret: number,
+  options?: DecimalMaskOptions,
+): MaskResult | null {
+  const opts = resolveDecimalOptions(options)
+  if (!opts.allowDecimalPush || opts.decimalPlaces == null || opts.decimalPlaces <= 0) return null
+
+  const { isNegative, intDigits, fracDigits, hasSeparator } = computeDecimalParts(value, opts)
+  if (!hasSeparator || fracDigits.length >= opts.decimalPlaces) return null
+
+  const split = splitAffixes(value, opts)
+  const bodyCaret = Math.max(0, Math.min(caret - split.bodyStart, split.body.length))
+  const { inFraction, digitsBefore } = locateCaretSegment(split.body, bodyCaret, opts)
+  // Fraction digits after the caret keep their slots; the caret stays with them.
+  const keepAfter = inFraction ? fracDigits.length - digitsBefore : fracDigits.length
+
+  const stream = (stripLeadingZeros(intDigits || '0') + fracDigits).padStart(opts.decimalPlaces, '0')
+  const newIntLength = stream.length - opts.decimalPlaces
+  const signPart = isNegative ? '-' : ''
+  const raw = signPart + stream.slice(0, newIntLength) + opts.decimalSeparator + stream.slice(newIntLength)
+  return applyDecimalMask(raw, raw.length - keepAfter, opts)
 }
 
 /**
@@ -542,7 +667,6 @@ export function formatDecimalValue(value: number, options?: DecimalMaskOptions):
   const opts = resolveDecimalOptions(options)
   if (!Number.isFinite(value)) return ''
 
-  const isNegative = opts.allowNegative && value < 0
   const abs = Math.abs(value)
   let fixed = opts.decimalPlaces != null ? abs.toFixed(opts.decimalPlaces) : String(abs)
   if (fixed.indexOf('e') >= 0) {
@@ -553,6 +677,9 @@ export function formatDecimalValue(value: number, options?: DecimalMaskOptions):
     fixed = expandExponent(String(abs)) +
       (opts.decimalPlaces ? '.' + '0'.repeat(opts.decimalPlaces) : '')
   }
+  // Decided after rounding: a value that rounds to zero at this width shows
+  // no sign, matching `unmaskDecimal`, which never yields -0.
+  const isNegative = opts.allowNegative && value < 0 && /[1-9]/.test(fixed)
   const dotIdx = fixed.indexOf('.')
   const intRaw = dotIdx === -1 ? fixed : fixed.slice(0, dotIdx)
   const fracPart = dotIdx === -1 ? '' : fixed.slice(dotIdx + 1)

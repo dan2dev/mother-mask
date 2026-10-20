@@ -103,6 +103,11 @@ export function view() {
         ),
 
         ExampleCard(
+          { title: 'Decimal push', inputId: 'ex-push', placeholder: '$0.00', inputmode: 'decimal' },
+          span({ className: 'hint' }, 'cents fill from the right: $23.00 + "4", "5", "6" → $234.56; Backspace → $23.45'),
+        ),
+
+        ExampleCard(
           { title: 'Masked value vs. raw value', inputId: 'ex-raw', placeholder: '000.000.000-00', inputmode: 'numeric' },
           div(
             { className: 'raw-outputs' },
@@ -170,6 +175,7 @@ export function setup(): PageTeardown {
   demos.decimal('ex-eur', { decimalPlaces: 2, separator: '.', decimalSeparator: ',', suffix: ' €' })
   demos.decimal('ex-qty', { decimalPlaces: 0, suffix: ' units' })
   demos.decimal('ex-balance', { decimalPlaces: 2, prefix: '$', allowNegative: true })
+  demos.decimal('ex-push', { decimalPlaces: 2, prefix: '$', allowNegative: true, allowDecimalPush: true })
 
   demos.mask('ex-raw', '999.999.999-99', (v) => {
     $('ex-raw-masked').textContent = v || '—'

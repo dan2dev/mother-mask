@@ -787,6 +787,7 @@ const uppercaseAlphanumeric = {
   'ex-eur': { lang: 'ts', code: String.raw`bindDecimal(input, { decimalPlaces: 2, separator: '.', decimalSeparator: ',', suffix: ' €' })` },
   'ex-qty': { lang: 'ts', code: String.raw`bindDecimal(input, { decimalPlaces: 0, suffix: ' units' })` },
   'ex-balance': { lang: 'ts', code: String.raw`bindDecimal(input, { decimalPlaces: 2, prefix: '$', allowNegative: true })` },
+  'ex-push': { lang: 'ts', code: String.raw`bindDecimal(input, { decimalPlaces: 2, prefix: '$', allowNegative: true, allowDecimalPush: true })` },
 
   'ex-raw': {
     lang: 'ts',
@@ -831,6 +832,7 @@ const uppercaseAlphanumeric = {
   'ex-decimal-eur': { lang: 'ts', code: String.raw`bindDecimal(input, { decimalPlaces: 2, separator: '.', decimalSeparator: ',', suffix: ' €' })` },
   'ex-decimal-units': { lang: 'ts', code: String.raw`bindDecimal(input, { decimalPlaces: 0, suffix: ' units' })` },
   'ex-decimal-negative': { lang: 'ts', code: String.raw`bindDecimal(input, { decimalPlaces: 2, prefix: '$', allowNegative: true })` },
+  'ex-decimal-push': { lang: 'ts', code: String.raw`bindDecimal(input, { decimalPlaces: 2, prefix: '$', allowNegative: true, allowDecimalPush: true })` },
   'ex-decimal-plain': { lang: 'ts', code: String.raw`bindDecimal(input, { decimalPlaces: 2, segmented: false })` },
   'ex-decimal-width': { lang: 'ts', code: String.raw`bindDecimal(input, { numberPlaces: 2, decimalPlaces: 2 })` },
   'ex-decimal-callback': {
