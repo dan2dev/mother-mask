@@ -30,7 +30,7 @@
  * nothing at runtime).
  */
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import type { Plugin } from 'vite'
+import type { Plugin, ViteDevServer } from 'vite'
 import type { appFetch as AppFetch } from '../src/app-handler.ts'
 
 function toFetchRequest(req: IncomingMessage): Request {
@@ -53,11 +53,26 @@ async function sendFetchResponse(res: ServerResponse, response: Response): Promi
   res.end(await response.text())
 }
 
+/** The one stylesheet, imported by src/main.ts. */
+const GLOBAL_CSS = '/src/styles/global.css'
+
 export function ssrDevPlugin(): Plugin {
+  let server: ViteDevServer
+
   return {
     name: 'mother-mask-docs:ssr-dev',
     apply: 'serve',
-    configureServer(server) {
+    // In dev the stylesheet otherwise only arrives once main.ts's module graph
+    // has loaded and Vite injects it from JS, so the server-rendered page
+    // paints unstyled first. Inline it in the shell instead, under the same
+    // `data-vite-dev-id` Vite's client would use: the client adopts this tag
+    // (and keeps HMR-updating it) rather than adding a second one.
+    async transformIndexHtml() {
+      const { default: css } = await server.ssrLoadModule(`${GLOBAL_CSS}?inline`) as { default: string }
+      return [{ tag: 'style', attrs: { type: 'text/css', 'data-vite-dev-id': server.config.root + GLOBAL_CSS }, children: css, injectTo: 'head' }]
+    },
+    configureServer(devServer) {
+      server = devServer
       return () => {
         server.middlewares.use((req, res, next) => {
           void (async () => {
