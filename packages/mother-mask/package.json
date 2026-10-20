@@ -276,7 +276,7 @@
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {
-    "@angular/common": "^20.3.34",
+    "@angular/common": "^22.2.3",
     "@angular/compiler": "^22.2.3",
     "@angular/core": "^20.3.34",
     "@angular/platform-browser": "^22.2.3",
