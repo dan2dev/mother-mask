@@ -281,7 +281,7 @@
     "@angular/core": "^20.3.34",
     "@angular/platform-browser": "^20.3.34",
     "@builder.io/qwik": "^1.20.2",
-    "@octanejs/vite-plugin": "^0.1.62",
+    "@octanejs/vite-plugin": "^0.4.1",
     "@riotjs/compiler": "^10.0.5",
     "@stencil/core": "^4.45.2",
     "@types/alpinejs": "^3.17.0",
