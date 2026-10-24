@@ -23,6 +23,6 @@
   "dependencies": {
     "mother-mask": "file:../packages/mother-mask",
     "nuclo": "0.3.30",
-    "nuclo-router": "0.1.7"
+    "nuclo-router": "0.1.8"
   }
 }
