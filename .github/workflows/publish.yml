@@ -60,12 +60,22 @@ jobs:
         working-directory: docs
         run: bun run build
 
-      - name: Bump version, commit, and tag (local only)
+      - name: Bump version, commit, tag, and push (retries on a racing release)
         id: version
-        # The next version is max(local, published) + 1 minor. Nothing leaves the
-        # runner here: the commit and tag are pushed only after `Publish`
-        # succeeds, so a failed publish never leaves an orphaned release tag.
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # Two pushes to main close together can both reach this job before either
+        # has published, so each computes the same "next" version and races to
+        # push its release commit — whichever loses gets a plain non-fast-forward
+        # rejection from `git push`. That's expected, not corruption: retry by
+        # resetting to the now-current main and recomputing the version (it reads
+        # `npm view` for the current published version, so a retry correctly
+        # starts from whatever the winner just published) rather than failing the
+        # whole release. This step only does cheap git/version-file work, and it
+        # runs — deliberately — before `Publish` below, so a retry here can never
+        # cause a second `npm publish` for the same run.
         run: |
+          bump_commit_and_tag() {
           package_name="$(bun pm pkg get name | tr -d '"')"
           local_version="$(bun pm pkg get version | tr -d '"')"
           published_version="$(npm view "$package_name" version 2>/dev/null || true)"
@@ -74,7 +84,12 @@ jobs:
           const versions = process.argv.slice(2).filter(Boolean).map((version) => {
             const match = /^(\d+)\.(\d+)\.(\d+)(?:-.+)?$/.exec(version);
             if (!match) throw new Error(`Invalid semver: ${version}`);
-            return { major: Number(match[1]), minor: Number(match[2]), patch: Number(match[3]) };
+            return {
+              raw: version,
+              major: Number(match[1]),
+              minor: Number(match[2]),
+              patch: Number(match[3]),
+            };
           });
 
           versions.sort((a, b) =>
@@ -86,42 +101,45 @@ jobs:
           NODE
           )"
 
-          echo "version=${version}" >> "$GITHUB_OUTPUT"
-          echo "tag=v${version}" >> "$GITHUB_OUTPUT"
+          node - "$version" <<'NODE'
+          const fs = require("node:fs");
 
-          npm pkg set version="$version"
-          git add package.json && git commit -m "chore(release): v${version} [skip ci]"
+          const version = process.argv[2];
+          const packageJsonPath = "package.json";
+          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+          packageJson.version = version;
+          fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+          NODE
+
+          git add package.json
+          git commit -m "chore(release): v${version} [skip ci]"
           git tag "v${version}"
+          }
+
+          bump_commit_and_tag
+
+          attempt=1
+          max_attempts=5
+          until git push --atomic origin "HEAD:${{ github.ref_name }}" "refs/tags/v$(bun pm pkg get version | tr -d '"')"; do
+            if [ "$attempt" -ge "$max_attempts" ]; then
+              echo "::error::Failed to push release commit after ${max_attempts} attempts — a competing release keeps winning the race."
+              exit 1
+            fi
+            echo "Push rejected (another release landed on ${{ github.ref_name }} first) — retrying, attempt $((attempt + 1))/${max_attempts}..."
+            git tag -d "v$(bun pm pkg get version | tr -d '"')"
+            git fetch origin "${{ github.ref_name }}"
+            git reset --hard "origin/${{ github.ref_name }}"
+            sleep $((RANDOM % 5 + 1))
+            bump_commit_and_tag
+            attempt=$((attempt + 1))
+          done
+
+          echo "tag=v$(bun pm pkg get version | tr -d '"')" >> "$GITHUB_OUTPUT"
 
       - name: Publish
         run: bun publish --access public
         env:
           NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Push release commit and tag
-        # The version is already on npm, so it must not change here. If main
-        # moved since checkout (the checkout is pinned to the triggering commit),
-        # re-apply the same version bump on top of the current main and retry.
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-          BRANCH: ${{ github.ref_name }}
-        run: |
-          attempt=1
-          max_attempts=5
-          until git push --atomic origin "HEAD:${BRANCH}" "refs/tags/v${VERSION}"; do
-            if [ "$attempt" -ge "$max_attempts" ]; then
-              echo "::error::Published v${VERSION} to npm but failed to push the release commit after ${max_attempts} attempts."
-              exit 1
-            fi
-            echo "Push rejected (${BRANCH} moved) — retrying, attempt $((attempt + 1))/${max_attempts}..."
-            git fetch origin "$BRANCH"
-            git reset --hard "origin/${BRANCH}"
-            npm pkg set version="$VERSION"
-            git add package.json && git commit -m "chore(release): v${VERSION} [skip ci]"
-            git tag -f "v${VERSION}"
-            sleep $((RANDOM % 5 + 1))
-            attempt=$((attempt + 1))
-          done
 
   deploy-docs:
     name: Deploy matching docs
