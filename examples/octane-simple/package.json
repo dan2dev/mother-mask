@@ -15,6 +15,6 @@
   "devDependencies": {
     "@octanejs/vite-plugin": "^0.1.53",
     "typescript": "~7.0.2",
-    "vite": "^6.4.3"
+    "vite": "^8.3.8"
   }
 }

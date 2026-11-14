@@ -10,10 +10,10 @@
   },
   "dependencies": {
     "mother-mask": "file:../../packages/mother-mask",
-    "riot": "^10.1.6"
+    "riot": "^10.1.7"
   },
   "devDependencies": {
     "typescript": "~7.0.2",
-    "vite": "^8.2.2"
+    "vite": "^8.3.8"
   }
 }

@@ -4,10 +4,13 @@ import type { JSX, Ref } from 'preact'
 import { bind, process } from 'mother-mask'
 import type { BindOptions, MaskPattern } from 'mother-mask'
 
-export type InputMaskProps = Omit<
-  JSX.InputHTMLAttributes<HTMLInputElement>,
-  'value' | 'defaultValue' | 'onChange' | 'type' | 'ref'
-> & {
+// `IntrinsicElements['input']` exists in every Preact 10 and 11 release. In 11 it
+// is a union keyed on `type`/`role`: keep the members valid for `type="text"`
+// (what both wrappers render) and omit per member.
+type TextInput<T> = T extends { type?: infer U } ? ('text' extends U ? Omit<T, 'value' | 'defaultValue' | 'onChange' | 'type' | 'ref'> : never) : never
+export type TextInputAttributes = TextInput<JSX.IntrinsicElements['input']>
+
+export type InputMaskProps = TextInputAttributes & {
   mask: MaskPattern
   options?: Omit<BindOptions, 'onChange'>
   value?: string

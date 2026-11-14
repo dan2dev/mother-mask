@@ -10,9 +10,9 @@
     "dev": "vite"
   },
   "devDependencies": {
-    "@playwright/test": "^1.61.1",
-    "typescript": "~6.0.2",
-    "vite": "^8.1.1"
+    "@playwright/test": "^1.65.1",
+    "typescript": "~7.0.2",
+    "vite": "^8.3.8"
   },
   "dependencies": {
     "mother-mask": "file:../packages/mother-mask"

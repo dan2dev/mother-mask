@@ -23,6 +23,10 @@ export default defineConfig({
     },
     rollupOptions: {
       external: ['mother-mask', '@builder.io/qwik'],
+      // Vite 8 (Rolldown) keeps JSDoc and `// <module id>` comments in this
+      // unminified output; Vite 6 dropped both.
+      experimental: { attachDebugInfo: 'none' },
+      output: { comments: { jsdoc: false } },
     },
   },
   plugins: [qwikVite({ target: 'lib', srcDir: 'src/qwik' })],

@@ -9,15 +9,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "inferno": "^9.1.0",
+    "inferno": "^10.0.0",
     "mother-mask": "file:../../packages/mother-mask"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
+    "@babel/core": "^7.29.13",
     "@babel/preset-typescript": "^7.29.7",
-    "babel-plugin-inferno": "^6.9.0",
+    "babel-plugin-inferno": "^10.0.0",
     "typescript": "~7.0.2",
-    "vite": "^8.2.2",
+    "vite": "^8.3.8",
     "vite-plugin-babel": "^1.7.3"
   }
 }
