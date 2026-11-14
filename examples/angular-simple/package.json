@@ -10,13 +10,13 @@
   },
   "dependencies": {
     "mother-mask": "file:../../packages/mother-mask",
-    "@angular/common": "^20.3.30",
-    "@angular/compiler": "^20.3.30",
-    "@angular/core": "^20.3.30",
-    "@angular/platform-browser": "^20.3.30"
+    "@angular/common": "^22.2.6",
+    "@angular/compiler": "^22.2.6",
+    "@angular/core": "^22.2.6",
+    "@angular/platform-browser": "^22.2.6"
   },
   "devDependencies": {
     "typescript": "~7.0.2",
-    "vite": "^8.2.2"
+    "vite": "^8.3.8"
   }
 }

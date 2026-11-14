@@ -1,13 +1,11 @@
 /** @jsxImportSource preact */
 import { useLayoutEffect, useRef, useState } from 'preact/hooks'
-import type { JSX, Ref } from 'preact'
+import type { Ref } from 'preact'
 import { bindDecimal, processDecimal } from 'mother-mask'
 import type { BindDecimalOptions } from 'mother-mask'
+import type { TextInputAttributes } from './InputMask'
 
-export type InputDecimalProps = Omit<
-  JSX.InputHTMLAttributes<HTMLInputElement>,
-  'value' | 'defaultValue' | 'onChange' | 'type' | 'ref'
-> & {
+export type InputDecimalProps = TextInputAttributes & {
   options?: Omit<BindDecimalOptions, 'onChange'>
   value?: string
   defaultValue?: string

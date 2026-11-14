@@ -5,7 +5,7 @@ export default defineConfig([{
   format: ['esm', 'cjs', 'umd'],
   outDir: 'dist',
   clean: true,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   globalName: 'MotherMask',
@@ -14,7 +14,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // React is an optional peer, and core exports must retain their identity.
@@ -24,7 +24,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // Vue is an optional peer, and core exports must retain their identity.
@@ -34,7 +34,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // Angular is an optional peer, and core exports must retain their identity.
@@ -44,7 +44,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // No Svelte runtime dependency at all — this entry is plain TS actions.
@@ -54,7 +54,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // Solid is an optional peer, and core exports must retain their identity.
@@ -64,7 +64,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // Preact is an optional peer, and core exports must retain their identity.
@@ -74,7 +74,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // Lit is an optional peer, and core exports must retain their identity.
@@ -84,7 +84,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // Alpine is an optional peer, and core exports must retain their identity.
@@ -94,7 +94,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // No framework dependency at all — plain customElements.
@@ -104,7 +104,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // Inferno is an optional peer, and core exports must retain their identity.
@@ -114,7 +114,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // Mithril is an optional peer, and core exports must retain their identity.
@@ -124,7 +124,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // ember-modifier is an optional peer, and core exports must retain their identity.
@@ -134,7 +134,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // Knockout is an optional peer, and core exports must retain their identity.
@@ -144,7 +144,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // Riot is an optional peer, and core exports must retain their identity.
@@ -154,7 +154,7 @@ export default defineConfig([{
   format: ['esm', 'cjs'],
   outDir: 'dist',
   clean: false,
-  dts: { tsgo: true },
+  dts: { generator: 'tsgo' },
   minify: true,
   sourcemap: true,
   // No Nuclo runtime dependency at all — this entry is a plain attributes object.

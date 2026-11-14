@@ -480,7 +480,7 @@ Its core exports are aliases to `mother-mask`, sharing the same
 implementation and caches. The core ESM, CommonJS, and UMD builds remain
 independent of Preact. Preact is an optional peer dependency required only
 when importing `mother-mask/preact`; the supported version range is
-`^10.0.0`. Preact is not bundled, and this entry never imports
+`^10.0.0 || ^11.0.0`. Preact is not bundled, and this entry never imports
 `preact/compat` — it's built directly on `preact` + `preact/hooks` to keep
 Preact's footprint advantage intact.
 

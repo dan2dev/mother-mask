@@ -10,10 +10,10 @@
   },
   "dependencies": {
     "mother-mask": "file:../../packages/mother-mask",
-    "nuclo": "^0.3.30"
+    "nuclo": "^0.3.39"
   },
   "devDependencies": {
     "typescript": "~7.0.2",
-    "vite": "^8.2.2"
+    "vite": "^8.3.8"
   }
 }

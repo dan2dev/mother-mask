@@ -10,11 +10,11 @@
   },
   "dependencies": {
     "mother-mask": "file:../../packages/mother-mask",
-    "svelte": "^5.0.0"
+    "svelte": "^5.57.3"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^6.2.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "typescript": "~7.0.2",
-    "vite": "^8.2.2"
+    "vite": "^8.3.8"
   }
 }

@@ -9,10 +9,10 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "typescript": "~6.0.2",
-    "vite": "^8.0.5"
+    "typescript": "~7.0.2",
+    "vite": "^8.3.8"
   },
   "dependencies": {
-    "mother-mask": "^2.0.4"
+    "mother-mask": "^3.53.0"
   }
 }
