@@ -29,8 +29,23 @@ help:
 install:
 	cd $(PKG) && pnpm install
 
+# `make up` (same block in the mono, nuclo and mother-mask Makefiles): bump every
+# package.json in this repo and its submodules (new untracked ones too; ignored
+# ones skipped) to the latest versions their peers allow, then reinstall wherever
+# a lockfile lives. Hold a dep back with a .ncurc.yml next to its package.json.
+UP_SKIP ?=
 up:
-	cd $(PKG) && pnpm up --latest
+	@pkgs=$$(for r in . $$(git submodule --quiet foreach --recursive 'echo $$displaypath'); do \
+		case " $(UP_SKIP) " in (*" $$r "*) continue;; esac; \
+		git -C $$r ls-files -co --exclude-standard ':(glob)**/package.json' | sed "s|^|$$r/|; s|^\./||"; \
+	done | xargs -n1 dirname); failed=; \
+	for d in $$pkgs; do echo "==> $$d"; (cd $$d && bunx npm-check-updates@23 -u --peer) || failed="$$failed $$d"; done; \
+	for d in $$pkgs; do (cd $$d && \
+		if [ -f bun.lock ] || [ -f bun.lockb ]; then bun install; \
+		elif [ -f pnpm-lock.yaml ]; then pnpm install; \
+		elif [ -f yarn.lock ]; then yarn install; \
+		elif [ -f package-lock.json ]; then npm install; fi) || failed="$$failed $$d"; done; \
+	[ -z "$$failed" ] || { echo "make up failed in:$$failed"; exit 1; }
 
 # ── Dev ───────────────────────────────────────────────────────────────────────
 build:
