@@ -50,7 +50,7 @@
     "@embroider/macros": "^1.21.4",
     "@embroider/router": "^3.0.6",
     "@embroider/vite": "^1.8.0",
-    "@eslint/js": "^9.39.5",
+    "@eslint/js": "^10.0.1",
     "@glimmer/component": "^2.2.1",
     "@rollup/plugin-babel": "^7.1.0",
     "@warp-drive/core": "~5.9.1",
